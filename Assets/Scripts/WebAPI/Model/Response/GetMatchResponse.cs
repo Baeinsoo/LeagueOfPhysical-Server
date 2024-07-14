@@ -4,8 +4,8 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class MatchStartResponse : HttpResponse
+    public class GetMatchResponse : HttpResponse
     {
-        public Match match;
+        public MatchDto match;
     }
 }

@@ -6,6 +6,6 @@ namespace LOP
 {
     public class MatchEndResponse : HttpResponse
     {
-        public Match match;
+        public MatchDto match;
     }
 }

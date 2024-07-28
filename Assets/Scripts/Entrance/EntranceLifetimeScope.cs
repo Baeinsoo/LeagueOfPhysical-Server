@@ -3,5 +3,5 @@ using VContainer.Unity;
 
 namespace LOP
 {
-    public class EntranceLifetimeScope : LifetimeScope { }
+    public class EntranceLifetimeScope : SceneLifetimeScope { }
 }

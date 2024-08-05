@@ -13,7 +13,7 @@ namespace LOP
     public class Entrance : MonoBehaviour
     {
         [Inject]
-        private IEntranceComponent[] entranceComponents;
+        private IEnumerable<IEntranceComponent> entranceComponents;
 
         private async void Start()
         {

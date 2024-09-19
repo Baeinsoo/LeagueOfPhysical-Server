@@ -12,17 +12,22 @@ namespace LOP
         public string matchId;
         public RoomStatus status;
         public string ip;
-        public int port;
+        public ushort port;
     }
 
     [Serializable]
     public enum RoomStatus
     {
         None = 0,
-        Spawning = 1,
-        Spawned = 2,
-        Ready = 3,
-        Playing = 4,
-        Finished = 5,
+        CreatingRunner = 1,
+        RunnerCreated = 2,
+        Initializing = 3,
+        WaitingForPlayers = 4,
+        StartingGame = 5,
+        GameInProgress = 6,
+        GameFinished = 7,
+        Closing = 8,
+        Closed = 9,
+        Error = 10,
     }
 }

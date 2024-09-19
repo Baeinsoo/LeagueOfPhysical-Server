@@ -12,11 +12,10 @@ namespace LOP
         public async Task Execute()
         {
 #if !UNITY_EDITOR
-            var arguments = System.Environment.GetCommandLineArgs();
-
-            var roomId = arguments[1];
-            var matchId = arguments[2];
-            var port = ushort.Parse(arguments[3]);
+            var roomId = Environment.GetEnvironmentVariable("ROOM_ID");
+            var matchId = Environment.GetEnvironmentVariable("MATCH_ID");
+            var port = ushort.Parse(Environment.GetEnvironmentVariable("PORT"));
+            var expectedPlayerList = new string[] { "375f9694a1e5c3af13ff9c75e11e1cb158f65521" };
 
             //var getMatch = LOPWebAPI.GetMatch(matchId);
             //yield return getMatch;
@@ -53,11 +52,7 @@ namespace LOP
             //    mapId = "FlapWangMap",
             //};
 #endif
-
-            Blackboard.Set("roomId", roomId);
-            Blackboard.Set("matchId", matchId);
-            Blackboard.Set("port", port);
-            Blackboard.Set("expectedPlayerList", expectedPlayerList);
+            Blackboard.Write("roomInfo", (roomId, matchId, port, expectedPlayerList));
         }
     }
 }

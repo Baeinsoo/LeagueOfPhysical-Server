@@ -7,9 +7,9 @@ namespace LOP
 {
     public class WebAPI
     {
-        public static WebRequest<string> Heartbeat(string roomId)
+        public static WebRequest<HttpResponse> Heartbeat(string roomId)
         {
-            return new WebRequestBuilder<string>()
+            return new WebRequestBuilder<HttpResponse>()
                 .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/heartbeat/{roomId}")
                 .SetMethod(HttpMethod.PUT)
                 .Build();

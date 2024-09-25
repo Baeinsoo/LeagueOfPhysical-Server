@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lobbyServerSetting:
     scheme: http
-    host: 3.35.176.152:1340
+    host: lobby-server-service
   matchmakingServerSetting:
     scheme: http
-    host: 3.35.176.152:1555
+    host: matchmaking-server-service
   roomServerSetting:
     scheme: http
-    host: 3.35.176.152:2000
+    host: room-server-service

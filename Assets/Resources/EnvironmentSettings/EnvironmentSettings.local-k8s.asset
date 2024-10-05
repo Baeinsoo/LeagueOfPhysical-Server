@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   lobbyServerSetting:
     scheme: http
-    host: localhost/lobby
+    host: lobby-server-service
   matchmakingServerSetting:
     scheme: http
-    host: localhost/matchmaking
+    host: matchmaking-server-service
   roomServerSetting:
     scheme: http
-    host: localhost/room
+    host: room-server-service

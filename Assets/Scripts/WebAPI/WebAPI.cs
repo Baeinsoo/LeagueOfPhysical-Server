@@ -7,6 +7,7 @@ namespace LOP
 {
     public class WebAPI
     {
+        #region Room
         public static WebRequest<HttpResponse> Heartbeat(string roomId)
         {
             return new WebRequestBuilder<HttpResponse>()
@@ -41,30 +42,21 @@ namespace LOP
                 .Build();
         }
 
+        public static WebRequest<GetRoomResponse> GetRoom(string roomId)
+        {
+            return new WebRequestBuilder<GetRoomResponse>()
+                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/{roomId}")
+                .SetMethod(HttpMethod.GET)
+                .Build();
+        }
+        #endregion
+
         #region Match
         public static WebRequest<GetMatchResponse> GetMatch(string matchId)
         {
             return new WebRequestBuilder<GetMatchResponse>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/match/{matchId}")
+                .SetUri($"{EnvironmentSettings.active.matchmakingBaseURL}/match/{matchId}")
                 .SetMethod(HttpMethod.GET)
-                .Build();
-        }
-
-        public static WebRequest<MatchStartResponse> MatchStart(MatchStartRequest request)
-        {
-            return new WebRequestBuilder<MatchStartResponse>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/match/match-start")
-                .SetMethod(HttpMethod.PUT)
-                .SetRequestBody(request)
-                .Build();
-        }
-
-        public static WebRequest<MatchEndResponse> MatchEnd(MatchEndRequest request)
-        {
-            return new WebRequestBuilder<MatchEndResponse>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/match/match-end")
-                .SetMethod(HttpMethod.PUT)
-                .SetRequestBody(request)
                 .Build();
         }
         #endregion

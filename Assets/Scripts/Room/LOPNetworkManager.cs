@@ -1,13 +1,31 @@
 using Mirror;
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UniRx;
 using UnityEngine;
 
 namespace LOP
 {
     public class LOPNetworkManager : NetworkManager
     {
+        public event Action onStartServer;
+        public event Action onStopServer;
+
+        private PortTransport _portTransport;
+        public PortTransport portTransport
+        {
+            get
+            {
+                return _portTransport ??= (transport is LatencySimulation latencySimulation ? latencySimulation.wrap : transport) as PortTransport;
+            }
+        }
+
+        public ushort port
+        {
+            set => portTransport.Port = value;
+            get => portTransport.Port;
+        }
+
         #region Server System Callbacks
         /// <summary>
         /// Called on the server when a new client connects.
@@ -41,19 +59,9 @@ namespace LOP
         /// </summary>
         public override void OnStartServer()
         {
-            Debug.Log($"[OnStartServer]");
+            base.OnStartServer();
 
-            //NotifyStartServerRequest request = new NotifyStartServerRequest
-            //{
-            //    roomId = LOP.Room.Instance.RoomId,
-            //    matchId = SceneDataContainer.Get<MatchData>().matchId,
-            //    expectedPlayerList = LOP.Room.Instance.ExpectedPlayerList,
-            //    matchSetting = SceneDataContainer.Get<MatchData>().matchSetting,
-            //    ip = LOP.Application.IP,
-            //    port = LOP.Room.Instance.Port,
-            //};
-
-            //LOPWebAPI.UpdateStatus(request);
+            onStartServer?.Invoke();
         }
 
         /// <summary>
@@ -61,9 +69,9 @@ namespace LOP
         /// </summary>
         public override void OnStopServer()
         {
-            Debug.Log($"[OnStopServer]");
+            base.OnStopServer();
 
-            //LOPWebAPI.NotifyStopServer(LOP.Room.Instance.RoomId);
+            onStopServer?.Invoke();
         }
         #endregion
     }

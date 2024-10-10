@@ -11,48 +11,64 @@ namespace LOP
     {
         public async Task Execute()
         {
-#if !UNITY_EDITOR
-            var roomId = Environment.GetEnvironmentVariable("ROOM_ID");
-            var matchId = Environment.GetEnvironmentVariable("MATCH_ID");
-            var port = ushort.Parse(Environment.GetEnvironmentVariable("PORT"));
-            var expectedPlayerList = new string[] { "375f9694a1e5c3af13ff9c75e11e1cb158f65521" };
+            string roomId = null;
+            ushort port = 0;
 
-            //var getMatch = LOPWebAPI.GetMatch(matchId);
-            //yield return getMatch;
-
-            //if (getMatch.isSuccess == false || getMatch.response.code != ResponseCode.SUCCESS)
-            //{
-            //    throw new System.Exception(getMatch.error);
-            //}
-
-            //var expectedPlayerList = getMatch.response.match.playerList;
-
-            //SceneDataContainer.Get<MatchData>().matchId = getMatch.response.match.id;
-            //SceneDataContainer.Get<MatchData>().matchSetting = new MatchSetting
-            //{
-            //    matchType = getMatch.response.match.matchType,
-            //    subGameId = getMatch.response.match.subGameId,
-            //    mapId = getMatch.response.match.mapId,
-            //};
-#else
-
-            var roomId = "EditorTestRoom";
-            var matchId = "EditorTestMatch";
-            var port = (ushort)7777;
-            var expectedPlayerList = new string[]
+            try
             {
-                "375f9694a1e5c3af13ff9c75e11e1cb158f65521",
-            };
+#if UNITY_EDITOR
+                roomId = "EditorTestRoom";
+                port = 7777;
+                Blackboard.Write("port", port);
 
-            //SceneDataContainer.Get<MatchData>().matchId = "EditorTestMatch";
-            //SceneDataContainer.Get<MatchData>().matchSetting = new MatchSetting
-            //{
-            //    matchType = MatchType.Friendly,
-            //    subGameId = "FlapWang",
-            //    mapId = "FlapWangMap",
-            //};
+                RoomDto room = new RoomDto
+                {
+                    id = "EditorTestRoom",
+                    matchId = "EditorTestMatch",
+                    status = RoomStatus.Initializing,
+                    ip = "localhost",
+                    port = 0,
+                };
+                Blackboard.Write(room);
+
+                MatchDto match = new MatchDto
+                {
+                    id = "EditorTestMatch",
+                    matchType = MatchType.Friendly,
+                    subGameId = "FlapWang",
+                    mapId = "FlapWangMap",
+                    targetRating = 1500,
+                    playerList = new string[]
+                    {
+                        "375f9694a1e5c3af13ff9c75e11e1cb158f65521",
+                    }
+                };
+                Blackboard.Write(match);
+#else
+                roomId = Environment.GetEnvironmentVariable("ROOM_ID");
+                port = ushort.Parse(Environment.GetEnvironmentVariable("PORT"));
+                Blackboard.Write("port", port);
+                
+                var getRoom = await WebAPI.GetRoom(roomId);
+                Blackboard.Write(getRoom.response.room);
+
+                var getMatch = await WebAPI.GetMatch(getRoom.response.room.matchId);
+                Blackboard.Write(getMatch.response.match);
 #endif
-            Blackboard.Write("roomInfo", (roomId, matchId, port, expectedPlayerList));
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e);
+
+                if (string.IsNullOrEmpty(roomId))
+                {
+                    await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                    {
+                        roomId = roomId,
+                        status = RoomStatus.Error,
+                    });
+                }
+            }
         }
     }
 }

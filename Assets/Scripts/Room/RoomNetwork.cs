@@ -6,27 +6,25 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class RoomNetwork : MonoSingleton<RoomNetwork>
+    public class RoomNetwork : MonoBehaviour
     {
-        private Dictionary<Type, Action<int, IMessage>> handlerMap;
-
+        private Dictionary<Type, MessageHandlerBase> handlerMap;
         private INetwork networkImpl;
 
-        protected override void Awake()
+        private void Awake()
         {
-            base.Awake();
-
-            networkImpl = GetComponent<INetwork>() ?? gameObject.AddComponent<MirrorNetworkImpl>();
+            handlerMap = new Dictionary<Type, MessageHandlerBase>();
+            networkImpl = GetComponent<INetwork>();
             networkImpl.onMessage += OnMessage;
-
-            handlerMap = new Dictionary<Type, Action<int, IMessage>>();
         }
 
-        protected override void OnDestroy()
+        private void OnDestroy()
         {
-            base.OnDestroy();
+            handlerMap.Clear();
+            handlerMap = null;
 
             networkImpl.onMessage -= OnMessage;
+            networkImpl = null;
         }
 
         private void OnMessage(int connectionId, IMessage message)
@@ -52,24 +50,44 @@ namespace LOP
             networkImpl.SendToNear(message, center, radius, reliable, instant);
         }
 
-        public void RegisterHandler(Type type, Action<int, IMessage> handler)
+        public void RegisterHandler<T>(Action<int, T> handler) where T : IMessage
         {
-            if (handlerMap.ContainsKey(type) == true)
+            if (handlerMap.TryGetValue(typeof(T), out var baseMessageHandler))
             {
-                handlerMap[type] += handler;
+                if (baseMessageHandler is MessageHandler<T> messageHandler)
+                {
+                    messageHandler.AddHandler(handler);
+                }
+                else
+                {
+                    Debug.LogWarning($"MessageHandler for {typeof(T)} is of a different type.");
+                }
             }
             else
             {
-                handlerMap[type] = handler;
+                var messageHandler = new MessageHandler<T>();
+                messageHandler.AddHandler(handler);
+                handlerMap[typeof(T)] = messageHandler;
             }
         }
 
-        public void UnregisterHandler(Type type, Action<int, IMessage> handler)
+        public void UnregisterHandler<T>(Action<int, T> handler) where T : IMessage
         {
-            handlerMap[type] -= handler;
-            if (handlerMap[type] == null)
+            if (handlerMap.TryGetValue(typeof(T), out var baseMessageHandler))
             {
-                handlerMap.Remove(type);
+                if (baseMessageHandler is MessageHandler<T> messageHandler)
+                {
+                    messageHandler.RemoveHandler(handler);
+
+                    if (messageHandler.IsEmpty)
+                    {
+                        handlerMap.Remove(typeof(T));
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"MessageHandler for {typeof(T)} is of a different type.");
+                }
             }
         }
     }

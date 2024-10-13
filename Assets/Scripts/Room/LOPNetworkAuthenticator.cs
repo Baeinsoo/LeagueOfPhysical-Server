@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 namespace LOP
 {
@@ -55,9 +56,8 @@ namespace LOP
         /// <param name="msg">The message payload</param>
         public void OnAuthRequestMessage(NetworkConnectionToClient conn, AuthRequestMessage msg)
         {
-            //  현재는 무조건 수락..
-            //  ...
-            bool authenticated = true;
+            bool authenticated = IsAuthenticated(conn, msg);
+
             if (authenticated)
             {
                 // Store the customProperties for later reference, e.g. when spawning the player
@@ -79,6 +79,18 @@ namespace LOP
 
                 ServerReject(conn);
             }
+        }
+
+        private bool IsAuthenticated(NetworkConnectionToClient conn, AuthRequestMessage msg)
+        {
+            bool authenticated = true;
+
+            if (Data.Room.match.playerList.Contains(msg.customProperties.userId) == false)
+            {
+                authenticated = false;
+            }
+
+            return authenticated;
         }
         #endregion
     }

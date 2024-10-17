@@ -1,5 +1,7 @@
+using Cysharp.Threading.Tasks;
 using GameFramework;
 using Mirror;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -11,7 +13,8 @@ namespace LOP
 {
     public class LOPRoom : MonoBehaviour, IRoom
     {
-        private const int HEARTBEAT_INTERVAL = 2;  //  sec
+        private const int HEARTBEAT_INTERVAL = 2;       //  sec
+        private const double TICK_INTERVAL = 1 / 60f;   //  sec
 
         [Inject] public IGame game { get; private set; }
         [Inject] private RoomNetwork roomNetwork;
@@ -21,66 +24,87 @@ namespace LOP
 
         private async void Awake()
         {
-            await InitializeAsync();
+            try
+            {
+                await InitializeAsync();
+                await StartRoomServerAsync();
+                await StartGameAsync();
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e);
 
-            StartGame();
+                await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                {
+                    roomId = Data.Room.room.id,
+                    status = RoomStatus.Error,
+                });
+            }
         }
 
         private async void OnDestroy()
         {
-            StopGame();
-
+            await ShutdownRoomServerAsync();
             await DeinitializeAsync();
         }
 
         public async Task InitializeAsync()
         {
+            await game.InitializeAsync();
+
+            InvokeRepeating("SendHeartbeat", 0, HEARTBEAT_INTERVAL);
+
             Data.Room.room = Blackboard.Read<RoomDto>(erase: true);
             Data.Room.match = Blackboard.Read<MatchDto>(erase: true);
 
-            networkManager.port = Blackboard.Read<ushort>("port", erase: true);
-
-            await game.InitializeAsync();
-
-            initialized = true;
+            game.onGameEnd += OnGameEnd;
 
             await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {
                 roomId = Data.Room.room.id,
                 status = RoomStatus.Initializing,
             });
+
+            initialized = true;
         }
 
         public async Task DeinitializeAsync()
         {
             await game.DeinitializeAsync();
 
+            CancelInvoke("SendHeartbeat");
+
             Data.Room.Clear();
+
+            game.onGameEnd -= OnGameEnd;
 
             initialized = false;
         }
 
-        public void StartGame()
+        public async Task StartRoomServerAsync()
         {
+            networkManager.port = Blackboard.Read<ushort>("port", erase: true);
             networkManager.StartServer();
 
-            InvokeRepeating("SendHeartbeat", 0, HEARTBEAT_INTERVAL);
-
-            if (NetworkServer.active)
-            {
-                WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
-                {
-                    roomId = Data.Room.room.id,
-                    status = RoomStatus.WaitingForPlayers,
-                });
-            }
-
-            Invoke("EndRoom", 60);
+            await UniTask.WaitUntil(() => NetworkServer.active);
         }
 
-        public void StopGame()
+        private async Task ShutdownRoomServerAsync()
         {
-            networkManager.StopServer();
+            networkManager.StopClient();
+
+            await UniTask.WaitUntil(() => NetworkServer.active == false);
+        }
+
+        public async Task StartGameAsync()
+        {
+            await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+            {
+                roomId = Data.Room.room.id,
+                status = RoomStatus.WaitingForPlayers,
+            });
+
+            game.Run(0, TICK_INTERVAL, 0);
         }
 
         private void SendHeartbeat()
@@ -88,7 +112,7 @@ namespace LOP
             WebAPI.Heartbeat(Data.Room.room.id);
         }
 
-        private void EndRoom()
+        private void OnGameEnd()
         {
             WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {

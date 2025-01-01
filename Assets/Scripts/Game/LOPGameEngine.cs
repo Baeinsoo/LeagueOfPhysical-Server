@@ -8,14 +8,69 @@ namespace LOP
 {
     public class LOPGameEngine : GameEngineBase
     {
-        public override async Task InitializeAsync()
+        public static readonly IMessageBrokerExtended messageBroker = new MessageBrokerExtended();
+
+        public override void UpdateEngine()
         {
-            await base.InitializeAsync();
+            BeginUpdate();
+
+            ProcessInput();
+
+            UpdateEntity();
+
+            UpdateAI();
+
+            SimulatePhysics();
+
+            ProcessEvent();
+
+            EndUpdate();
         }
 
-        public override async Task DeinitializeAsync()
+        private void BeginUpdate()
         {
-            await base.DeinitializeAsync();
+            messageBroker.Publish(new Message.LOPGameEngine.Update.Begin());
+        }
+
+        private void ProcessInput()
+        {
+            foreach (var entity in entityManager.GetEntities())
+            {
+
+            }
+        }
+
+        private void UpdateEntity()
+        {
+            messageBroker.Publish(new Message.LOPGameEngine.Update.BeforeEntityUpdate());
+
+            entityManager.UpdateEntities();
+
+            messageBroker.Publish(new Message.LOPGameEngine.Update.AfterEntityUpdate());
+        }
+
+        private void UpdateAI()
+        {
+
+        }
+
+        private void SimulatePhysics()
+        {
+            messageBroker.Publish(new Message.LOPGameEngine.Update.BeforePhysicsSimulation());
+
+            Physics.Simulate((float)tickUpdater.interval);
+
+            messageBroker.Publish(new Message.LOPGameEngine.Update.AfterPhysicsSimulation());
+        }
+
+        private void ProcessEvent()
+        {
+
+        }
+
+        private void EndUpdate()
+        {
+            messageBroker.Publish(new Message.LOPGameEngine.Update.End());
         }
     }
 }

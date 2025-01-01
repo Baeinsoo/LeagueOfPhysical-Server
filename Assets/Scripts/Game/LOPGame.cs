@@ -4,33 +4,60 @@ using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
 using System.Threading.Tasks;
+using System;
 
 namespace LOP
 {
     public class LOPGame : MonoBehaviour, IGame
     {
-        public IGameEngine gameEngine { get; private set; }
-        [Inject] private RoomNetwork roomNetwork;
+        public event Action<GameState> onGameStateChanged;
 
-        private float originalFixedDeltaTime;
-        private bool originalAutoSyncTransforms;
+        [Inject]
+        private RoomNetwork roomNetwork;
+
+        public IGameEngine gameEngine { get; private set; }
+
+        private GameState _gameState;
+        public GameState gameState
+        {
+            get => _gameState;
+            private set
+            {
+                _gameState = value;
+                onGameStateChanged?.Invoke(value);
+            }
+        }
 
         public bool initialized { get; private set; }
 
+        private Restorer restorer = new Restorer();
+
         public async Task InitializeAsync()
         {
-            roomNetwork.RegisterHandler<GameInfoRequest>(OnGameInfoRequest);
+            gameState = GameState.Initializing;
+
+            var oldSimulationMode = Physics.simulationMode;
+            var oldAutoSyncTransforms = Physics.autoSyncTransforms;
+
+            restorer.action += () =>
+            {
+                Physics.simulationMode = oldSimulationMode;
+                Physics.autoSyncTransforms = oldAutoSyncTransforms;
+            };
 
             Physics.simulationMode = SimulationMode.Script;
+            Physics.autoSyncTransforms = false;
 
-            originalAutoSyncTransforms = Physics.autoSyncTransforms;
-            Physics.autoSyncTransforms = true;
-
-            originalFixedDeltaTime = UnityEngine.Time.fixedDeltaTime;
+            //var sceneLoadOperation = SceneManager.LoadSceneAsync(Data.Room.match.mapId, LoadSceneMode.Additive);
 
             gameEngine = GetComponentInChildren<IGameEngine>();
-
             await gameEngine.InitializeAsync();
+            //await UniTask.WaitUntil(() => sceneLoadOperation.isDone && gameEngine.initialized);
+
+            foreach (var player in Data.Room.match.playerList.OrEmpty())
+            {
+
+            }
 
             initialized = true;
         }
@@ -39,10 +66,7 @@ namespace LOP
         {
             await gameEngine.DeinitializeAsync();
 
-            Physics.simulationMode = SimulationMode.FixedUpdate;
-            Physics.autoSyncTransforms = originalAutoSyncTransforms;
-
-            UnityEngine.Time.fixedDeltaTime = originalFixedDeltaTime;
+            restorer.Dispose();
 
             initialized = false;
         }
@@ -52,27 +76,12 @@ namespace LOP
             gameEngine.Run(tick, interval, elapsedTime);
         }
 
-        public void Stop()
+        private void LateUpdate()
         {
-            gameEngine.Stop();
-        }
-
-        private void OnGameInfoRequest(int id, GameInfoRequest gameInfoRequest)
-        {
-            Debug.Log($"gameInfoRequest: {gameInfoRequest}");
-
-            var gameInfoResponse = new GameInfoResponse
+            if (gameEngine.tickUpdater.elapsedTime > 60)
             {
-                EntityId = 1,
-                GameInfo = new GameInfo
-                {
-                    Tick = 1,
-                    Interval = 0.1,
-                    ElapsedTime = 5,
-                },
-            };
-
-            roomNetwork.Send(gameInfoResponse, id);
+                gameState = GameState.GameOver;
+            }
         }
     }
 }

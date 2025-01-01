@@ -50,14 +50,14 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
+            Data.Room.room = Blackboard.Read<RoomDto>(erase: true);
+            Data.Room.match = Blackboard.Read<MatchDto>(erase: true);
+
             await game.InitializeAsync();
 
             InvokeRepeating("SendHeartbeat", 0, HEARTBEAT_INTERVAL);
 
-            Data.Room.room = Blackboard.Read<RoomDto>(erase: true);
-            Data.Room.match = Blackboard.Read<MatchDto>(erase: true);
-
-            game.onGameEnd += OnGameEnd;
+            game.onGameStateChanged += OnGameStateChanged;
 
             await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {
@@ -76,7 +76,7 @@ namespace LOP
 
             Data.Room.Clear();
 
-            game.onGameEnd -= OnGameEnd;
+            game.onGameStateChanged -= OnGameStateChanged;
 
             initialized = false;
         }
@@ -112,13 +112,18 @@ namespace LOP
             WebAPI.Heartbeat(Data.Room.room.id);
         }
 
-        private void OnGameEnd()
+        private void OnGameStateChanged(GameState gameState)
         {
-            WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+            switch (gameState)
             {
-                roomId = Data.Room.room.id,
-                status = RoomStatus.Closed,
-            });
+                case GameState.GameOver:
+                    WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                    {
+                        roomId = Data.Room.room.id,
+                        status = RoomStatus.Closed,
+                    });
+                    break;
+            }
         }
     }
 }

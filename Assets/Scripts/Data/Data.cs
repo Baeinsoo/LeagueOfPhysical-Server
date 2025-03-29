@@ -6,6 +6,6 @@ namespace LOP
 {
     public partial class Data
     {
-        public static RoomContainer Room { get; } = new RoomContainer();
+        public static RoomDataContext Room { get; } = new RoomDataContext();
     }
 }

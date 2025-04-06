@@ -4,11 +4,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using GameFramework;
+using VContainer;
 
 namespace LOP
 {
+    [DIMonoBehaviour]
     public class LOPNetworkAuthenticator : NetworkAuthenticator
     {
+        [Inject]
+        private IDataContextManager dataManager;
+
         #region Messages
         public struct AuthRequestMessage : NetworkMessage
         {
@@ -85,7 +91,7 @@ namespace LOP
         {
             bool authenticated = true;
 
-            if (Data.Room.match.playerList.Contains(msg.customProperties.userId) == false)
+            if (dataManager.Get<RoomDataContext>().match.playerList.Contains(msg.customProperties.userId) == false)
             {
                 authenticated = false;
             }

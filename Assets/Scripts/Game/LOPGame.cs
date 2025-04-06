@@ -15,6 +15,9 @@ namespace LOP
         [Inject]
         private RoomNetwork roomNetwork;
 
+        [Inject]
+        private IDataContextManager dataManager;
+
         public IGameEngine gameEngine { get; private set; }
 
         private GameState _gameState;
@@ -54,7 +57,7 @@ namespace LOP
             await gameEngine.InitializeAsync();
             //await UniTask.WaitUntil(() => sceneLoadOperation.isDone && gameEngine.initialized);
 
-            foreach (var player in Data.Room.match.playerList.OrEmpty())
+            foreach (var player in dataManager.Get<RoomDataContext>().match.playerList.OrEmpty())
             {
 
             }

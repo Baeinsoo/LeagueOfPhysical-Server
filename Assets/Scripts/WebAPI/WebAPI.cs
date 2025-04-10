@@ -13,6 +13,7 @@ namespace LOP
             return new WebRequestBuilder<HttpResponse>()
                 .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/heartbeat/{roomId}")
                 .SetMethod(HttpMethod.PUT)
+                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
                 .Build();
         }
 
@@ -22,6 +23,7 @@ namespace LOP
                 .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room")
                 .SetMethod(HttpMethod.PUT)
                 .SetRequestBody(request)
+                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
                 .Build();
         }
 
@@ -30,6 +32,7 @@ namespace LOP
             return new WebRequestBuilder<string>()
                 .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/{roomId}")
                 .SetMethod(HttpMethod.DELETE)
+                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
                 .Build();
         }
 
@@ -39,6 +42,7 @@ namespace LOP
                 .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/status")
                 .SetMethod(HttpMethod.PUT)
                 .SetRequestBody(request)
+                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
                 .Build();
         }
 
@@ -47,6 +51,7 @@ namespace LOP
             return new WebRequestBuilder<GetRoomResponse>()
                 .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/{roomId}")
                 .SetMethod(HttpMethod.GET)
+                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
                 .Build();
         }
         #endregion
@@ -57,6 +62,7 @@ namespace LOP
             return new WebRequestBuilder<GetMatchResponse>()
                 .SetUri($"{EnvironmentSettings.active.matchmakingBaseURL}/match/{matchId}")
                 .SetMethod(HttpMethod.GET)
+                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
                 .Build();
         }
         #endregion

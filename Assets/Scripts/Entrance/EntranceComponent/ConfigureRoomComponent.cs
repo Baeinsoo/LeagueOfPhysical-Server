@@ -21,22 +21,21 @@ namespace LOP
             try
             {
 #if UNITY_EDITOR
-                roomId = "EditorTestRoom";
                 port = 7777;
                 Blackboard.Write("port", port);
 
-                RoomDto room = new RoomDto
+                Room room = new Room
                 {
                     id = "EditorTestRoom",
                     matchId = "EditorTestMatch",
                     status = RoomStatus.Initializing,
                     ip = "localhost",
-                    port = 0,
+                    port = port,
                 };
 
-                dataManager.UpdateData(room);
+                dataManager.Get<RoomDataContext>().room = room;
 
-                MatchDto match = new MatchDto
+                Match match = new Match
                 {
                     id = "EditorTestMatch",
                     matchType = MatchType.Friendly,
@@ -48,17 +47,14 @@ namespace LOP
                         "375f9694a1e5c3af13ff9c75e11e1cb158f65521",
                     }
                 };
-                dataManager.UpdateData(match);
+                dataManager.Get<RoomDataContext>().match = match;
 #else
                 roomId = Environment.GetEnvironmentVariable("ROOM_ID");
                 port = ushort.Parse(Environment.GetEnvironmentVariable("PORT"));
                 Blackboard.Write("port", port);
                 
                 var getRoom = await WebAPI.GetRoom(roomId);
-                dataManager.UpdateData(getRoom.response.room);
-
                 var getMatch = await WebAPI.GetMatch(getRoom.response.room.matchId);
-                dataManager.UpdateData(getMatch.response.match);
 #endif
             }
             catch (Exception e)

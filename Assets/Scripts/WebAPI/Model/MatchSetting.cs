@@ -8,11 +8,11 @@ namespace LOP
     [Serializable]
     public struct MatchSetting
     {
-        public MatchType matchType;
+        public GameMode matchType;
         public string subGameId;
         public string mapId;
 
-        public MatchSetting(MatchType matchType, string subGameId, string mapId)
+        public MatchSetting(GameMode matchType, string subGameId, string mapId)
         {
             this.matchType = matchType;
             this.subGameId = subGameId;

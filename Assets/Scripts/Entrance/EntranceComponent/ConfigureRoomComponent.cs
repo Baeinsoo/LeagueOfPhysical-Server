@@ -38,7 +38,7 @@ namespace LOP
                 Match match = new Match
                 {
                     id = "EditorTestMatch",
-                    matchType = MatchType.Friendly,
+                    matchType = GameMode.Normal,
                     subGameId = "FlapWang",
                     mapId = "FlapWangMap",
                     targetRating = 1500,

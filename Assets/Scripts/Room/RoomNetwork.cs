@@ -6,8 +6,10 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class RoomNetwork : MonoBehaviour
+    public class RoomNetwork : MonoBehaviour, IRoomNetwork
     {
+        public event Action<IMessage> onMessage;
+
         private Dictionary<Type, MessageHandlerBase> handlerMap;
         private INetwork networkImpl;
 
@@ -25,6 +27,8 @@ namespace LOP
 
             networkImpl.onMessage -= OnMessage;
             networkImpl = null;
+
+            onMessage = null;
         }
 
         private void OnMessage(int connectionId, IMessage message)
@@ -33,6 +37,8 @@ namespace LOP
             {
                 handler?.Invoke(connectionId, message);
             };
+
+            onMessage?.Invoke(message);
         }
 
         public void Send(IMessage message, int targetId, bool reliable = true, bool instant = false)

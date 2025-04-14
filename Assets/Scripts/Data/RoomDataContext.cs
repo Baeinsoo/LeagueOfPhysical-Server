@@ -6,7 +6,7 @@ using System;
 
 namespace LOP
 {
-    public partial class RoomDataContext : IDataContext
+    public class RoomDataContext : IDataContext
     {
         public Type[] subscribedTypes => new Type[]
         {

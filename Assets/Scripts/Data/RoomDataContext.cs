@@ -45,11 +45,21 @@ namespace LOP
 
         private void HandleGetRoom(GetRoomResponse response)
         {
+            if (response.room == null)
+            {
+                return;
+            }
+
             room = MapperConfig.mapper.Map<Room>(response.room);
         }
 
         private void HandleUpdateRoomStatus(UpdateRoomStatusResponse response)
         {
+            if (response.room == null)
+            {
+                return;
+            }
+
             room = MapperConfig.mapper.Map<Room>(response.room);
         }
 

@@ -13,7 +13,7 @@ namespace LOP
     public class LOPNetworkAuthenticator : NetworkAuthenticator
     {
         [Inject]
-        private IDataContextManager dataManager;
+        private IRoomDataContext roomDataContext;
 
         #region Messages
         public struct AuthRequestMessage : NetworkMessage
@@ -91,7 +91,7 @@ namespace LOP
         {
             bool authenticated = true;
 
-            if (dataManager.Get<RoomDataContext>().match.playerList.Contains(msg.customProperties.userId) == false)
+            if (roomDataContext.match.playerList.Contains(msg.customProperties.userId) == false)
             {
                 authenticated = false;
             }

@@ -11,7 +11,7 @@ namespace LOP
     public class ConfigureRoomComponent : IEntranceComponent
     {
         [Inject]
-        private IDataContextManager dataManager;
+        private IRoomDataContext roomDataContext;
 
         public async Task Execute()
         {
@@ -33,7 +33,7 @@ namespace LOP
                     port = port,
                 };
 
-                dataManager.Get<RoomDataContext>().room = room;
+                roomDataContext.room = room;
 
                 Match match = new Match
                 {
@@ -47,7 +47,7 @@ namespace LOP
                         "375f9694a1e5c3af13ff9c75e11e1cb158f65521",
                     }
                 };
-                dataManager.Get<RoomDataContext>().match = match;
+                roomDataContext.match = match;
 #else
                 roomId = Environment.GetEnvironmentVariable("ROOM_ID");
                 port = ushort.Parse(Environment.GetEnvironmentVariable("PORT"));

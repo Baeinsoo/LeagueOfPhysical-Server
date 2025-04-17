@@ -10,7 +10,11 @@ namespace LOP
         {
             builder.Register<IMasterDataManager, LOPMasterDataManager>(Lifetime.Singleton);
             builder.Register<IDataContextManager, LOPDataContextManager>(Lifetime.Singleton);
-            builder.Register<IDataContext, RoomDataContext>(Lifetime.Transient);
+
+            builder.Register<RoomDataContext>(Lifetime.Singleton)
+                .As<IRoomDataContext>()
+                .As<IDataContext>()
+                .AsSelf();
         }
     }
 }

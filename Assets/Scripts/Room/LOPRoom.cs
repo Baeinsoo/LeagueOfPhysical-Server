@@ -19,7 +19,7 @@ namespace LOP
         [Inject] public IGame game { get; private set; }
         [Inject] private RoomNetwork roomNetwork;
         [Inject] private LOPNetworkManager networkManager;
-        [Inject] private IDataContextManager dataManager;
+        [Inject] private IRoomDataContext roomDataContext;
 
         public bool initialized { get; private set; }
 
@@ -37,7 +37,7 @@ namespace LOP
 
                 await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
                 {
-                    roomId = dataManager.Get<RoomDataContext>().room.id,
+                    roomId = roomDataContext.room.id,
                     status = RoomStatus.Error,
                 });
             }
@@ -59,7 +59,7 @@ namespace LOP
 
             await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {
-                roomId = dataManager.Get<RoomDataContext>().room.id,
+                roomId = roomDataContext.room.id,
                 status = RoomStatus.Initializing,
             });
 
@@ -72,7 +72,7 @@ namespace LOP
 
             CancelInvoke("SendHeartbeat");
 
-            dataManager.Get<RoomDataContext>().Clear();
+            roomDataContext.Clear();
 
             game.onGameStateChanged -= OnGameStateChanged;
 
@@ -98,7 +98,7 @@ namespace LOP
         {
             await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {
-                roomId = dataManager.Get<RoomDataContext>().room.id,
+                roomId = roomDataContext.room.id,
                 status = RoomStatus.WaitingForPlayers,
             });
 
@@ -107,17 +107,17 @@ namespace LOP
 
         private void SendHeartbeat()
         {
-            WebAPI.Heartbeat(dataManager.Get<RoomDataContext>().room.id);
+            WebAPI.Heartbeat(roomDataContext.room.id);
         }
 
-        private void OnGameStateChanged(GameState gameState)
+        private void OnGameStateChanged(IGameState gameState)
         {
             switch (gameState)
             {
-                case GameState.GameOver:
+                case GameOver:
                     WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
                     {
-                        roomId = dataManager.Get<RoomDataContext>().room.id,
+                        roomId = roomDataContext.room.id,
                         status = RoomStatus.Closed,
                     });
                     break;

@@ -14,12 +14,13 @@ namespace LOP
     public class LOPRoom : MonoBehaviour, IRoom
     {
         private const int HEARTBEAT_INTERVAL = 2;       //  sec
-        private const double TICK_INTERVAL = 1 / 60f;   //  sec
+        private const double TICK_INTERVAL = 1 / 64f;   //  sec
 
         [Inject] public IGame game { get; private set; }
-        [Inject] private RoomNetwork roomNetwork;
+        [Inject] private IRoomNetwork roomNetwork;
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private IRoomDataContext roomDataContext;
+        [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
 
         public bool initialized { get; private set; }
 
@@ -51,11 +52,16 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
-            await game.InitializeAsync();
+            foreach (var roomMessageHandler in roomMessageHandlers.OrEmpty())
+            {
+                roomMessageHandler.Register();
+            }
+
+            game.onGameStateChanged += OnGameStateChanged;
 
             InvokeRepeating("SendHeartbeat", 0, HEARTBEAT_INTERVAL);
 
-            game.onGameStateChanged += OnGameStateChanged;
+            await game.InitializeAsync();
 
             await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {
@@ -72,9 +78,14 @@ namespace LOP
 
             CancelInvoke("SendHeartbeat");
 
-            roomDataContext.Clear();
-
             game.onGameStateChanged -= OnGameStateChanged;
+
+            foreach (var roomMessageHandler in roomMessageHandlers.OrEmpty())
+            {
+                roomMessageHandler.Unregister();
+            }
+
+            roomDataContext.Clear();
 
             initialized = false;
         }
@@ -115,6 +126,7 @@ namespace LOP
             switch (gameState)
             {
                 case GameOver:
+                    Debug.Log("Game Over");
                     WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
                     {
                         roomId = roomDataContext.room.id,

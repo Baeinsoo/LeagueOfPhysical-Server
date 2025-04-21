@@ -6,19 +6,19 @@ namespace LOP
 {
     public static partial class Extensions
     {
-        public static void RegisterHandler<T>(this IRoomNetwork network, Action<T> handler, IMessageInterceptor interceptor = null) where T : IMessage
+        public static void RegisterHandler<T>(this IRoomNetwork network, Action<int, T> handler, IMessageInterceptorWithId interceptor = null) where T : IMessage
         {
-            network.RegisterHandler<T>(message =>
+            network.RegisterHandler<T>((id, message) =>
             {
                 try
                 {
-                    interceptor?.OnBeforeHandle(message);
-                    handler(message);
-                    interceptor?.OnAfterHandle(message);
+                    interceptor?.OnBeforeHandle(id, message);
+                    handler(id, message);
+                    interceptor?.OnAfterHandle(id, message);
                 }
                 catch (Exception e)
                 {
-                    interceptor?.OnError(message, e.Message);
+                    interceptor?.OnError(id, message, e.Message);
                 }
             });
         }

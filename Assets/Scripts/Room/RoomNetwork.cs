@@ -8,7 +8,7 @@ namespace LOP
 {
     public class RoomNetwork : MonoBehaviour, IRoomNetwork
     {
-        public event Action<IMessage> onMessage;
+        public event Action<int, IMessage> onMessage;
 
         private Dictionary<Type, MessageHandlerBase> handlerMap;
         private INetwork networkImpl;
@@ -38,7 +38,7 @@ namespace LOP
                 handler?.Invoke(connectionId, message);
             };
 
-            onMessage?.Invoke(message);
+            onMessage?.Invoke(connectionId, message);
         }
 
         public void Send(IMessage message, int targetId, bool reliable = true, bool instant = false)

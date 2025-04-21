@@ -10,18 +10,19 @@ namespace LOP
 {
     public class LOPGame : MonoBehaviour, IGame
     {
-        public event Action<GameState> onGameStateChanged;
+        public event Action<IGameState> onGameStateChanged;
 
         [Inject]
-        private RoomNetwork roomNetwork;
+        private IRoomDataContext roomDataContext;
 
         [Inject]
-        private IDataContextManager dataManager;
-
         public IGameEngine gameEngine { get; private set; }
 
-        private GameState _gameState;
-        public GameState gameState
+        [Inject]
+        private IEnumerable<IGameMessageHandler> gameMessageHandlers;
+
+        private IGameState _gameState;
+        public IGameState gameState
         {
             get => _gameState;
             private set
@@ -37,7 +38,7 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
-            gameState = GameState.Initializing;
+            gameState = Initializing.State;
 
             var oldSimulationMode = Physics.simulationMode;
             var oldAutoSyncTransforms = Physics.autoSyncTransforms;
@@ -51,16 +52,28 @@ namespace LOP
             Physics.simulationMode = SimulationMode.Script;
             Physics.autoSyncTransforms = false;
 
+            foreach (var gameMessageHandler in gameMessageHandlers.OrEmpty())
+            {
+                gameMessageHandler.Register();
+            }
+
             //var sceneLoadOperation = SceneManager.LoadSceneAsync(Data.Room.match.mapId, LoadSceneMode.Additive);
 
-            gameEngine = GetComponentInChildren<IGameEngine>();
             await gameEngine.InitializeAsync();
             //await UniTask.WaitUntil(() => sceneLoadOperation.isDone && gameEngine.initialized);
 
-            foreach (var player in dataManager.Get<RoomDataContext>().match.playerList.OrEmpty())
+            foreach (var player in roomDataContext.match.playerList.OrEmpty())
             {
-
+                LOPEntityCreationData data = new LOPEntityCreationData
+                {
+                    entityId = player,
+                    position = Vector3.zero,
+                    rotation = Vector3.zero,
+                    velocity = Vector3.zero,
+                };
             }
+
+            gameState = Initialized.State;
 
             initialized = true;
         }
@@ -69,6 +82,11 @@ namespace LOP
         {
             await gameEngine.DeinitializeAsync();
 
+            foreach (var gameMessageHandler in gameMessageHandlers.OrEmpty())
+            {
+                gameMessageHandler.Unregister();
+            }
+
             restorer.Dispose();
 
             initialized = false;
@@ -76,6 +94,8 @@ namespace LOP
 
         public void Run(long tick, double interval, double elapsedTime)
         {
+            gameState = Playing.State;
+
             gameEngine.Run(tick, interval, elapsedTime);
         }
 
@@ -83,7 +103,7 @@ namespace LOP
         {
             if (gameEngine.tickUpdater.elapsedTime > 60)
             {
-                gameState = GameState.GameOver;
+                gameState = GameOver.State;
             }
         }
     }

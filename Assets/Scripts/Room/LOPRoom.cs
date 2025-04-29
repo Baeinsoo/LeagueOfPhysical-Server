@@ -11,13 +11,12 @@ using VContainer;
 
 namespace LOP
 {
-    public class LOPRoom : MonoBehaviour, IRoom
+    public class LOPRoom : MonoBehaviour, IServerRoom
     {
         private const int HEARTBEAT_INTERVAL = 2;       //  sec
-        private const double TICK_INTERVAL = 1 / 64f;   //  sec
+        private const double TICK_INTERVAL = 1 / 50d;   //  sec
 
         [Inject] public IGame game { get; private set; }
-        [Inject] private IRoomNetwork roomNetwork;
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private IRoomDataContext roomDataContext;
         [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
@@ -92,6 +91,8 @@ namespace LOP
 
         public async Task StartRoomServerAsync()
         {
+            networkManager.onServerConnect += OnPlayerConnect;
+            networkManager.onServerDisconnect += OnPlayerDisconnect;
             networkManager.port = Blackboard.Read<ushort>("port", erase: true);
             networkManager.StartServer();
 
@@ -133,6 +134,22 @@ namespace LOP
                         status = RoomStatus.Closed,
                     });
                     break;
+            }
+        }
+
+        public void OnPlayerConnect(IConnectionData connectionData)
+        {
+            if (connectionData is not LOPConnectionData data)
+            {
+                throw new ArgumentException("Invalid connection data");
+            }
+        }
+
+        public void OnPlayerDisconnect(IConnectionData connectionData)
+        {
+            if (connectionData is not LOPConnectionData data)
+            {
+                throw new ArgumentException("Invalid connection data");
             }
         }
     }

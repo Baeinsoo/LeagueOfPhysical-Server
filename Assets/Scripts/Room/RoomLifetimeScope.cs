@@ -17,7 +17,7 @@ namespace LOP
         {
             base.Configure(builder);
 
-            builder.RegisterComponent(room);
+            builder.RegisterComponent(room).AsImplementedInterfaces();
             builder.RegisterComponent(roomNetwork).As<IRoomNetwork>();
             builder.RegisterComponent(networkManager);
             builder.RegisterComponent(game).As<IGame>();

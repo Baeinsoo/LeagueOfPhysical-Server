@@ -11,6 +11,9 @@ namespace LOP
         public event Action onStartServer;
         public event Action onStopServer;
 
+        public event Action<LOPConnectionData> onServerConnect;
+        public event Action<LOPConnectionData> onServerDisconnect;
+
         private PortTransport _portTransport;
         public PortTransport portTransport
         {
@@ -36,7 +39,10 @@ namespace LOP
         {
             base.OnServerConnect(conn);
 
-            //MessageBroker.Default.Publish(new PlayerEnter(conn));
+            onServerConnect?.Invoke(new LOPConnectionData
+            {
+                networkConnection = conn,
+            });
         }
 
         /// <summary>
@@ -48,7 +54,10 @@ namespace LOP
         {
             base.OnServerDisconnect(conn);
 
-            //MessageBroker.Default.Publish(new PlayerLeave(conn));
+            onServerDisconnect?.Invoke(new LOPConnectionData
+            {
+                networkConnection = conn,
+            });
         }
         #endregion
 

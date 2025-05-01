@@ -1,5 +1,4 @@
 using GameFramework;
-using LOP;
 using UnityEngine;
 using VContainer;
 
@@ -15,17 +14,17 @@ namespace LOP
 
         public void Register()
         {
-            roomNetwork.RegisterHandler<GameInfoRequest>(OnGameInfoRequest, LOPRoomMessageInterceptor.Default);
+            roomNetwork.RegisterHandler<GameInfoToS>(OnGameInfoToS, LOPRoomMessageInterceptor.Default);
         }
 
         public void Unregister()
         {
-            roomNetwork.UnregisterHandler<GameInfoRequest>(OnGameInfoRequest);
+            roomNetwork.UnregisterHandler<GameInfoToS>(OnGameInfoToS);
         }
 
-        private void OnGameInfoRequest(int id, GameInfoRequest request)
+        private void OnGameInfoToS(int id, GameInfoToS gameInfoToS)
         {
-            var gameInfoResponse = new GameInfoResponse
+            var gameInfoToC = new GameInfoToC
             {
                 EntityId = "1",
                 GameInfo = new GameInfo
@@ -36,7 +35,7 @@ namespace LOP
                 },
             };
 
-            roomNetwork.Send(gameInfoResponse, id);
+            roomNetwork.Send(gameInfoToC, id);
         }
     }
 }

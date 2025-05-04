@@ -7,19 +7,19 @@ namespace LOP
     public class GameInputMessageHandler : IGameMessageHandler
     {
         [Inject]
-        private IGame game;
+        private IGameEngine gameEngine;
 
         [Inject]
-        private IRoomNetwork roomNetwork;
+        private IMessageDispatcher messageDispatcher;
 
         public void Register()
         {
-            //RoomNetwork.instance.UnregisterHandler(typeof(InputSequnceToC), OnInputSequnceToC);
+            //messageDispatcher.RegisterHandler<PlayerInputToS>(OnPlayerInputToS, LOPRoomMessageInterceptor.Default);
         }
 
         public void Unregister()
         {
-            //RoomNetwork.instance.UnregisterHandler(typeof(InputSequnceToC), OnInputSequnceToC);
+            //messageDispatcher.UnregisterHandler<PlayerInputToS>(OnPlayerInputToS);
         }
     }
 }

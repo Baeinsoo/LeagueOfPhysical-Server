@@ -7,26 +7,33 @@ namespace LOP
     public class GameMessageHandler : IRoomMessageHandler
     {
         [Inject]
-        private IGame game;
+        private IGameEngine gameEngine;
 
         [Inject]
-        private IRoomNetwork roomNetwork;
+        private IMessageDispatcher messageDispatcher;
+
+        [Inject]
+        private ISessionManager sessionManager;
 
         public void Register()
         {
-            roomNetwork.RegisterHandler<GameInfoToS>(OnGameInfoToS, LOPRoomMessageInterceptor.Default);
+            messageDispatcher.RegisterHandler<GameInfoToS>(OnGameInfoToS, LOPRoomMessageInterceptor.Default);
         }
 
         public void Unregister()
         {
-            roomNetwork.UnregisterHandler<GameInfoToS>(OnGameInfoToS);
+            messageDispatcher.UnregisterHandler<GameInfoToS>(OnGameInfoToS);
         }
 
-        private void OnGameInfoToS(int id, GameInfoToS gameInfoToS)
+        private void OnGameInfoToS(GameInfoToS gameInfoToS)
         {
+            var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
+            var entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(gameInfoToS.UserId);
+
             var gameInfoToC = new GameInfoToC
             {
-                EntityId = "1",
+                EntityId = entity.entityId,
+                SessionId = session.sessionId,
                 GameInfo = new GameInfo
                 {
                     Tick = GameEngine.Time.tick,
@@ -35,7 +42,7 @@ namespace LOP
                 },
             };
 
-            roomNetwork.Send(gameInfoToC, id);
+            session.Send(gameInfoToC);
         }
     }
 }

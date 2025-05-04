@@ -8,19 +8,19 @@ namespace LOP
 {
     public abstract class MessageHandlerBase
     {
-        public abstract void Invoke(int id, IMessage message);
+        public abstract void Invoke(IMessage message);
         public abstract bool IsEmpty { get; }
     }
 
     public class MessageHandler<T> : MessageHandlerBase where T : IMessage
     {
-        private Action<int, T> handlers;
+        private Action<T> handlers;
 
-        public override void Invoke(int id, IMessage message)
+        public override void Invoke(IMessage message)
         {
             if (message is T typedMessage)
             {
-                handlers.Invoke(id, typedMessage);
+                handlers.Invoke(typedMessage);
             }
             else
             {
@@ -28,12 +28,12 @@ namespace LOP
             }
         }
 
-        public void AddHandler(Action<int, T> handler)
+        public void AddHandler(Action<T> handler)
         {
             handlers += handler ?? throw new ArgumentNullException(nameof(handler));
         }
 
-        public void RemoveHandler(Action<int, T> handler)
+        public void RemoveHandler(Action<T> handler)
         {
             handlers -= handler ?? throw new ArgumentNullException(nameof(handler));
         }

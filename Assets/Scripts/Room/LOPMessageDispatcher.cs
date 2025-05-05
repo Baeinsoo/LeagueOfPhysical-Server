@@ -64,8 +64,13 @@ namespace LOP
             if (handlerMap.TryGetValue(message.GetType(), out var handler))
             {
                 handler?.Invoke(message);
-            }
-            ;
+            };
+        }
+
+        public void Dispose()
+        {
+            handlerMap.Clear();
+            NetworkServer.UnregisterHandler<CustomMirrorMessage>();
         }
     }
 }

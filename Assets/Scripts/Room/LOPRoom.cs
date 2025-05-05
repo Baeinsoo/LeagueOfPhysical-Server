@@ -19,6 +19,7 @@ namespace LOP
         [Inject] public IGame game { get; private set; }
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private IRoomDataContext roomDataContext;
+        [Inject] private IMessageDispatcher messageDispatcher;
         [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
 
         public bool initialized { get; private set; }
@@ -85,6 +86,8 @@ namespace LOP
             }
 
             roomDataContext.Clear();
+
+            messageDispatcher.Dispose();
 
             initialized = false;
         }

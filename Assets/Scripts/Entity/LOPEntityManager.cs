@@ -12,6 +12,8 @@ namespace LOP
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
         private Dictionary<string, string> entityUserMap = new Dictionary<string, string>();
 
+        private int entityIdCounter = 1;
+
         public IEntity GetEntity(string entityId)
         {
             return entityMap[entityId];
@@ -105,6 +107,11 @@ namespace LOP
             string entityId = userEntityMap[userId];
 
             return GetEntity<TEntity>(entityId);
+        }
+
+        public string GenerateEntityId()
+        {
+            return entityIdCounter++.ToString();
         }
     }
 }

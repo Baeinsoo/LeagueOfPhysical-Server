@@ -14,12 +14,28 @@ namespace LOP
 
         public void Register()
         {
-            //messageDispatcher.RegisterHandler<PlayerInputToS>(OnPlayerInputToS, LOPRoomMessageInterceptor.Default);
+            messageDispatcher.RegisterHandler<PlayerInputToS>(OnPlayerInputToS, LOPRoomMessageInterceptor.Default);
         }
 
         public void Unregister()
         {
-            //messageDispatcher.UnregisterHandler<PlayerInputToS>(OnPlayerInputToS);
+            messageDispatcher.UnregisterHandler<PlayerInputToS>(OnPlayerInputToS);
+        }
+
+        private void OnPlayerInputToS(PlayerInputToS playerInputToS)
+        {
+            LOPEntity entity = gameEngine.entityManager.GetEntity<LOPEntity>(playerInputToS.EntityId);
+
+            PlayerInput playerInput = new PlayerInput
+            {
+                tick = playerInputToS.Tick,
+                horizontal = playerInputToS.PlayerInput.Horizontal,
+                vertical = playerInputToS.PlayerInput.Vertical,
+                jump = playerInputToS.PlayerInput.Jump,
+                sequenceNumber = playerInputToS.PlayerInput.SequenceNumber,
+            };
+
+            entity.GetComponent<EntityInputComponent>().AddInput(playerInput);
         }
     }
 }

@@ -22,6 +22,8 @@ namespace LOP
             view.SetEntity(entity);
             view.SetEntityController(controller);
 
+            EntityInputComponent entityInputComponent = entity.gameObject.AddComponent<EntityInputComponent>();
+
             return entity;
         }
     }

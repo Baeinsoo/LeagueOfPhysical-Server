@@ -44,7 +44,8 @@ namespace LOP
                     targetRating = 1500,
                     playerList = new string[]
                     {
-                        "375f9694a1e5c3af13ff9c75e11e1cb158f65521",
+                        "c391ab13-d4ef-407e-be8a-0ff5aa53bec0",
+                        "ae6764c1-4469-442d-a89c-709badeb997b",
                     }
                 };
                 roomDataContext.match = match;

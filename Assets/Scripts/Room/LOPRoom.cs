@@ -18,6 +18,7 @@ namespace LOP
 
         [Inject] public IGame game { get; private set; }
         [Inject] private LOPNetworkManager networkManager;
+        [Inject] private ISessionManager sessionManager;
         [Inject] private IRoomDataContext roomDataContext;
         [Inject] private IMessageDispatcher messageDispatcher;
         [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
@@ -146,6 +147,20 @@ namespace LOP
             {
                 throw new ArgumentException("Invalid connection data");
             }
+
+            var conn = data.networkConnection;
+            var customProperties = conn.authenticationData as CustomProperties;
+
+            Debug.Log($"[OnPlayerEnter] userId: {customProperties.userId}, connectionId: {conn.connectionId}");
+
+            if (sessionManager.TryGetSessionByUserId<LOPSession>(customProperties.userId, out var session))
+            {
+                session.networkConnection = conn;
+            }
+            else
+            {
+                sessionManager.AddSession(new LOPSession(customProperties.userId, conn));
+            }
         }
 
         public void OnPlayerDisconnect(IConnectionData connectionData)
@@ -154,6 +169,14 @@ namespace LOP
             {
                 throw new ArgumentException("Invalid connection data");
             }
+
+            var conn = data.networkConnection;
+            var customProperties = conn.authenticationData as CustomProperties;
+
+            Debug.Log($"[OnPlayerLeave] userId: {customProperties.userId}, connectionId: {conn.connectionId}");
+
+            var session = sessionManager.GetSessionByUserId<LOPSession>(customProperties.userId);
+            session.networkConnection = null;
         }
     }
 }

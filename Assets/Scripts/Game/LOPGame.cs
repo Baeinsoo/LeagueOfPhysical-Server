@@ -5,6 +5,8 @@ using UnityEngine;
 using VContainer;
 using System.Threading.Tasks;
 using System;
+using UnityEngine.SceneManagement;
+using Cysharp.Threading.Tasks;
 
 namespace LOP
 {
@@ -57,20 +59,25 @@ namespace LOP
                 gameMessageHandler.Register();
             }
 
-            //var sceneLoadOperation = SceneManager.LoadSceneAsync(Data.Room.match.mapId, LoadSceneMode.Additive);
+            var sceneLoadOperation = SceneManager.LoadSceneAsync(roomDataContext.match.mapId, LoadSceneMode.Additive);  //  gamedata? addressable?
 
             await gameEngine.InitializeAsync();
-            //await UniTask.WaitUntil(() => sceneLoadOperation.isDone && gameEngine.initialized);
+
+            await UniTask.WaitUntil(() => sceneLoadOperation.isDone);
 
             foreach (var player in roomDataContext.match.playerList.OrEmpty())
             {
                 LOPEntityCreationData data = new LOPEntityCreationData
                 {
-                    entityId = player,
+                    userId = player,
+                    entityId = gameEngine.entityManager.GenerateEntityId(),
+                    visualId = "Assets/Art/Characters/Knight/Knight.prefab",
                     position = Vector3.zero,
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 };
+
+                LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, LOPEntityCreationData>(data);
             }
 
             gameState = Initialized.State;
@@ -101,7 +108,7 @@ namespace LOP
 
         private void LateUpdate()
         {
-            if (gameEngine.tickUpdater.elapsedTime > 60)
+            if (gameEngine.tickUpdater.elapsedTime > 60 * 5)
             {
                 gameState = GameOver.State;
             }

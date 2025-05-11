@@ -113,5 +113,23 @@ namespace LOP
         {
             return entityIdCounter++.ToString();
         }
+
+        public EntitySnap[] GetAllEntitySnaps()
+        {
+            var entityStateList = new List<EntitySnap>();
+
+            foreach (var entity in GetEntities().OrEmpty())
+            {
+                entityStateList.Add(new EntitySnap
+                {
+                    EntityId = entity.entityId,
+                    Position = MapperConfig.mapper.Map<ProtoVector3>(entity.position),
+                    Rotation = MapperConfig.mapper.Map<ProtoVector3>(entity.rotation),
+                    Velocity = MapperConfig.mapper.Map<ProtoVector3>(entity.velocity),
+                });
+            }
+
+            return entityStateList.ToArray();
+        }
     }
 }

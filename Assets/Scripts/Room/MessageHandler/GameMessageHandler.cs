@@ -1,4 +1,6 @@
 using GameFramework;
+using LOP.Event.LOPGameEngine.Update;
+using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
 
@@ -15,34 +17,55 @@ namespace LOP
         [Inject]
         private ISessionManager sessionManager;
 
+        private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
+
         public void Register()
         {
             messageDispatcher.RegisterHandler<GameInfoToS>(OnGameInfoToS, LOPRoomMessageInterceptor.Default);
+
+            gameEngine.AddListener(this);
         }
 
         public void Unregister()
         {
             messageDispatcher.UnregisterHandler<GameInfoToS>(OnGameInfoToS);
+
+            gameEngine.RemoveListener(this);
         }
 
         private void OnGameInfoToS(GameInfoToS gameInfoToS)
         {
-            var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
-            var entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(gameInfoToS.UserId);
+            gameInfoToSList.Add(gameInfoToS);
+        }
 
-            var gameInfoToC = new GameInfoToC
+        [GameEngineListen(typeof(End))]
+        private void OnEnd()
+        {
+            EntitySnap[] allEntitySnaps = (gameEngine as LOPGameEngine).entityManager.GetAllEntitySnaps();
+
+            foreach (var gameInfoToS in gameInfoToSList)
             {
-                EntityId = entity.entityId,
-                SessionId = session.sessionId,
-                GameInfo = new GameInfo
-                {
-                    Tick = GameEngine.Time.tick,
-                    Interval = GameEngine.Time.tickInterval,
-                    ElapsedTime = GameEngine.Time.elapsedTime,
-                },
-            };
+                var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
+                var entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(gameInfoToS.UserId);
 
-            session.Send(gameInfoToC);
+                var gameInfoToC = new GameInfoToC
+                {
+                    EntityId = entity.entityId,
+                    SessionId = session.sessionId,
+                    GameInfo = new GameInfo
+                    {
+                        Tick = GameEngine.Time.tick,
+                        Interval = GameEngine.Time.tickInterval,
+                        ElapsedTime = GameEngine.Time.elapsedTime,
+                    },
+                };
+
+                gameInfoToC.GameInfo.EntitySnaps.AddRange(allEntitySnaps);
+
+                session.Send(gameInfoToC);
+            }
+
+            gameInfoToSList.Clear();
         }
     }
 }

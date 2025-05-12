@@ -120,7 +120,7 @@ MonoBehaviour:
       - m_Id: 6b7b5c5f3b2dfc24486fad968becfad9
         m_Value: '[UnityEngine.AddressableAssets.Addressables.BuildPath]/[BuildTarget]'
       - m_Id: cc7bee0b199131a4784dfd1d7811c9a9
-        m_Value: 'https://lop-dev-assets.s3.ap-northeast-2.amazonaws.com/[BuildTarget]'
+        m_Value: 'https://lop-assets.s3.ap-northeast-2.amazonaws.com/dev/[BuildTarget]'
     m_ProfileEntryNames:
     - m_Id: 08f24799348a80b4d83ab62b1a2e8c1e
       m_Name: Local.LoadPath

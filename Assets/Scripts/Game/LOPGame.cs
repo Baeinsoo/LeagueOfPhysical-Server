@@ -7,6 +7,9 @@ using System.Threading.Tasks;
 using System;
 using UnityEngine.SceneManagement;
 using Cysharp.Threading.Tasks;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.ResourceManagement.ResourceProviders;
 
 namespace LOP
 {
@@ -37,6 +40,7 @@ namespace LOP
         public bool initialized { get; private set; }
 
         private Restorer restorer = new Restorer();
+        private AsyncOperationHandle<SceneInstance> handle;
 
         public async Task InitializeAsync()
         {
@@ -59,11 +63,11 @@ namespace LOP
                 gameMessageHandler.Register();
             }
 
-            var sceneLoadOperation = SceneManager.LoadSceneAsync(roomDataContext.match.mapId, LoadSceneMode.Additive);  //  gamedata? addressable?
+            handle = Addressables.LoadSceneAsync(/*roomDataContext.match.mapId*/"Assets/Art/Scenes/FlapWangMap.unity", LoadSceneMode.Additive);
 
             await gameEngine.InitializeAsync();
 
-            await UniTask.WaitUntil(() => sceneLoadOperation.isDone);
+            await UniTask.WaitUntil(() => handle.IsDone);
 
             foreach (var player in roomDataContext.match.playerList.OrEmpty())
             {
@@ -95,6 +99,8 @@ namespace LOP
             }
 
             restorer.Dispose();
+
+            await Addressables.UnloadSceneAsync(handle);
 
             initialized = false;
         }

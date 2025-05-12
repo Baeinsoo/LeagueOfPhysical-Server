@@ -1,5 +1,6 @@
 using GameFramework;
 using LOP.Event.LOPGameEngine.Update;
+using Mirror.Examples.BilliardsPredicted;
 using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
@@ -52,6 +53,7 @@ namespace LOP
                 {
                     EntityId = entity.entityId,
                     SessionId = session.sessionId,
+                    ExpectedNextSequence = entity.GetComponent<EntityInputComponent>().expectedNextSequence,
                     GameInfo = new GameInfo
                     {
                         Tick = GameEngine.Time.tick,

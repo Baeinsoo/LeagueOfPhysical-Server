@@ -12,7 +12,7 @@ namespace LOP
 
         private long inputDelayTicks = 5;
         private long lastProcessedSequence = -1;
-        private long expectedNextSequence = 0;
+        public long expectedNextSequence { get; private set; }
 
         private async void Awake()
         {

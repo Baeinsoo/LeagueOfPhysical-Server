@@ -75,7 +75,7 @@ namespace LOP
                     var dir = Vector3.up;
                     var JumpPowerFactor = 10;
 
-                    entity.visualRigidbody.AddForce(normalizedPower * dir.normalized * JumpPowerFactor, ForceMode.Impulse);
+                    entity.entityRigidbody.AddForce(normalizedPower * dir.normalized * JumpPowerFactor, ForceMode.Impulse);
                 }
 
                 var inputSequnceToC = new InputSequnceToC();

@@ -78,11 +78,11 @@ namespace LOP
                     entity.entityRigidbody.AddForce(normalizedPower * dir.normalized * JumpPowerFactor, ForceMode.Impulse);
                 }
 
-                var inputSequnceToC = new InputSequnceToC();
-                inputSequnceToC.InputSequnce = new InputSequnce();
+                var inputSequnceToC = new InputSequenceToC();
+                inputSequnceToC.InputSequence = new InputSequence();
                 inputSequnceToC.EntityId = entity.entityId;
-                inputSequnceToC.InputSequnce.Tick = GameEngine.Time.tick;
-                inputSequnceToC.InputSequnce.Sequence = input.sequenceNumber;
+                inputSequnceToC.InputSequence.Tick = GameEngine.Time.tick;
+                inputSequnceToC.InputSequence.Sequence = input.sequenceNumber;
 
                 string userId = entityManager.GetUserIdByEntityId(entity.entityId);
                 ISession session = sessionManager.GetSessionByUserId(userId);

@@ -243,7 +243,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 61e9f36d42b83474381a1661ace4b970, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dontDestroyOnLoad: 1
+  dontDestroyOnLoad: 0
   runInBackground: 1
   headlessStartMode: 0
   editorAutoStart: 0
@@ -262,7 +262,7 @@ MonoBehaviour:
   autoCreatePlayer: 0
   playerSpawnMethod: 0
   spawnPrefabs: []
-  exceptionsDisconnect: 0
+  exceptionsDisconnect: 1
   snapshotSettings:
     bufferTimeMultiplier: 2
     bufferLimit: 32

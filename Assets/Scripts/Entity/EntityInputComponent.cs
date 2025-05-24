@@ -1,8 +1,6 @@
-using GameFramework;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using Cysharp.Threading.Tasks;
 
 namespace LOP
 {
@@ -10,37 +8,22 @@ namespace LOP
     {
         private SortedDictionary<long, PlayerInput> inputBuffer = new SortedDictionary<long, PlayerInput>();
 
-        private long inputDelayTicks = 5;
         private long lastProcessedSequence = -1;
         public long expectedNextSequence { get; private set; }
 
-        private async void Awake()
-        {
-            await UniTask.WaitUntil(() => GameEngine.current != null);
-
-            inputDelayTicks = (long)(0.1 / GameEngine.Time.tickInterval);
-        }
-
         public PlayerInput GetNextInput(long tick)
         {
-            long targetTick = tick - inputDelayTicks;
-
-            foreach (var key in inputBuffer.Keys.Where(k => k < targetTick).ToList())
+            if (inputBuffer.Count == 0)
             {
-                Debug.Log($"늦게 도착한 입력 스킵 됨: 틱 {key}, 시퀀스 {inputBuffer[key].sequenceNumber}");
-                inputBuffer.Remove(key);
+                return null;
             }
 
-            if (inputBuffer.TryGetValue(targetTick, out PlayerInput input))
-            {
-                inputBuffer.Remove(targetTick);
+            PlayerInput input = inputBuffer.First().Value;
+            inputBuffer.Remove(input.tick);
 
-                lastProcessedSequence = input.sequenceNumber;
+            lastProcessedSequence = input.sequenceNumber;
 
-                return input;
-            }
-
-            return null;
+            return input;
         }
 
         public void AddInput(PlayerInput input)

@@ -78,6 +78,17 @@ namespace LOP
                     entity.entityRigidbody.AddForce(normalizedPower * dir.normalized * JumpPowerFactor, ForceMode.Impulse);
                 }
 
+                //  Dash (Temporary Skill Example)
+                if (input.skillId == 1)
+                {
+                    Quaternion rotation = Quaternion.Euler(entity.rotation);
+                    Vector3 forward = rotation * Vector3.forward;
+
+                    entity.entityRigidbody.AddForce(forward * 20, ForceMode.Impulse);
+
+                    //// Handle skill logic here, e.g., playerContext.entity.UseSkill(playerInput.skillId);
+                }
+
                 var inputSequnceToC = new InputSequenceToC();
                 inputSequnceToC.InputSequence = new InputSequence();
                 inputSequnceToC.EntityId = entity.entityId;

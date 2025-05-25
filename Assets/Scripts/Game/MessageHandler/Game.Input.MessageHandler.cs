@@ -32,6 +32,7 @@ namespace LOP
                 horizontal = playerInputToS.PlayerInput.Horizontal,
                 vertical = playerInputToS.PlayerInput.Vertical,
                 jump = playerInputToS.PlayerInput.Jump,
+                skillId = playerInputToS.PlayerInput.SkillId,
                 sequenceNumber = playerInputToS.PlayerInput.SequenceNumber,
             };
 

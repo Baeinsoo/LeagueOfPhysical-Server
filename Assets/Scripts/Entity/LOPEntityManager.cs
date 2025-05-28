@@ -116,11 +116,11 @@ namespace LOP
 
         public EntitySnap[] GetAllEntitySnaps()
         {
-            var entityStateList = new List<EntitySnap>();
+            var entitySnapList = new List<EntitySnap>();
 
             foreach (var entity in GetEntities().OrEmpty())
             {
-                entityStateList.Add(new EntitySnap
+                entitySnapList.Add(new EntitySnap
                 {
                     EntityId = entity.entityId,
                     Position = MapperConfig.mapper.Map<ProtoVector3>(entity.position),
@@ -129,7 +129,21 @@ namespace LOP
                 });
             }
 
-            return entityStateList.ToArray();
+            return entitySnapList.ToArray();
+        }
+
+        public EntityCreationData[] GetAllEntityCreationDatas()
+        {
+            var entityCreationDataList = new List<EntityCreationData>();
+
+            foreach (var entity in GetEntities().OrEmpty())
+            {
+                EntityCreationData entityCreationData = EntityCreationDataFactory.Create(entity);
+
+                entityCreationDataList.Add(entityCreationData);
+            }
+
+            return entityCreationDataList.ToArray();
         }
     }
 }

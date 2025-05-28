@@ -1,6 +1,5 @@
 using GameFramework;
 using LOP.Event.LOPGameEngine.Update;
-using Mirror.Examples.BilliardsPredicted;
 using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
@@ -42,7 +41,12 @@ namespace LOP
         [GameEngineListen(typeof(End))]
         private void OnEnd()
         {
-            EntitySnap[] allEntitySnaps = (gameEngine as LOPGameEngine).entityManager.GetAllEntitySnaps();
+            if (gameInfoToSList.Count == 0)
+            {
+                return;
+            }
+
+            EntityCreationData[] allEntityCreationDatas = (gameEngine as LOPGameEngine).entityManager.GetAllEntityCreationDatas();
 
             foreach (var gameInfoToS in gameInfoToSList)
             {
@@ -62,7 +66,7 @@ namespace LOP
                     },
                 };
 
-                gameInfoToC.GameInfo.EntitySnaps.AddRange(allEntitySnaps);
+                gameInfoToC.GameInfo.EntityCreationDatas.AddRange(allEntityCreationDatas);
 
                 session.Send(gameInfoToC);
             }

@@ -44,7 +44,9 @@ namespace LOP
 
         private void ProcessInput()
         {
-            foreach (var entity in entityManager.GetEntities<LOPEntity>())
+            IEnumerable<LOPEntity> LOPEntities = new List<LOPEntity>(entityManager.GetEntities<LOPEntity>());
+
+            foreach (var entity in LOPEntities)
             {
                 var input = entity.GetComponent<EntityInputComponent>().GetNextInput(GameEngine.Time.tick);
                 if (input == null)
@@ -90,6 +92,12 @@ namespace LOP
                     //// Handle skill logic here, e.g., playerContext.entity.UseSkill(playerInput.skillId);
                 }
 
+                //  Spawn (Temporary Skill Example)
+                if (input.skillId == 2)
+                {
+                    SpawnEntity(entity);
+                }
+
                 var inputSequnceToC = new InputSequenceToC();
                 inputSequnceToC.InputSequence = new InputSequence();
                 inputSequnceToC.EntityId = entity.entityId;
@@ -100,6 +108,46 @@ namespace LOP
                 ISession session = sessionManager.GetSessionByUserId(userId);
                 session.Send(inputSequnceToC);
             }
+        }
+
+        private void SpawnEntity(LOPEntity owner)
+        {
+            Vector3 offset = new Vector3(Random.Range(1, 5), Random.Range(1, 3), Random.Range(1, 5));
+            Vector3 position = owner.position + offset;
+
+            LOPEntityCreationData data = new LOPEntityCreationData
+            {
+                userId = "",
+                entityId = entityManager.GenerateEntityId(),
+                visualId = "Cube",
+                position = position,
+                rotation = Vector3.zero,
+                velocity = Vector3.zero,
+            };
+
+            LOPEntity entity = entityManager.CreateEntity<LOPEntity, LOPEntityCreationData>(data);
+
+            EntitySpawnToC entitySpawnToC = new EntitySpawnToC
+            {
+                EntityCreationData = new EntityCreationData
+                {
+                    LopEntityCreationData = new global::LOPEntityCreationData
+                    {
+                        BaseEntityCreationData = new BaseEntityCreationData
+                        {
+                            EntityId = entity.entityId,
+                            Position = MapperConfig.mapper.Map<ProtoVector3>(entity.position),
+                            Rotation = MapperConfig.mapper.Map<ProtoVector3>(entity.rotation),
+                            Velocity = MapperConfig.mapper.Map<ProtoVector3>(entity.velocity),
+                        },
+                        VisualId = entity.visualId,
+                    }
+                },
+            };
+
+            string userId = entityManager.GetUserIdByEntityId(owner.entityId);
+            ISession session = sessionManager.GetSessionByUserId(userId);
+            session.Send(entitySpawnToC);
         }
 
         private void UpdateEntity()

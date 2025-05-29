@@ -70,14 +70,16 @@ namespace LOP
 
             await UniTask.WaitUntil(() => handle.IsDone);
 
-            foreach (var player in roomDataContext.match.playerList.OrEmpty())
+            for (int i = 0; i < roomDataContext.match.playerList.Length; i++)
             {
+                string playerId = roomDataContext.match.playerList[i];
+
                 LOPEntityCreationData data = new LOPEntityCreationData
                 {
-                    userId = player,
+                    userId = playerId,
                     entityId = gameEngine.entityManager.GenerateEntityId(),
                     visualId = "Assets/Art/Characters/Knight/Knight.prefab",
-                    position = Vector3.zero,
+                    position = Vector3.right * i * 5,
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 };

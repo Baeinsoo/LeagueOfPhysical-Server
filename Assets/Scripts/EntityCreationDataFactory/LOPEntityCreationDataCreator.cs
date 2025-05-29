@@ -19,7 +19,7 @@ namespace LOP
             var lopEntityCreationData = new global::LOPEntityCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
-                //VisualId = lopEntity.visualId ?? string.Empty,
+                VisualId = lopEntity.visualId,
             };
 
             return new EntityCreationData

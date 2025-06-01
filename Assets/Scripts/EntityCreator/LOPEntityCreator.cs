@@ -11,6 +11,8 @@ namespace LOP
         public LOPEntity Create(LOPEntityCreationData lopEntityCreationData)
         {
             GameObject root = new GameObject($"{nameof(LOPEntity)}_{lopEntityCreationData.entityId}");
+            GameObject visual = root.CreateChild("Visual");
+            GameObject physics = root.CreateChild("Physics");
 
             LOPEntity entity = root.CreateChildWithComponent<LOPEntity>();
             entity.Initialize(lopEntityCreationData);

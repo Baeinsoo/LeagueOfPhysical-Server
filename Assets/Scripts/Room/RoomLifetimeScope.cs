@@ -29,6 +29,9 @@ namespace LOP
             builder.Register<ISessionManager, SessionManager>(Lifetime.Singleton);
 
             builder.Register<IMessageDispatcher, LOPMessageDispatcher>(Lifetime.Singleton);
+
+            builder.Register<IActionManager, LOPActionManager>(Lifetime.Singleton);
+            builder.Register<IMovementManager, LOPMovementManager>(Lifetime.Singleton);
         }
     }
 }

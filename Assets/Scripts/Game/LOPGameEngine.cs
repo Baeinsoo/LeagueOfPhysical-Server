@@ -12,6 +12,12 @@ namespace LOP
         [Inject]
         private ISessionManager sessionManager;
 
+        [Inject]
+        private IActionManager actionManager;
+
+        [Inject]
+        private IMovementManager movementManager;
+
         public new LOPEntityManager entityManager => base.entityManager as LOPEntityManager;
 
         public override void UpdateEngine()
@@ -54,48 +60,11 @@ namespace LOP
                     continue;
                 }
 
-                Vector3 direction = new Vector3(input.horizontal, 0, input.vertical).normalized;
+                movementManager.ProcessInput(entity, input.horizontal, input.vertical, input.jump);
 
-                //  Move & Rotate
-                if (direction.normalized.sqrMagnitude > 0)
+                if (input.skillId > 0)
                 {
-                    var velocity = direction.normalized * 5;
-
-                    entity.velocity = new Vector3(velocity.x, entity.velocity.y, velocity.z);
-
-                    float myFloat = 0;
-                    var angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-                    var smooth = Mathf.SmoothDampAngle(entity.rotation.y, angle, ref myFloat, 0.01f);
-
-                    entity.rotation = new Vector3(0, smooth, 0);
-                }
-
-                //  Jump
-                if (input.jump)
-                {
-                    var normalizedPower = 1;
-                    var dir = Vector3.up;
-                    var JumpPowerFactor = 10;
-
-                    entity.entityRigidbody.linearVelocity -= new Vector3(0, entity.entityRigidbody.linearVelocity.y, 0);
-                    entity.entityRigidbody.AddForce(normalizedPower * dir.normalized * JumpPowerFactor, ForceMode.Impulse);
-                }
-
-                //  Dash (Temporary Skill Example)
-                if (input.skillId == 1)
-                {
-                    Quaternion rotation = Quaternion.Euler(entity.rotation);
-                    Vector3 forward = rotation * Vector3.forward;
-
-                    entity.entityRigidbody.AddForce(forward * 7, ForceMode.Impulse);
-
-                    //// Handle skill logic here, e.g., playerContext.entity.UseSkill(playerInput.skillId);
-                }
-
-                //  Spawn (Temporary Skill Example)
-                if (input.skillId == 2)
-                {
-                    SpawnEntity(entity);
+                    actionManager.TryExecuteAction(entity, input.skillId);
                 }
 
                 var inputSequnceToC = new InputSequenceToC();

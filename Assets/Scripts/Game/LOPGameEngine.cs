@@ -62,9 +62,9 @@ namespace LOP
 
                 movementManager.ProcessInput(entity, input.horizontal, input.vertical, input.jump);
 
-                if (input.skillId > 0)
+                if (input.actionId > 0)
                 {
-                    actionManager.TryExecuteAction(entity, input.skillId);
+                    actionManager.TryExecuteAction(entity, input.actionId);
                 }
 
                 var inputSequnceToC = new InputSequenceToC();

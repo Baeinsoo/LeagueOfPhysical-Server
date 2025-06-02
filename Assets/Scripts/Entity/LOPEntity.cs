@@ -14,7 +14,7 @@ namespace LOP
         public readonly IMessageBrokerExtended eventBus = new MessageBrokerExtended();
 
         public Status[] statuses => components.OfType<Status>()?.ToArray();
-        public Ability[] abilities => components.OfType<Ability>()?.ToArray();
+        public Action[] actions => components.OfType<Action>()?.ToArray();
 
         private Vector3 _position;
         public override Vector3 position
@@ -148,7 +148,7 @@ namespace LOP
         {
             UpdateStatuses();
 
-            UpdateAbilities();
+            UpdateActions();
         }
 
         [GameEngineListen(typeof(End))]
@@ -172,11 +172,11 @@ namespace LOP
             }
         }
 
-        private void UpdateAbilities()
+        private void UpdateActions()
         {
-            foreach (var ability in abilities.OrEmpty())
+            foreach (var action in actions.OrEmpty())
             {
-                ability.UpdateAbility();
+                action.UpdateAction();
             }
         }
 

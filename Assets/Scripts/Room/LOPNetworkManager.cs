@@ -8,8 +8,8 @@ namespace LOP
 {
     public class LOPNetworkManager : NetworkManager
     {
-        public event Action onStartServer;
-        public event Action onStopServer;
+        public event System.Action onStartServer;
+        public event System.Action onStopServer;
 
         public event Action<LOPConnectionData> onServerConnect;
         public event Action<LOPConnectionData> onServerDisconnect;

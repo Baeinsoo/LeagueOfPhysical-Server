@@ -62,11 +62,11 @@ namespace LOP
 
                 movementManager.ProcessInput(entity, input.horizontal, input.vertical, input.jump);
 
-                if (input.actionId > 0)
+                if (string.IsNullOrEmpty(input.actionCode) == false)
                 {
-                    actionManager.TryExecuteAction(entity, input.actionId);
+                    actionManager.TryExecuteAction(entity, input.actionCode);
                 }
-
+                
                 var inputSequnceToC = new InputSequenceToC();
                 inputSequnceToC.InputSequence = new InputSequence();
                 inputSequnceToC.EntityId = entity.entityId;

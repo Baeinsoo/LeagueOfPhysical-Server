@@ -79,6 +79,7 @@ namespace LOP
                     userId = playerId,
                     entityId = gameEngine.entityManager.GenerateEntityId(),
                     visualId = "Assets/Art/Characters/Knight/Knight.prefab",
+                    characterCode = "character_001",
                     position = Vector3.right * i * 5,
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,

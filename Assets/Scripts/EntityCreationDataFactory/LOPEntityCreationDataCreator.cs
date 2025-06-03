@@ -19,6 +19,7 @@ namespace LOP
             var lopEntityCreationData = new global::LOPEntityCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
+                CharacterCode = lopEntity.characterCode,
                 VisualId = lopEntity.visualId,
             };
 

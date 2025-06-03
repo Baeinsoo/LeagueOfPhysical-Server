@@ -4,7 +4,6 @@ using UnityEngine;
 using System;
 using System.Linq;
 using System.Threading.Tasks;
-using System.IO;
 
 namespace LOP
 {
@@ -15,10 +14,13 @@ namespace LOP
         public async Task LoadMasterData()
         {
             var characterCollection = await MasterDataLoader.LoadFromCSV<MasterData.Character>("MasterData/Character.csv");
-            RegisterMasterData(characterCollection); 
+            RegisterMasterData(characterCollection);
 
             var resourceCollection = await MasterDataLoader.LoadFromCSV<MasterData.Resource>("MasterData/Resource.csv");
             RegisterMasterData(resourceCollection);
+            
+            var actionCollection = await MasterDataLoader.LoadFromCSV<MasterData.Action>("MasterData/Action.csv");
+            RegisterMasterData(actionCollection);
         }
 
         public void RegisterMasterData<T>(IEnumerable<T> collection) where T : IMasterData

@@ -112,9 +112,9 @@ namespace LOP
 
             if (creationData is LOPEntityCreationData lopEntityCreationData)
             {
-                visualId = lopEntityCreationData.visualId;
                 characterCode = lopEntityCreationData.characterCode;
                 masterData = SceneLifetimeScope.Resolve<IMasterDataManager>().GetMasterData<Character>(lopEntityCreationData.characterCode);
+                visualId = lopEntityCreationData.visualId;
 
                 if (physicsGameObject != null)
                 {

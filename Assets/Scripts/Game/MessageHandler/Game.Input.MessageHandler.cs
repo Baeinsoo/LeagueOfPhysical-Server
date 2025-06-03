@@ -32,7 +32,7 @@ namespace LOP
                 horizontal = playerInputToS.PlayerInput.Horizontal,
                 vertical = playerInputToS.PlayerInput.Vertical,
                 jump = playerInputToS.PlayerInput.Jump,
-                actionId = playerInputToS.PlayerInput.ActionId,
+                actionCode = playerInputToS.PlayerInput.ActionCode,
                 sequenceNumber = playerInputToS.PlayerInput.SequenceNumber,
             };
 

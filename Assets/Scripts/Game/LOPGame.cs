@@ -18,7 +18,7 @@ namespace LOP
         public event Action<IGameState> onGameStateChanged;
 
         [Inject]
-        private IRoomDataContext roomDataContext;
+        private IRoomDataStore roomDataStore;
 
         [Inject]
         public IGameEngine gameEngine { get; private set; }
@@ -64,15 +64,15 @@ namespace LOP
                 gameMessageHandler.Register();
             }
 
-            handle = Addressables.LoadSceneAsync(/*roomDataContext.match.mapId*/"Assets/Art/Scenes/FlapWangMap.unity", LoadSceneMode.Additive);
+            handle = Addressables.LoadSceneAsync(/*roomDataStore.match.mapId*/"Assets/Art/Scenes/FlapWangMap.unity", LoadSceneMode.Additive);
 
             await gameEngine.InitializeAsync();
 
             await UniTask.WaitUntil(() => handle.IsDone);
 
-            for (int i = 0; i < roomDataContext.match.playerList.Length; i++)
+            for (int i = 0; i < roomDataStore.match.playerList.Length; i++)
             {
-                string playerId = roomDataContext.match.playerList[i];
+                string playerId = roomDataStore.match.playerList[i];
 
                 LOPEntityCreationData data = new LOPEntityCreationData
                 {

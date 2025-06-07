@@ -5,7 +5,7 @@ using System;
 
 namespace LOP
 {
-    public class RoomDataContext : IRoomDataContext
+    public class RoomDataStore : IRoomDataStore
     {
         public Type[] subscribedTypes => new Type[]
         {
@@ -19,7 +19,7 @@ namespace LOP
         public Room room { get; set; }
         public Match match { get; set; }
 
-        public RoomDataContext()
+        public RoomDataStore()
         {
             updateHandlers = new Dictionary<Type, Action<object>>
             {

@@ -4,6 +4,7 @@ using Mirror;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using UniRx;
 using UnityEngine;
@@ -19,7 +20,7 @@ namespace LOP
         [Inject] public IGame game { get; private set; }
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private ISessionManager sessionManager;
-        [Inject] private IRoomDataContext roomDataContext;
+        [Inject] private IRoomDataStore roomDataStore;
         [Inject] private IMessageDispatcher messageDispatcher;
         [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
 
@@ -39,7 +40,7 @@ namespace LOP
 
                 await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
                 {
-                    roomId = roomDataContext.room.id,
+                    roomId = roomDataStore.room.id,
                     status = RoomStatus.Error,
                 });
             }
@@ -66,7 +67,7 @@ namespace LOP
 
             await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {
-                roomId = roomDataContext.room.id,
+                roomId = roomDataStore.room.id,
                 status = RoomStatus.Initializing,
             });
 
@@ -86,7 +87,7 @@ namespace LOP
                 roomMessageHandler.Unregister();
             }
 
-            roomDataContext.Clear();
+            roomDataStore.Clear();
 
             messageDispatcher.Dispose();
 
@@ -114,7 +115,7 @@ namespace LOP
         {
             await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
             {
-                roomId = roomDataContext.room.id,
+                roomId = roomDataStore.room.id,
                 status = RoomStatus.WaitingForPlayers,
             });
 
@@ -123,7 +124,7 @@ namespace LOP
 
         private void SendHeartbeat()
         {
-            WebAPI.Heartbeat(roomDataContext.room.id);
+            WebAPI.Heartbeat(roomDataStore.room.id);
         }
 
         private void OnGameStateChanged(IGameState gameState)
@@ -134,7 +135,7 @@ namespace LOP
                     Debug.Log("Game Over");
                     WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
                     {
-                        roomId = roomDataContext.room.id,
+                        roomId = roomDataStore.room.id,
                         status = RoomStatus.Closed,
                     });
                     break;
@@ -151,7 +152,7 @@ namespace LOP
             var conn = data.networkConnection;
             var customProperties = conn.authenticationData as CustomProperties;
 
-            Debug.Log($"[OnPlayerEnter] userId: {customProperties.userId}, connectionId: {conn.connectionId}");
+            Debug.Log($"[OnPlayerEnter] userId: {customProperties.userId}, identity: {conn.identity}");
 
             if (sessionManager.TryGetSessionByUserId<LOPSession>(customProperties.userId, out var session))
             {
@@ -173,7 +174,7 @@ namespace LOP
             var conn = data.networkConnection;
             var customProperties = conn.authenticationData as CustomProperties;
 
-            Debug.Log($"[OnPlayerLeave] userId: {customProperties.userId}, connectionId: {conn.connectionId}");
+            Debug.Log($"[OnPlayerLeave] userId: {customProperties.userId}, identity: {conn.identity}");
 
             var session = sessionManager.GetSessionByUserId<LOPSession>(customProperties.userId);
             session.networkConnection = null;

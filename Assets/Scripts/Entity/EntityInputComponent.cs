@@ -6,19 +6,30 @@ namespace LOP
 {
     public class EntityInputComponent : MonoBehaviour
     {
+        private static int INPUT_DELAY_TICKS = 0;
+
         private SortedDictionary<long, PlayerInput> inputBuffer = new SortedDictionary<long, PlayerInput>();
 
         private long lastProcessedSequence = -1;
         public long expectedNextSequence { get; private set; }
 
-        public PlayerInput GetNextInput(long tick)
+        public PlayerInput GetInput(long tick)
         {
             if (inputBuffer.Count == 0)
             {
                 return null;
             }
 
-            PlayerInput input = inputBuffer.First().Value;
+            // 지연을 적용한 처리 틱 계산
+            long targetTick = tick - INPUT_DELAY_TICKS;
+
+            var availableInputs = inputBuffer.Where(kvp => kvp.Key <= targetTick).ToList();
+            if (availableInputs.Count == 0)
+            {
+                return null;
+            }
+
+            PlayerInput input = availableInputs.First().Value;
             inputBuffer.Remove(input.tick);
 
             lastProcessedSequence = input.sequenceNumber;

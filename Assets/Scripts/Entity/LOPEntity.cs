@@ -85,22 +85,9 @@ namespace LOP
         public Rigidbody entityRigidbody { get; private set; }
         public Collider[] entityColliders { get; private set; }
 
-        private BoundedDictionary<long, EntityTransformSnap> beginTransformSnaps = new BoundedDictionary<long, EntityTransformSnap>(20);
-        private BoundedDictionary<long, EntityTransformSnap> endTransformSnaps = new BoundedDictionary<long, EntityTransformSnap>(20);
-
         protected void RaisePropertyChanged(object sender, PropertyChangedEventArgs e)
         {
             eventBus.Publish(new Event.Entity.PropertyChange(e.PropertyName));
-        }
-
-        protected virtual void Awake()
-        {
-            SceneLifetimeScope.Resolve<IGameEngine>().AddListener(this);
-        }
-
-        protected virtual void OnDestroy()
-        {
-            SceneLifetimeScope.Resolve<IGameEngine>().RemoveListener(this);
         }
 
         public virtual void Initialize<TEntityCreationData>(TEntityCreationData creationData) where TEntityCreationData : struct, IEntityCreationData
@@ -139,35 +126,11 @@ namespace LOP
             }
         }
 
-        [GameEngineListen(typeof(Begin))]
-        private void OnUpdateBegin()
-        {
-            beginTransformSnaps[GameEngine.Time.tick] = new EntityTransformSnap
-            {
-                position = position,
-                rotation = rotation,
-                velocity = velocity
-            };
-        }
-
         public override void UpdateEntity()
         {
             UpdateStatuses();
 
             UpdateActions();
-        }
-
-        [GameEngineListen(typeof(End))]
-        private void OnUpdateEnd()
-        {
-            UpdateNetworkState();
-
-            endTransformSnaps[GameEngine.Time.tick] = new EntityTransformSnap
-            {
-                position = position,
-                rotation = rotation,
-                velocity = velocity
-            };
         }
 
         private void UpdateStatuses()
@@ -186,20 +149,7 @@ namespace LOP
             }
         }
 
-        private void UpdateNetworkState()
-        {
-        }
-
-        [GameEngineListen(typeof(BeforePhysicsSimulation))]
-        private void OnUpdateBeforePhysicsSimulation() { }
-
-        [GameEngineListen(typeof(AfterPhysicsSimulation))]
-        private void OnUpdateAfterPhysicsSimulation()
-        {
-            SyncPhysics();
-        }
-
-        private void SyncPhysics()
+        public void SyncPhysics()
         {
             if (entityRigidbody == null)
             {

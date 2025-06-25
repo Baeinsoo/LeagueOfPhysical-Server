@@ -60,18 +60,20 @@ namespace LOP
                     continue;
                 }
 
-                movementManager.ProcessInput(entity, input.horizontal, input.vertical, input.jump);
+                EntityTransform entityTransform = MapperConfig.mapper.Map<EntityTransform>(input.EntityTransform);
 
-                if (string.IsNullOrEmpty(input.actionCode) == false)
+                movementManager.ProcessInput(entity, entityTransform, input.PlayerInput.Horizontal, input.PlayerInput.Vertical, input.PlayerInput.Jump);
+
+                if (string.IsNullOrEmpty(input.PlayerInput.ActionCode) == false)
                 {
-                    actionManager.TryExecuteAction(entity, input.actionCode);
+                    actionManager.TryExecuteAction(entity, input.PlayerInput.ActionCode);
                 }
                 
                 var inputSequnceToC = new InputSequenceToC();
                 inputSequnceToC.InputSequence = new InputSequence();
                 inputSequnceToC.EntityId = entity.entityId;
                 inputSequnceToC.InputSequence.Tick = GameEngine.Time.tick;
-                inputSequnceToC.InputSequence.Sequence = input.sequenceNumber;
+                inputSequnceToC.InputSequence.Sequence = input.PlayerInput.SequenceNumber;
 
                 string userId = entityManager.GetUserIdByEntityId(entity.entityId);
                 ISession session = sessionManager.GetSessionByUserId(userId);

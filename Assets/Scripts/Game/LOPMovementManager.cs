@@ -26,6 +26,10 @@ namespace LOP
             //  Jump
             if (jump)
             {
+                //entity.position = entityTransform.position;
+                //entity.rotation = entityTransform.rotation;
+                //entity.velocity = entityTransform.velocity;
+                entity.position = new Vector3(entity.position.x, entityTransform.position.y, entity.position.z);
                 entity.entityRigidbody.linearVelocity -= new Vector3(0, entity.entityRigidbody.linearVelocity.y, 0);
                 entity.entityRigidbody.AddForce(Vector3.up * entity.masterData.JumpPower, ForceMode.Impulse);
             }

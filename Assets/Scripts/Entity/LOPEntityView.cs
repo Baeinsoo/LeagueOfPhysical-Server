@@ -31,7 +31,10 @@ namespace LOP
         {
             entity.eventBus.Receive<PropertyChange>().Subscribe(OnPropertyChange).AddTo(this);
 
-            UpdateVisual(entity.visualId);
+            if (entity.TryGetEntityComponent<AppearanceComponent>(out var appearanceComponent))
+            {
+                UpdateVisual(appearanceComponent.visualId);
+            }
         }
 
         protected override void OnDestroy()
@@ -53,8 +56,8 @@ namespace LOP
         {
             switch (propertyChange.propertyName)
             {
-                case nameof(entity.visualId):
-                    UpdateVisual(entity.visualId);
+                case nameof(AppearanceComponent.visualId):
+                    UpdateVisual(entity.GetEntityComponent<AppearanceComponent>().visualId);
                     break;
             }
         }

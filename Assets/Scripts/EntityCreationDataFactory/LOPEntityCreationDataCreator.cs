@@ -19,8 +19,8 @@ namespace LOP
             var lopEntityCreationData = new global::LOPEntityCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
-                CharacterCode = lopEntity.characterCode,
-                VisualId = lopEntity.visualId,
+                CharacterCode = lopEntity.GetEntityComponent<CharacterComponent>().characterCode,
+                VisualId = lopEntity.GetEntityComponent<AppearanceComponent>().visualId,
             };
 
             return new EntityCreationData

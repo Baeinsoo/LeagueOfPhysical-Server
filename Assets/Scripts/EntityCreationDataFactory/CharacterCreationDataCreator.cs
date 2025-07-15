@@ -3,8 +3,8 @@ using System;
 
 namespace LOP
 {
-    [EntityCreationDataCreatorRegistration]
-    public class LOPEntityCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
+    [EntityCreationDataCreatorRegistration(EntityType.Character)]
+    public class CharacterCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
     {
         public EntityCreationData Create(LOPEntity lopEntity)
         {
@@ -16,7 +16,7 @@ namespace LOP
                 Velocity = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.velocity),
             };
 
-            var lopEntityCreationData = new global::LOPEntityCreationData
+            global::CharacterCreationData characterCreationData = new global::CharacterCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
                 CharacterCode = lopEntity.GetEntityComponent<CharacterComponent>().characterCode,
@@ -25,7 +25,7 @@ namespace LOP
 
             return new EntityCreationData
             {
-                LopEntityCreationData = lopEntityCreationData
+                CharacterCreationData = characterCreationData
             };
         }
 
@@ -37,7 +37,6 @@ namespace LOP
             }
 
             throw new ArgumentException("Entity must be of type LOPEntity");
-
         }
     }
 }

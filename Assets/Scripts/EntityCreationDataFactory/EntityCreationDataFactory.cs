@@ -8,11 +8,11 @@ namespace LOP
 {
     public static class EntityCreationDataFactory
     {
-        private static readonly Dictionary<Type, IEntityCreationDataCreator> entityCreationDataCreators;
+        private static readonly Dictionary<object, IEntityCreationDataCreator> entityCreationDataCreators;
 
         static EntityCreationDataFactory()
         {
-            entityCreationDataCreators = new Dictionary<Type, IEntityCreationDataCreator>();
+            entityCreationDataCreators = new Dictionary<object, IEntityCreationDataCreator>();
 
             RegisterCreators();
         }
@@ -28,26 +28,25 @@ namespace LOP
                     continue;
                 }
 
-                var genericInterface = type.GetInterfaces().FirstOrDefault(i => i.IsGenericType && i.GetGenericTypeDefinition() == typeof(IEntityCreationDataCreator<>));
-                if (genericInterface == null || type.IsAbstract || type.IsInterface)
-                {
-                    continue;
-                }
-
                 if (Activator.CreateInstance(type) is IEntityCreationDataCreator instance)
                 {
-                    var typeArguments = genericInterface.GetGenericArguments();
-                    var key = typeArguments[0];
-
-                    entityCreationDataCreators[key] = instance;
-                    Debug.Log($"Registered Creator: {type.Name} for {key.Name}");
+                    entityCreationDataCreators[attribute.type] = instance;
+                    Debug.Log($"Registered Creator: {type.Name} for {attribute.type}");
                 }
             }
         }
 
         public static EntityCreationData Create(IEntity entity)
         {
-            if (entityCreationDataCreators.TryGetValue(entity.GetType(), out var creator) == false)
+            if (entity.TryGetEntityComponent<EntityTypeComponent>(out var entityTypeComponent) == false)
+            {
+                throw new InvalidOperationException(
+                    $"Entity '{entity.entityId}' does not have an EntityTypeComponent. " +
+                    "Ensure the entity is properly initialized with its components."
+                );
+            }
+
+            if (entityCreationDataCreators.TryGetValue(entityTypeComponent.entityType, out var creator) == false)
             {
                 throw new InvalidOperationException(
                     $"No registered creator found for entity type '{entity.GetType().Name}' " +

@@ -1,27 +1,28 @@
 using GameFramework;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace LOP
 {
     [EntityCreatorRegistration]
-    public class LOPEntityCreator : IEntityCreator<LOPEntity, LOPEntityCreationData>
+    public class ItemCreator : IEntityCreator<LOPEntity, ItemCreationData>
     {
-        public LOPEntity Create(LOPEntityCreationData lopEntityCreationData)
+        public LOPEntity Create(ItemCreationData creationData)
         {
-            GameObject root = new GameObject($"{nameof(LOPEntity)}_{lopEntityCreationData.entityId}");
+            GameObject root = new GameObject($"Item_{creationData.entityId}");
             GameObject visual = root.CreateChild("Visual");
             GameObject physics = root.CreateChild("Physics");
 
             LOPEntity entity = root.CreateChildWithComponent<LOPEntity>();
-            entity.Initialize(lopEntityCreationData);
+            entity.Initialize(creationData);
 
-            CharacterComponent characterComponent = entity.AddEntityComponent<CharacterComponent>();
-            characterComponent.Initialize(lopEntityCreationData.characterCode);
+            EntityTypeComponent entityTypeComponent = entity.AddEntityComponent<EntityTypeComponent>();
+            entityTypeComponent.Initialize(EntityType.Item);
+
+            ItemComponent itemComponent = entity.AddEntityComponent<ItemComponent>();
+            itemComponent.Initialize(creationData.itemCode);
 
             AppearanceComponent appearanceComponent = entity.AddEntityComponent<AppearanceComponent>();
-            appearanceComponent.Initialize(lopEntityCreationData.visualId);
+            appearanceComponent.Initialize(creationData.visualId);
 
             PhysicsComponent physicsComponent = entity.AddEntityComponent<PhysicsComponent>();
             physicsComponent.Initialize();
@@ -32,8 +33,6 @@ namespace LOP
             LOPEntityView view = root.CreateChildWithComponent<LOPEntityView>();
             view.SetEntity(entity);
             view.SetEntityController(controller);
-
-            EntityInputComponent entityInputComponent = entity.gameObject.AddComponent<EntityInputComponent>();
 
             return entity;
         }

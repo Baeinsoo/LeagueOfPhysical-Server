@@ -79,18 +79,37 @@ namespace LOP
             {
                 string playerId = roomDataStore.match.playerList[i];
 
-                LOPEntityCreationData data = new LOPEntityCreationData
+                int random = UnityEngine.Random.Range(0, 3);
+                string visualId = "";
+                string characterCode = "";
+                switch (random)
+                {
+                    case 0:
+                        visualId = "Assets/Art/Characters/Knight/Knight.prefab";
+                        characterCode = "character_001";
+                        break;
+                    case 1:
+                        visualId = "Assets/Art/Characters/Archer/Archer.prefab";
+                        characterCode = "monster_002";
+                        break;
+                    case 2:
+                        visualId = "Assets/Art/Characters/Necromancer/Necromancer.prefab";
+                        characterCode = "monster_001";
+                        break;
+                }
+
+                CharacterCreationData data = new CharacterCreationData
                 {
                     userId = playerId,
                     entityId = gameEngine.entityManager.GenerateEntityId(),
-                    visualId = "Assets/Art/Characters/Knight/Knight.prefab",
-                    characterCode = "character_001",
+                    visualId = visualId,
+                    characterCode = characterCode,
                     position = Vector3.right * i * 5,
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 };
 
-                LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, LOPEntityCreationData>(data);
+                LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
             }
 
             gameState = Initialized.State;

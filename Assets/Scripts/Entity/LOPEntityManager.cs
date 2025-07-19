@@ -78,13 +78,15 @@ namespace LOP
         {
             LOPEntity lopEntity = entityMap[entityId] as LOPEntity;
 
-            Destroy(lopEntity.gameObject);
+            Destroy(lopEntity.transform.parent.gameObject);
 
             entityMap.Remove(entityId);
 
-            string userId = entityUserMap[entityId];
-            userEntityMap.Remove(userId);
-            entityUserMap.Remove(entityId);
+            if (entityUserMap.TryGetValue(entityId, out var userId))
+            {
+                userEntityMap.Remove(userId);
+                entityUserMap.Remove(entityId);
+            }
         }
 
         public void UpdateEntities()

@@ -1,6 +1,8 @@
 using GameFramework;
+using LOP.Event.Entity;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using VContainer;
 using System.Threading.Tasks;
@@ -47,8 +49,17 @@ namespace LOP
         private Restorer restorer = new Restorer();
         private AsyncOperationHandle<SceneInstance> handle;
 
+        private double lastEnemySpawnTime;
+
         public async Task InitializeAsync()
         {
+            RoomEventBus.Subscribe<EntityDeath>(entityDeath =>
+            {
+                DespawnEntity(entityDeath.victimId);
+
+                SpawnExpMarble(entityDeath.position);
+            });
+
             gameState = Initializing.State;
 
             var oldSimulationMode = Physics.simulationMode;
@@ -142,10 +153,122 @@ namespace LOP
 
         private void LateUpdate()
         {
+            if (gameEngine.tickUpdater.elapsedTime - lastEnemySpawnTime >= 10f)
+            {
+                if (gameEngine.entityManager.GetEntities().Count() < 100)
+                {
+                    SpawnEnemies(10);
+                    lastEnemySpawnTime = gameEngine.tickUpdater.elapsedTime;
+                }
+            }
+
             if (gameEngine.tickUpdater.elapsedTime > 60 * 5)
             {
                 gameState = GameOver.State;
             }
         }
+
+        #region Spawn
+        private void SpawnEnemies(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                SpawnEnemy(GetRandomSpawnPosition());
+            }
+        }
+
+        private void SpawnEnemy(Vector3 position)
+        {
+            int random = UnityEngine.Random.Range(0, 2);
+            string visualId = "";
+            string characterCode = "";
+            switch (random)
+            {
+                case 0:
+                    visualId = "Assets/Art/Characters/Archer/Archer.prefab";
+                    characterCode = "monster_002";
+                    break;
+
+                case 1:
+                    visualId = "Assets/Art/Characters/Necromancer/Necromancer.prefab";
+                    characterCode = "monster_001";
+                    break;
+            }
+
+            CharacterCreationData data = new CharacterCreationData
+            {
+                userId = "",
+                entityId = gameEngine.entityManager.GenerateEntityId(),
+                visualId = visualId,
+                characterCode = characterCode,
+                position = position,
+                rotation = Vector3.zero,
+                velocity = Vector3.zero,
+            };
+
+            LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
+
+            EntitySpawnToC entitySpawnToC = new EntitySpawnToC
+            {
+                EntityCreationData = EntityCreationDataFactory.Create(entity),
+            };
+
+            ISessionManager sessionManager = SceneLifetimeScope.Resolve<ISessionManager>();
+            foreach (var session in sessionManager.GetAllSessions().OrEmpty())
+            {
+                session.Send(entitySpawnToC);
+            }
+        }
+
+        public void SpawnExpMarble(Vector3 position)
+        {
+            string visualId = "Assets/Art/Items/ExpMarble/ExpMarble.prefab";
+            string itemCode = "exp_marble";
+
+            ItemCreationData data = new ItemCreationData
+            {
+                entityId = gameEngine.entityManager.GenerateEntityId(),
+                visualId = visualId,
+                itemCode = itemCode,
+                position = position,
+                rotation = Vector3.zero,
+                velocity = Vector3.zero,
+            };
+
+            LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, ItemCreationData>(data);
+
+            EntitySpawnToC entitySpawnToC = new EntitySpawnToC
+            {
+                EntityCreationData = EntityCreationDataFactory.Create(entity),
+            };
+
+            ISessionManager sessionManager = SceneLifetimeScope.Resolve<ISessionManager>();
+            foreach (var session in sessionManager.GetAllSessions().OrEmpty())
+            {
+                session.Send(entitySpawnToC);
+            }
+        }
+
+        private Vector3 GetRandomSpawnPosition()
+        {
+            return new Vector3(UnityEngine.Random.Range(-20f, 20f), 0, UnityEngine.Random.Range(-20f, 20f));
+        }
+
+        private void DespawnEntity(string entityId)
+        {
+            gameEngine.entityManager.DeleteEntityById(entityId);
+
+            EntityDespawnToC entityDespawnToC = new EntityDespawnToC
+            {
+                EntityId = entityId,
+            };
+
+            ISessionManager sessionManager = SceneLifetimeScope.Resolve<ISessionManager>();
+            foreach (var session in sessionManager.GetAllSessions().OrEmpty())
+            {
+                session.Send(entityDespawnToC);
+            }
+        }
+        #endregion
     }
 }

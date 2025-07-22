@@ -54,7 +54,7 @@ namespace LOP
 
             foreach (var entity in LOPEntities)
             {
-                var input = entity.GetComponent<EntityInputComponent>().GetInput(GameEngine.Time.tick);
+                var input = entity.GetComponent<EntityInputComponent>()?.GetInput(GameEngine.Time.tick);
                 if (input == null)
                 {
                     continue;

@@ -32,6 +32,8 @@ namespace LOP
 
             builder.Register<IActionManager, LOPActionManager>(Lifetime.Singleton);
             builder.Register<IMovementManager, LOPMovementManager>(Lifetime.Singleton);
+
+            builder.Register<ICombatSystem, LOPCombatSystem>(Lifetime.Singleton);
         }
     }
 }

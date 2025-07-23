@@ -46,7 +46,18 @@ namespace LOP
             view.SetEntity(entity);
             view.SetEntityController(controller);
 
-            EntityInputComponent entityInputComponent = entity.gameObject.AddComponent<EntityInputComponent>();
+            //  Temp.. must be modified later
+            bool isPlayer = !string.IsNullOrEmpty(creationData.userId);
+            if (isPlayer)
+            {
+                EntityInputComponent entityInputComponent = entity.gameObject.AddComponent<EntityInputComponent>();
+            }
+            else
+            {
+                LOPAIController aiController = root.CreateChildWithComponent<LOPAIController>();
+                aiController.SetEntity(entity);
+                aiController.SetBrain(new EnemyBrain());
+            }
 
             return entity;
         }

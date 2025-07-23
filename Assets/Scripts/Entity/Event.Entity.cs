@@ -42,4 +42,16 @@ namespace LOP.Event.Entity
             this.position = position;
         }
     }
+
+    public struct ItemTouch
+    {
+        public string itemId;
+        public string toucherId;
+
+        public ItemTouch(string itemId, string toucherId)
+        {
+            this.itemId = itemId;
+            this.toucherId = toucherId;
+        }
+    }
 }

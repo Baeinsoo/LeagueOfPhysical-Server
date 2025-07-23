@@ -1,6 +1,7 @@
 using GameFramework;
 using LOP.Event.Entity;
 using UniRx;
+using Unity.VisualScripting;
 using UnityEngine;
 
 namespace LOP
@@ -43,6 +44,11 @@ namespace LOP
             capsuleCollider.center = new Vector3(0, capsuleCollider.height * 0.5f, 0);
             capsuleCollider.isTrigger = isTrigger;
             entityColliders = new Collider[] { capsuleCollider };
+
+            TriggerDetector triggerDetector = physicsGameObject.GetOrAddComponent<TriggerDetector>();
+            triggerDetector.onTriggerEnter += OnTriggerEnter;
+            triggerDetector.onTriggerStay += OnTriggerStay;
+            triggerDetector.onTriggerExit += OnTriggerExit;
         }
 
         private void OnPropertyChange(PropertyChange propertyChange)
@@ -61,6 +67,30 @@ namespace LOP
                     entityRigidbody.linearVelocity = entity.velocity;
                     break;
             }
+        }
+
+        private void OnTriggerEnter(Collider other)
+        {
+            LOPEntity otherEntity = other.transform.parent?.parent?.GetComponentInChildren<LOPEntity>();
+            if (otherEntity == null)
+            {
+                Debug.LogWarning($"Trigger detected with non-entity object: {other.name}");
+                return;
+            }
+
+            //  Temp.. must be modified later
+            if (otherEntity.GetComponent<EntityInputComponent>())
+            {
+                RoomEventBus.Publish(new ItemTouch(entity.entityId, otherEntity.entityId));
+            }
+        }
+
+        private void OnTriggerStay(Collider other)
+        {
+        }
+
+        private void OnTriggerExit(Collider other)
+        {
         }
     }
 }

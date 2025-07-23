@@ -60,6 +60,17 @@ namespace LOP
                 SpawnExpMarble(entityDeath.position);
             });
 
+            RoomEventBus.Subscribe<ItemTouch>(itemTouch =>
+            {
+                if (gameEngine.entityManager.GetEntity(itemTouch.itemId) != null)
+                {
+                    DespawnEntity(itemTouch.itemId);
+
+                    LOPEntity toucher = gameEngine.entityManager.GetEntity<LOPEntity>(itemTouch.toucherId);
+                    toucher.GetEntityComponent<LevelComponent>().AddExperience(10);
+                }
+            });
+
             gameState = Initializing.State;
 
             var oldSimulationMode = Physics.simulationMode;

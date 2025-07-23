@@ -118,6 +118,12 @@ namespace LOP
                     position = Vector3.right * i * 5,
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
+                    maxHP = 100000,
+                    currentHP = 100000,
+                    maxMP = 1000,
+                    currentMP = 1000,
+                    level = 1,
+                    currentExp = 0,
                 };
 
                 LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
@@ -204,6 +210,12 @@ namespace LOP
                 position = position,
                 rotation = Vector3.zero,
                 velocity = Vector3.zero,
+                maxHP = 100,
+                currentHP = 100,
+                maxMP = 100,
+                currentMP = 100,
+                level = 1,
+                currentExp = 0,
             };
 
             LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);

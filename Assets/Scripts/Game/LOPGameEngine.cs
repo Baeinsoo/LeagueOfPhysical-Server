@@ -121,6 +121,21 @@ namespace LOP
 
                 session.Send(entitySnapsToC);
             }
+
+            foreach (var session in sessionManager.GetAllSessions())
+            {
+                LOPEntity entity = entityManager.GetEntityByUserId<LOPEntity>(session.userId);
+
+                UserEntitySnapToC entitySnapsToC = new UserEntitySnapToC();
+                entitySnapsToC.CurrentHP = entity.GetEntityComponent<HealthComponent>().currentHP;
+                entitySnapsToC.MaxHP = entity.GetEntityComponent<HealthComponent>().maxHP;
+                entitySnapsToC.CurrentMP = entity.GetEntityComponent<ManaComponent>().currentMP;
+                entitySnapsToC.MaxMP = entity.GetEntityComponent<ManaComponent>().maxMP;
+                entitySnapsToC.CurrentExp = entity.GetEntityComponent<LevelComponent>().currentExp;
+                entitySnapsToC.Level = entity.GetEntityComponent<LevelComponent>().level;
+
+                session.Send(entitySnapsToC);
+            }
         }
     }
 }

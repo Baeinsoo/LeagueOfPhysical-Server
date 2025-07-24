@@ -57,6 +57,15 @@ namespace LOP
             OnActionStart();
 
             entity.eventBus.Publish(new Event.Entity.ActionStart(actionCode));
+
+            ActionStartToC actionStartToC = new ActionStartToC();
+            actionStartToC.EntityId = entity.entityId;
+            actionStartToC.ActionCode = actionCode;
+
+            foreach (var session in SceneLifetimeScope.Resolve<ISessionManager>().GetAllSessions())
+            {
+                session.Send(actionStartToC);
+            }
         }
 
         protected void ActionEnd()

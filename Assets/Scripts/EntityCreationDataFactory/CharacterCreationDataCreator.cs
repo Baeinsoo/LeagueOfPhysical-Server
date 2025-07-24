@@ -21,6 +21,13 @@ namespace LOP
                 BaseEntityCreationData = baseEntityCreationData,
                 CharacterCode = lopEntity.GetEntityComponent<CharacterComponent>().characterCode,
                 VisualId = lopEntity.GetEntityComponent<AppearanceComponent>().visualId,
+
+                MaxHP = lopEntity.GetEntityComponent<HealthComponent>().maxHP,
+                CurrentHP = lopEntity.GetEntityComponent<HealthComponent>().currentHP,
+                MaxMP = lopEntity.GetEntityComponent<ManaComponent>().maxMP,
+                CurrentMP = lopEntity.GetEntityComponent<ManaComponent>().currentMP,
+                Level = lopEntity.GetEntityComponent<LevelComponent>().level,
+                CurrentExp = lopEntity.GetEntityComponent<LevelComponent>().currentExp,
             };
 
             return new EntityCreationData

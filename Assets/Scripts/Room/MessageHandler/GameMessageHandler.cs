@@ -57,7 +57,7 @@ namespace LOP
                 {
                     EntityId = entity.entityId,
                     SessionId = session.sessionId,
-                    ExpectedNextSequence = entity.GetComponent<EntityInputComponent>().expectedNextSequence,
+                    ExpectedNextSequence = entity.GetEntityComponent<EntityInputComponent>().expectedNextSequence,
                     GameInfo = new GameInfo
                     {
                         Tick = GameEngine.Time.tick,

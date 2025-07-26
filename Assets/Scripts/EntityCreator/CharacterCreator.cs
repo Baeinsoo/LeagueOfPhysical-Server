@@ -46,11 +46,10 @@ namespace LOP
             view.SetEntity(entity);
             view.SetEntityController(controller);
 
-            //  Temp.. must be modified later
             bool isPlayer = !string.IsNullOrEmpty(creationData.userId);
             if (isPlayer)
             {
-                EntityInputComponent entityInputComponent = entity.gameObject.AddComponent<EntityInputComponent>();
+                EntityInputComponent entityInputComponent = entity.AddEntityComponent<EntityInputComponent>();
             }
             else
             {

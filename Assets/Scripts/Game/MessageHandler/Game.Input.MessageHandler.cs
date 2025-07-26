@@ -36,7 +36,7 @@ namespace LOP
                 sequenceNumber = playerInputToS.PlayerInput.SequenceNumber,
             };
 
-            entity.GetComponent<EntityInputComponent>().AddInput(playerInputToS);
+            entity.GetEntityComponent<EntityInputComponent>().AddInput(playerInputToS);
         }
     }
 }

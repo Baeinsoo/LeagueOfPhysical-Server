@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class EntityInputComponent : MonoBehaviour
+    public class EntityInputComponent : LOPComponent
     {
         private static int INPUT_DELAY_TICKS = 0;
 

@@ -13,7 +13,7 @@ namespace LOP
             var entities = GameEngine.current.entityManager.GetEntities<LOPEntity>();
             foreach (var otherEntity in entities)
             {
-                if (otherEntity.TryGetComponent<EntityInputComponent>(out var inputComponent))
+                if (otherEntity.HasEntityComponent<PlayerComponent>())
                 {
                     target = otherEntity;
                     break;

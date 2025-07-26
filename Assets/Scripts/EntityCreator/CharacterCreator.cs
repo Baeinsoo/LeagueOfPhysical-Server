@@ -49,6 +49,9 @@ namespace LOP
             bool isPlayer = !string.IsNullOrEmpty(creationData.userId);
             if (isPlayer)
             {
+                PlayerComponent playerComponent = entity.AddEntityComponent<PlayerComponent>();
+                playerComponent.Initialize(creationData.userId);
+
                 EntityInputComponent entityInputComponent = entity.AddEntityComponent<EntityInputComponent>();
             }
             else

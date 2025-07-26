@@ -78,8 +78,7 @@ namespace LOP
                 return;
             }
 
-            //  Temp.. must be modified later
-            if (otherEntity.GetComponent<EntityInputComponent>())
+            if (otherEntity.HasEntityComponent<PlayerComponent>())
             {
                 RoomEventBus.Publish(new ItemTouch(entity.entityId, otherEntity.entityId));
             }

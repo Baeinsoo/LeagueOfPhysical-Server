@@ -53,14 +53,14 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
-            RoomEventBus.Subscribe<EntityDeath>(entityDeath =>
+            EventBus.Default.Subscribe<EntityDeath>(EventTopic.Entity, entityDeath =>
             {
                 DespawnEntity(entityDeath.victimId);
 
                 SpawnExpMarble(entityDeath.position);
             });
 
-            RoomEventBus.Subscribe<ItemTouch>(itemTouch =>
+            EventBus.Default.Subscribe<ItemTouch>(EventTopic.Entity, itemTouch =>
             {
                 if (gameEngine.entityManager.GetEntity(itemTouch.itemId) != null)
                 {

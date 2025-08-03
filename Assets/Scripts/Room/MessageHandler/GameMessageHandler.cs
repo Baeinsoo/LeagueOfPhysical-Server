@@ -12,23 +12,20 @@ namespace LOP
         private IGameEngine gameEngine;
 
         [Inject]
-        private IMessageDispatcher messageDispatcher;
-
-        [Inject]
         private ISessionManager sessionManager;
 
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
 
         public void Register()
         {
-            messageDispatcher.RegisterHandler<GameInfoToS>(OnGameInfoToS, LOPRoomMessageInterceptor.Default);
+            EventBus.Default.Subscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
 
             gameEngine.AddListener(this);
         }
 
         public void Unregister()
         {
-            messageDispatcher.UnregisterHandler<GameInfoToS>(OnGameInfoToS);
+            EventBus.Default.Unsubscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
 
             gameEngine.RemoveListener(this);
         }

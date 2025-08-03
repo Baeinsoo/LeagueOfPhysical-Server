@@ -29,7 +29,7 @@ namespace LOP
 
         protected virtual void Start()
         {
-            entity.eventBus.Receive<PropertyChange>().Subscribe(OnPropertyChange).AddTo(this);
+            EventBus.Default.Subscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
 
             if (entity.TryGetEntityComponent<AppearanceComponent>(out var appearanceComponent))
             {
@@ -40,6 +40,8 @@ namespace LOP
         protected override void OnDestroy()
         {
             base.OnDestroy();
+
+            EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
 
             if (asyncOperationHandle.IsValid())
             {

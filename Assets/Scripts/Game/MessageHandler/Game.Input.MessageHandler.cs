@@ -14,12 +14,12 @@ namespace LOP
 
         public void Register()
         {
-            messageDispatcher.RegisterHandler<PlayerInputToS>(OnPlayerInputToS, LOPRoomMessageInterceptor.Default);
+            EventBus.Default.Subscribe<PlayerInputToS>(nameof(IMessage), OnPlayerInputToS);
         }
 
         public void Unregister()
         {
-            messageDispatcher.UnregisterHandler<PlayerInputToS>(OnPlayerInputToS);
+            EventBus.Default.Unsubscribe<PlayerInputToS>(nameof(IMessage), OnPlayerInputToS);
         }
 
         private void OnPlayerInputToS(PlayerInputToS playerInputToS)

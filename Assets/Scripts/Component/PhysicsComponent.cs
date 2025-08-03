@@ -23,7 +23,7 @@ namespace LOP
 
         public void Initialize(bool isKinematic, bool isTrigger)
         {
-            entity.eventBus.Receive<PropertyChange>().Subscribe(OnPropertyChange).AddTo(this);
+            EventBus.Default.Subscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
 
             GameObject physics = entity.transform.parent.Find("Physics").gameObject;
             physicsGameObject = physics.CreateChild("PhysicsGameObject");
@@ -49,6 +49,11 @@ namespace LOP
             triggerDetector.onTriggerEnter += OnTriggerEnter;
             triggerDetector.onTriggerStay += OnTriggerStay;
             triggerDetector.onTriggerExit += OnTriggerExit;
+        }
+
+        private void OnDestroy()
+        {
+            EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
         }
 
         private void OnPropertyChange(PropertyChange propertyChange)
@@ -80,7 +85,7 @@ namespace LOP
 
             if (otherEntity.HasEntityComponent<PlayerComponent>())
             {
-                RoomEventBus.Publish(new ItemTouch(entity.entityId, otherEntity.entityId));
+                EventBus.Default.Publish(EventTopic.Entity, new ItemTouch(entity.entityId, otherEntity.entityId));
             }
         }
 

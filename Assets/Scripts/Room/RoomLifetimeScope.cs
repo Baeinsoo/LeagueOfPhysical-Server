@@ -34,6 +34,13 @@ namespace LOP
             builder.Register<IMovementManager, LOPMovementManager>(Lifetime.Singleton);
 
             builder.Register<ICombatSystem, LOPCombatSystem>(Lifetime.Singleton);
+
+            #region RegisterBuildCallback
+            builder.RegisterBuildCallback(container =>
+            {
+                container.Resolve<IMessageDispatcher>();
+            });
+            #endregion
         }
     }
 }

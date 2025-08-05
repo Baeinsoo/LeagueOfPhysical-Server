@@ -21,7 +21,6 @@ namespace LOP
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private ISessionManager sessionManager;
         [Inject] private IRoomDataStore roomDataStore;
-        [Inject] private IMessageDispatcher messageDispatcher;
         [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
 
         public bool initialized { get; private set; }
@@ -88,8 +87,6 @@ namespace LOP
             }
 
             roomDataStore.Clear();
-
-            messageDispatcher.Dispose();
 
             initialized = false;
         }

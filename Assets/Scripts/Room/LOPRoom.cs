@@ -93,6 +93,11 @@ namespace LOP
 
         public async Task StartRoomServerAsync()
         {
+            NetworkServer.RegisterHandler<CustomMirrorMessage>((id, message) =>
+            {
+                EventBus.Default.Publish(nameof(IMessage), message.payload);
+            });
+
             networkManager.onServerConnect += OnPlayerConnect;
             networkManager.onServerDisconnect += OnPlayerDisconnect;
             networkManager.port = Blackboard.Read<ushort>("port", erase: true);

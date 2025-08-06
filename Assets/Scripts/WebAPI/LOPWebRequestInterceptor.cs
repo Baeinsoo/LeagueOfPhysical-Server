@@ -12,9 +12,7 @@ namespace LOP
 
         public void OnSuccess<T>(UnityWebRequest request, T response)
         {
-            var dataStoreManager = SceneLifetimeScope.Resolve<IDataStoreManager>();
-
-            dataStoreManager.UpdateData(response);
+            EventBus.Default.Publish(EventTopic.WebResponse, response);
         }
 
         public void OnError(UnityWebRequest request, string error) { }

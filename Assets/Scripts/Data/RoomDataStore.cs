@@ -7,13 +7,18 @@ namespace LOP
         public Room room { get; set; }
         public Match match { get; set; }
 
-        [DataListen(typeof(GetMatchResponse))]
+        public RoomDataStore()
+        {
+            EventBus.Default.Subscribe<GetMatchResponse>(EventTopic.WebResponse, HandleGetMatch);
+            EventBus.Default.Subscribe<GetRoomResponse>(EventTopic.WebResponse, HandleGetRoom);
+            EventBus.Default.Subscribe<UpdateRoomStatusResponse>(EventTopic.WebResponse, HandleUpdateRoomStatus);
+        }
+
         private void HandleGetMatch(GetMatchResponse response)
         {
             match = MapperConfig.mapper.Map<Match>(response.match);
         }
 
-        [DataListen(typeof(GetRoomResponse))]
         private void HandleGetRoom(GetRoomResponse response)
         {
             if (response.room == null)
@@ -24,7 +29,6 @@ namespace LOP
             room = MapperConfig.mapper.Map<Room>(response.room);
         }
 
-        [DataListen(typeof(UpdateRoomStatusResponse))]
         private void HandleUpdateRoomStatus(UpdateRoomStatusResponse response)
         {
             if (response.room == null)

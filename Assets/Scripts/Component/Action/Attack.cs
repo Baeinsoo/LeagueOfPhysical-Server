@@ -1,10 +1,14 @@
 using GameFramework;
 using UnityEngine;
+using VContainer;
 
 namespace LOP
 {
     public class Attack : Action
     {
+        [Inject]
+        private ICombatSystem combatSystem;
+
         private bool hasHit = false;
         private float hitTime = 0.01f;
         private float range = 2;
@@ -43,7 +47,6 @@ namespace LOP
                         continue;
                     }
 
-                    ICombatSystem combatSystem = SceneLifetimeScope.Resolve<ICombatSystem>();
                     combatSystem.Attack(entity, hit.transform.parent.parent.GetComponentInChildren<LOPEntity>());
                 }
             }

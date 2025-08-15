@@ -28,6 +28,9 @@ namespace LOP
         [Inject]
         private IEnumerable<IGameMessageHandler> gameMessageHandlers;
 
+        [Inject]
+        private ISessionManager sessionManager;
+
         private IGameState _gameState;
         public IGameState gameState
         {
@@ -236,7 +239,6 @@ namespace LOP
                 EntityCreationData = EntityCreationDataFactory.Create(entity),
             };
 
-            ISessionManager sessionManager = SceneLifetimeScope.Resolve<ISessionManager>();
             foreach (var session in sessionManager.GetAllSessions().OrEmpty())
             {
                 session.Send(entitySpawnToC);
@@ -265,7 +267,6 @@ namespace LOP
                 EntityCreationData = EntityCreationDataFactory.Create(entity),
             };
 
-            ISessionManager sessionManager = SceneLifetimeScope.Resolve<ISessionManager>();
             foreach (var session in sessionManager.GetAllSessions().OrEmpty())
             {
                 session.Send(entitySpawnToC);
@@ -286,7 +287,6 @@ namespace LOP
                 EntityId = entityId,
             };
 
-            ISessionManager sessionManager = SceneLifetimeScope.Resolve<ISessionManager>();
             foreach (var session in sessionManager.GetAllSessions().OrEmpty())
             {
                 session.Send(entityDespawnToC);

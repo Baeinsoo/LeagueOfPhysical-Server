@@ -1,10 +1,14 @@
 using GameFramework;
 using LOP.Event.LOPGameEngine.Update;
+using VContainer;
 
 namespace LOP
 {
     public class LOPAIController : MonoEntityController<LOPEntity>
     {
+        [Inject]
+        private IGameEngine gameEngine;
+
         public IBrain brain { get; private set; }
 
         public void SetBrain(IBrain brain)
@@ -12,16 +16,16 @@ namespace LOP
             this.brain = brain;
         }
 
-        protected virtual void Awake()
+        protected virtual void Start()
         {
-            SceneLifetimeScope.Resolve<IGameEngine>().AddListener(this);
+            gameEngine.AddListener(this);
         }
 
         protected override void OnDestroy()
         {
             base.OnDestroy();
 
-            SceneLifetimeScope.Resolve<IGameEngine>().RemoveListener(this);
+            gameEngine.RemoveListener(this);
         }
 
         [GameEngineListen(typeof(Begin))]

@@ -6,6 +6,13 @@ namespace LOP
 {
     public class EnemyBrain : IBrain<LOPEntity>
     {
+        private IActionManager actionManager;
+
+        public EnemyBrain(IActionManager actionManager)
+        {
+            this.actionManager = actionManager;
+        }
+
         public void Think(LOPEntity entity, double deltaTime)
         {
             //  Find the player
@@ -33,7 +40,7 @@ namespace LOP
                 if (direction.magnitude < 2f)
                 {
                     //  Attack the player
-                    SceneLifetimeScope.Resolve<IActionManager>().TryExecuteAction(entity, "attack_001");
+                    actionManager.TryExecuteAction(entity, "attack_001");
                 }
                 else
                 {

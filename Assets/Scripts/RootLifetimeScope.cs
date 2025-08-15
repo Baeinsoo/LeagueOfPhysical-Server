@@ -15,6 +15,8 @@ namespace LOP
                 .As<IDataStore>()
                 .AsSelf();
 
+            builder.Register<EnemyBrain>(Lifetime.Transient);
+
             #region RegisterBuildCallback
             builder.RegisterBuildCallback(container =>
             {

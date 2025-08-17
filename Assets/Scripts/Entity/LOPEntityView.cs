@@ -39,8 +39,6 @@ namespace LOP
 
         protected override void OnDestroy()
         {
-            base.OnDestroy();
-
             EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
 
             if (asyncOperationHandle.IsValid())
@@ -52,6 +50,8 @@ namespace LOP
             {
                 Destroy(_visualGameObject);
             }
+
+            base.OnDestroy();
         }
 
         private void OnPropertyChange(PropertyChange propertyChange)

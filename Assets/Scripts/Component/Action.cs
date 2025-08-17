@@ -20,8 +20,8 @@ namespace LOP
         public bool isCasting => GameEngine.Time.tick < startTick + masterData.CastTime / GameEngine.Time.tickInterval;
         public double remainCooldown { get; protected set; }
 
-        protected long startTick;
-        protected long endTick;
+        public long startTick { get; protected set; }
+        public long endTick { get; protected set; }
         protected double elapsedTime => (GameEngine.Time.tick - startTick) * GameEngine.Time.tickInterval;
         private long lastUpdateTick;
 
@@ -38,7 +38,7 @@ namespace LOP
 
         void IInitializable.Initialize() { }
 
-        public virtual bool TryActionStart()
+        public virtual bool TryStartAction()
         {
             if (isActive)
             {
@@ -53,7 +53,18 @@ namespace LOP
             }
 
             ActionStart();
+            return true;
+        }
 
+        public virtual bool TryEndAction()
+        {
+            if (!isActive)
+            {
+                Debug.LogWarning($"Action {actionCode} is not active. Cannot end action.");
+                return false;
+            }
+
+            ActionEnd();
             return true;
         }
 
@@ -85,6 +96,15 @@ namespace LOP
             OnActionEnd();
 
             EventBus.Default.Publish(EventTopic.EntityId<LOPEntity>(entity.entityId), new ActionEnd(actionCode));
+
+            ActionEndToC actionEndToC = new ActionEndToC();
+            actionEndToC.EntityId = entity.entityId;
+            actionEndToC.ActionCode = actionCode;
+
+            foreach (var session in sessionManager.GetAllSessions())
+            {
+                session.Send(actionEndToC);
+            }
         }
 
         public void UpdateAction()

@@ -40,7 +40,7 @@ namespace LOP
                 if (direction.magnitude < 2f)
                 {
                     //  Attack the player
-                    actionManager.TryExecuteAction(entity, "attack_001");
+                    actionManager.TryStartAction(entity, "attack_001");
                 }
                 else
                 {

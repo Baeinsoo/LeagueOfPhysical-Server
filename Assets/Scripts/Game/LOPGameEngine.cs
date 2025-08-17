@@ -66,14 +66,16 @@ namespace LOP
 
                 if (string.IsNullOrEmpty(input.PlayerInput.ActionCode) == false)
                 {
-                    actionManager.TryExecuteAction(entity, input.PlayerInput.ActionCode);
+                    actionManager.TryStartAction(entity, input.PlayerInput.ActionCode);
                 }
-                
-                var inputSequnceToC = new InputSequenceToC();
-                inputSequnceToC.InputSequence = new InputSequence();
+
+                InputSequenceToC inputSequnceToC = new InputSequenceToC();
                 inputSequnceToC.EntityId = entity.entityId;
-                inputSequnceToC.InputSequence.Tick = GameEngine.Time.tick;
-                inputSequnceToC.InputSequence.Sequence = input.PlayerInput.SequenceNumber;
+                inputSequnceToC.InputSequence = new InputSequence
+                {
+                    Tick = GameEngine.Time.tick,
+                    Sequence = input.PlayerInput.SequenceNumber,
+                };
 
                 string userId = entityManager.GetUserIdByEntityId(entity.entityId);
                 ISession session = sessionManager.GetSessionByUserId(userId);
@@ -133,6 +135,17 @@ namespace LOP
                 entitySnapsToC.MaxMP = entity.GetEntityComponent<ManaComponent>().maxMP;
                 entitySnapsToC.CurrentExp = entity.GetEntityComponent<LevelComponent>().currentExp;
                 entitySnapsToC.Level = entity.GetEntityComponent<LevelComponent>().level;
+
+                foreach (var action in entity.GetComponents<Action>())
+                {
+                    entitySnapsToC.ActionDatas.Add(new ActionData
+                    {
+                        ActionCode = action.actionCode,
+                        IsActive = action.isActive,
+                        RemainCooldown = action.remainCooldown,
+                        StartTick = action.startTick,
+                    });
+                }
 
                 session.Send(entitySnapsToC);
             }

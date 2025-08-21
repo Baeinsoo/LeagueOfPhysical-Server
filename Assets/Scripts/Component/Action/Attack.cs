@@ -10,9 +10,9 @@ namespace LOP
         private ICombatSystem combatSystem;
 
         private bool hasHit = false;
-        private float hitTime = 0.01f;
+        private float hitTime => this.masterData.Duration * 0.5f;
         private float range = 2;
-        private float angle = 60;
+        private float angle = 90;
 
         protected override void OnActionUpdate()
         {

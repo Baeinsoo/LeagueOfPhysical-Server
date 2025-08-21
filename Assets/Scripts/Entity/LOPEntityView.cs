@@ -64,7 +64,7 @@ namespace LOP
             }
         }
 
-        private void UpdateVisual(string visualId)
+        private async void UpdateVisual(string visualId)
         {
             if (this.visualId == visualId)
             {
@@ -79,14 +79,13 @@ namespace LOP
             }
 
             asyncOperationHandle = Addressables.LoadAssetAsync<GameObject>(visualId);
-            asyncOperationHandle.Completed += (prefab) =>
-            {
-                GameObject visual = transform.parent.Find("Visual").gameObject;
+            await asyncOperationHandle.Task;
 
-                visualGameObject = Instantiate(prefab.Result, visual.transform);
-                visualGameObject.transform.position = entity.position;
-                visualGameObject.transform.rotation = Quaternion.Euler(entity.rotation);
-            };
+            GameObject visual = transform.parent.Find("Visual").gameObject;
+
+            visualGameObject = Instantiate(asyncOperationHandle.Task.Result, visual.transform);
+            visualGameObject.transform.position = entity.position;
+            visualGameObject.transform.rotation = Quaternion.Euler(entity.rotation);
         }
         
         private void LateUpdate()

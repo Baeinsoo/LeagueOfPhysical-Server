@@ -40,7 +40,18 @@ namespace LOP
                 if (direction.magnitude < 2f)
                 {
                     //  Attack the player
-                    actionManager.TryStartAction(entity, "attack_001");
+                    switch (entity.GetEntityComponent<AppearanceComponent>().visualId)
+                    {
+                        case "Assets/Art/Characters/Knight/Knight.prefab":
+                            actionManager.TryStartAction(entity, "knight_attack_001");
+                            break;
+                        case "Assets/Art/Characters/Archer/Archer.prefab":
+                            actionManager.TryStartAction(entity, "archer_attack_001");
+                            break;
+                        case "Assets/Art/Characters/Necromancer/Necromancer.prefab":
+                            actionManager.TryStartAction(entity, "necromancer_attack_001");
+                            break;
+                    }
                 }
                 else
                 {

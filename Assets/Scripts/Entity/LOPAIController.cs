@@ -21,9 +21,9 @@ namespace LOP
             gameEngine.AddListener(this);
         }
 
-        protected override void OnDestroy()
+        public override void Cleanup()
         {
-            base.OnDestroy();
+            base.Cleanup();
 
             gameEngine.RemoveListener(this);
         }

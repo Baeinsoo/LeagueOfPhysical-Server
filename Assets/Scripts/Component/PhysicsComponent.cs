@@ -51,9 +51,11 @@ namespace LOP
             triggerDetector.onTriggerExit += OnTriggerExit;
         }
 
-        private void OnDestroy()
+        public override void OnDetach()
         {
             EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
+
+            base.OnDetach();
         }
 
         private void OnPropertyChange(PropertyChange propertyChange)

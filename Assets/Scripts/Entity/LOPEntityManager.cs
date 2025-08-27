@@ -14,6 +14,8 @@ namespace LOP
 
         private int entityIdCounter = 1;
 
+        private HashSet<string> entitiesToDestroy = new HashSet<string>();
+
         public IEntity GetEntity(string entityId)
         {
             return entityMap[entityId];
@@ -76,17 +78,37 @@ namespace LOP
 
         public void DeleteEntityById(string entityId)
         {
-            LOPEntity lopEntity = entityMap[entityId] as LOPEntity;
+            entitiesToDestroy.Add(entityId);
+        }
 
-            Destroy(lopEntity.transform.parent.gameObject);
-
-            entityMap.Remove(entityId);
-
-            if (entityUserMap.TryGetValue(entityId, out var userId))
+        public void DestroyMarkedEntities()
+        {
+            foreach (var entityId in entitiesToDestroy)
             {
-                userEntityMap.Remove(userId);
-                entityUserMap.Remove(entityId);
+                LOPEntity lopEntity = GetEntity<LOPEntity>(entityId);
+
+                foreach (var component in lopEntity.components.ToArray())
+                {
+                    lopEntity.DetachEntityComponent(component);
+                }
+
+                foreach (var cleanup in lopEntity.transform.parent.GetComponentsInChildren<ICleanup>(true))
+                {
+                    cleanup.Cleanup();
+                }
+
+                Destroy(lopEntity.transform.parent.gameObject);
+
+                entityMap.Remove(entityId);
+
+                if (entityUserMap.TryGetValue(entityId, out var userId))
+                {
+                    userEntityMap.Remove(userId);
+                    entityUserMap.Remove(entityId);
+                }
             }
+
+            entitiesToDestroy.Clear();
         }
 
         public void UpdateEntities()

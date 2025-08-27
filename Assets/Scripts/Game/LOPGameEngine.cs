@@ -149,6 +149,8 @@ namespace LOP
 
                 session.Send(entitySnapsToC);
             }
+
+            entityManager.DestroyMarkedEntities();
         }
     }
 }

@@ -14,6 +14,14 @@ namespace LOP
 
         public void Attack(LOPEntity attacker, LOPEntity target)
         {
+            bool attackerIsPlayer = attacker.HasEntityComponent<PlayerComponent>();
+            bool targetIsPlayer = target.HasEntityComponent<PlayerComponent>();
+
+            if (!attackerIsPlayer && !targetIsPlayer)
+            {
+                return;
+            }
+
             if (target.TryGetEntityComponent<HealthComponent>(out var healthComponent) == false)
             {
                 return;

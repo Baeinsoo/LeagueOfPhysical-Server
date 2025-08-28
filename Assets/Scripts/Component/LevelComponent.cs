@@ -1,3 +1,4 @@
+using GameFramework;
 using UnityEngine;
 
 namespace LOP
@@ -24,6 +25,8 @@ namespace LOP
                 level++;
                 Debug.Log($"Level Up! New Level: {level}");
                 expToNextLevel = 100;
+
+                entity.GetEntityComponent<PlayerComponent>().statPoints++;
             }
         }
     }

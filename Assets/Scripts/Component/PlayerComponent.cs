@@ -5,6 +5,8 @@ namespace LOP
     {
         public string userId { get; private set; }
 
+        public int statPoints { get; set; }
+
         public void Initialize(string userId)
         {
             this.userId = userId;

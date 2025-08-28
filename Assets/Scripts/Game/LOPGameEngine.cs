@@ -135,6 +135,7 @@ namespace LOP
                 entitySnapsToC.MaxMP = entity.GetEntityComponent<ManaComponent>().maxMP;
                 entitySnapsToC.CurrentExp = entity.GetEntityComponent<LevelComponent>().currentExp;
                 entitySnapsToC.Level = entity.GetEntityComponent<LevelComponent>().level;
+                entitySnapsToC.StatPoints = entity.GetEntityComponent<PlayerComponent>().statPoints;
 
                 foreach (var action in entity.GetComponents<Action>())
                 {

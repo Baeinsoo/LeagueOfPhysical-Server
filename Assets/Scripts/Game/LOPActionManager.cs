@@ -13,6 +13,9 @@ namespace LOP
         [Inject]
         private IObjectResolver objectResolver;
 
+        [Inject]
+        private ICombatSystem combatSystem;
+
         public bool TryStartAction(LOPEntity entity, string actionCode)
         {
             if (entity == null)
@@ -24,6 +27,22 @@ namespace LOP
             if (string.IsNullOrEmpty(actionCode))
             {
                 Debug.LogWarning($"Invalid action Code. Cannot execute action. actionCode: {actionCode}");
+                return false;
+            }
+
+            //  Dummy..
+            if (actionCode == "spawn_001")
+            {
+                var entities = GameEngine.current.entityManager.GetEntities<LOPEntity>();
+                var targets = entities
+                    .Where(e => !e.HasEntityComponent<PlayerComponent>())
+                    .Where(e => (e.position - entity.position).magnitude <= 20);
+
+                foreach (var target in targets.DefaultIfEmpty())
+                {
+                    combatSystem.Attack(entity, target);
+                }
+
                 return false;
             }
 

@@ -60,7 +60,6 @@ namespace LOP
 
             StatAllocationToC statAllocationToC = new StatAllocationToC
             {
-                EntityId = entity.entityId,
                 Stat = statAllocationToS.Stat,
                 StatValue = statValue,
             };

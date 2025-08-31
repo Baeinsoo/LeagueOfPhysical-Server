@@ -29,7 +29,8 @@ namespace LOP
 
         private void OnStatAllocationToS(StatAllocationToS statAllocationToS)
         {
-            LOPEntity entity = gameEngine.entityManager.GetEntity<LOPEntity>(statAllocationToS.EntityId);
+            ISession session = sessionManager.GetSessionById(statAllocationToS.SessionId);
+            LOPEntity entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
             StatsComponent statsComponent = entity.GetEntityComponent<StatsComponent>();
             int statValue = 0;
             switch (statAllocationToS.Stat)
@@ -56,9 +57,6 @@ namespace LOP
             }
 
             entity.GetEntityComponent<PlayerComponent>().statPoints--;
-
-            string userId = gameEngine.entityManager.GetUserIdByEntityId(entity.entityId);
-            var session = sessionManager.GetSessionByUserId(userId);
 
             StatAllocationToC statAllocationToC = new StatAllocationToC
             {

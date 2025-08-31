@@ -9,6 +9,9 @@ namespace LOP
         [Inject]
         private IGameEngine gameEngine;
 
+        [Inject]
+        private ISessionManager sessionManager;
+
         public void Register()
         {
             EventBus.Default.Subscribe<PlayerInputToS>(nameof(IMessage), OnPlayerInputToS);
@@ -21,8 +24,6 @@ namespace LOP
 
         private void OnPlayerInputToS(PlayerInputToS playerInputToS)
         {
-            LOPEntity entity = gameEngine.entityManager.GetEntity<LOPEntity>(playerInputToS.EntityId);
-
             PlayerInput playerInput = new PlayerInput
             {
                 tick = playerInputToS.Tick,
@@ -33,6 +34,8 @@ namespace LOP
                 sequenceNumber = playerInputToS.PlayerInput.SequenceNumber,
             };
 
+            ISession session = sessionManager.GetSessionById(playerInputToS.SessionId);
+            LOPEntity entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
             entity.GetEntityComponent<EntityInputComponent>().AddInput(playerInputToS);
         }
     }

@@ -606,10 +606,9 @@ MonoBehaviour:
   headlessStartMode: 0
   editorAutoStart: 0
   sendRate: 60
-  autoStartServerBuild: 0
-  autoConnectClientBuild: 0
   offlineScene: 
   onlineScene: 
+  offlineSceneLoadDelay: 0
   transport: {fileID: 1619750958}
   networkAddress: localhost
   maxConnections: 100
@@ -1093,6 +1092,7 @@ MonoBehaviour:
   networkManager: {fileID: 897964053}
   game: {fileID: 707173724}
   gameEngine: {fileID: 1325402485}
+  entityManager: {fileID: 1325402487}
 --- !u!4 &1901170866
 Transform:
   m_ObjectHideFlags: 0

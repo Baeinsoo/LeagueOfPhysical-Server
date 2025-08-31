@@ -3,11 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using System;
+using VContainer;
 
 namespace LOP
 {
     public class LOPEntityManager : MonoBehaviour, IEntityManager
     {
+        [Inject]
+        private ISessionManager sessionManager;
+
         private Dictionary<string, IEntity> entityMap = new Dictionary<string, IEntity>();
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
         private Dictionary<string, string> entityUserMap = new Dictionary<string, string>();
@@ -105,6 +109,15 @@ namespace LOP
                 {
                     userEntityMap.Remove(userId);
                     entityUserMap.Remove(entityId);
+                }
+
+                //  Send EntityDespawnToC
+                foreach (var session in sessionManager.GetAllSessions().DefaultIfEmpty())
+                {
+                    session.Send(new EntityDespawnToC
+                    {
+                        EntityId = entityId,
+                    });
                 }
             }
 

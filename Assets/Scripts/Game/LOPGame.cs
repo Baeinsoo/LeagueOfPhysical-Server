@@ -281,16 +281,6 @@ namespace LOP
         private void DespawnEntity(string entityId)
         {
             gameEngine.entityManager.DeleteEntityById(entityId);
-
-            EntityDespawnToC entityDespawnToC = new EntityDespawnToC
-            {
-                EntityId = entityId,
-            };
-
-            foreach (var session in sessionManager.GetAllSessions().OrEmpty())
-            {
-                session.Send(entityDespawnToC);
-            }
         }
         #endregion
     }

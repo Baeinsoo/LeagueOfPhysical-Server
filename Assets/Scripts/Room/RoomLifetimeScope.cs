@@ -11,6 +11,7 @@ namespace LOP
         [SerializeField] private LOPNetworkManager networkManager;
         [SerializeField] private LOPGame game;
         [SerializeField] private LOPGameEngine gameEngine;
+        [SerializeField] private LOPEntityManager entityManager; 
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -20,6 +21,7 @@ namespace LOP
             builder.RegisterComponent(networkManager);
             builder.RegisterComponent(game).As<IGame>();
             builder.RegisterComponent(gameEngine).As<IGameEngine>();
+            builder.RegisterComponent(entityManager).As<IEntityManager>();
 
             builder.Register<IRoomMessageHandler, GameMessageHandler>(Lifetime.Transient);
 

@@ -37,11 +37,14 @@ namespace LOP
             {
                 Debug.LogError(e);
 
-                await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                if (!EnvironmentSettings.active.Standalone)
                 {
-                    roomId = roomDataStore.room.id,
-                    status = RoomStatus.Error,
-                });
+                    await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                    {
+                        roomId = roomDataStore.room.id,
+                        status = RoomStatus.Error,
+                    });
+                }
             }
         }
 
@@ -64,11 +67,14 @@ namespace LOP
 
             await game.InitializeAsync();
 
-            await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+            if (!EnvironmentSettings.active.Standalone)
             {
-                roomId = roomDataStore.room.id,
-                status = RoomStatus.Initializing,
-            });
+                await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                {
+                    roomId = roomDataStore.room.id,
+                    status = RoomStatus.Initializing,
+                });
+            }
 
             initialized = true;
         }
@@ -115,18 +121,28 @@ namespace LOP
 
         public async Task StartGameAsync()
         {
-            await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+            if (EnvironmentSettings.active.Standalone)
             {
-                roomId = roomDataStore.room.id,
-                status = RoomStatus.WaitingForPlayers,
-            });
+                await Task.CompletedTask;
+            }
+            else
+            {
+                await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                {
+                    roomId = roomDataStore.room.id,
+                    status = RoomStatus.WaitingForPlayers,
+                });
+            }
 
             game.Run(0, TICK_INTERVAL, 0);
         }
 
         private void SendHeartbeat()
         {
-            WebAPI.Heartbeat(roomDataStore.room.id);
+            if (!EnvironmentSettings.active.Standalone)
+            {
+                WebAPI.Heartbeat(roomDataStore.room.id);
+            }
         }
 
         private void OnGameStateChanged(IGameState gameState)
@@ -135,11 +151,14 @@ namespace LOP
             {
                 case GameOver:
                     Debug.Log("Game Over");
-                    WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                    if (!EnvironmentSettings.active.Standalone)
                     {
-                        roomId = roomDataStore.room.id,
-                        status = RoomStatus.Closed,
-                    });
+                        WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                        {
+                            roomId = roomDataStore.room.id,
+                            status = RoomStatus.Closed,
+                        });
+                    }
                     break;
             }
         }

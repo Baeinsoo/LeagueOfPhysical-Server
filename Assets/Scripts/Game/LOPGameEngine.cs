@@ -7,6 +7,7 @@ using LOP.Event.LOPGameEngine.Update;
 
 namespace LOP
 {
+    [DIMonoBehaviour]
     public class LOPGameEngine : GameEngineBase
     {
         [Inject]
@@ -17,6 +18,10 @@ namespace LOP
 
         [Inject]
         private IMovementManager movementManager;
+
+        [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
+        [Inject] private GameFramework.World.WorldEventApplicator worldEventApplicator;
+        [Inject] private WireBroadcaster wireBroadcaster;
 
         public new LOPEntityManager entityManager => base.entityManager as LOPEntityManager;
 
@@ -107,6 +112,14 @@ namespace LOP
 
         private void ProcessEvent()
         {
+            // --- World Core — 슬라이스 3: 이벤트 버퍼 드레인 ---
+            var snapshot = worldEventBuffer.Snapshot;
+            if (snapshot.Count == 0) return;
+
+            worldEventApplicator.Apply(snapshot);
+            wireBroadcaster.Broadcast(snapshot);
+            worldEventBuffer.Clear();
+            // --- end World Core slice 3 ---
         }
 
         private void EndUpdate()

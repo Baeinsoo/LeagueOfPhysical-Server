@@ -5,11 +5,11 @@ namespace LOP
 {
     public class LOPCombatSystem : ICombatSystem
     {
-        private ISessionManager sessionManager;
+        private readonly GameFramework.World.WorldEventBuffer worldEventBuffer;
 
-        public LOPCombatSystem(ISessionManager sessionManager)
+        public LOPCombatSystem(GameFramework.World.WorldEventBuffer worldEventBuffer)
         {
-            this.sessionManager = sessionManager;
+            this.worldEventBuffer = worldEventBuffer;
         }
 
         public void Attack(LOPEntity attacker, LOPEntity target)
@@ -52,25 +52,30 @@ namespace LOP
                 healthComponent.TakeDamage(attacker.entityId, damage);
             }
 
-            DamageEventToC damageEventToC = new DamageEventToC
-            {
-                Tick = GameEngine.Time.tick,
-                AttackerId = attacker.entityId,
-                TargetId = target.entityId,
-                ActionCode = "attack",
-                DamageType = "physical",
-                Damage = damage,
-                IsCritical = isCritical,
-                IsDodged = isDodged,
-                IsBlocked = false,
-                RemainingHP = healthComponent.currentHP,
-                IsDead = healthComponent.currentHP <= 0
-            };
+            // --- World Core — 슬라이스 3: Generation → 버퍼 Append ---
+            // 송신은 WireBroadcaster, Application은 WorldEventApplicator가 ProcessEvent에서 처리.
+            // 레거시 HealthComponent.TakeDamage는 walking-skeleton 병렬 경로로 그대로 유지.
+            int dealtAmount = isDodged ? 0 : damage;
+            bool isDead = healthComponent.currentHP <= 0;
 
-            foreach (var session in sessionManager.GetAllSessions())
+            worldEventBuffer.Append(new GameFramework.World.DamageDealtEvent(
+                targetId:   target.entityId,
+                attackerId: attacker.entityId,
+                amount:     dealtAmount,
+                isCritical: isCritical,
+                isDodged:   isDodged,
+                remaining:  healthComponent.currentHP,
+                isDead:     isDead
+            ));
+
+            if (isDead)
             {
-                session.Send(damageEventToC);
+                worldEventBuffer.Append(new GameFramework.World.DeathEvent(
+                    victimId:   target.entityId,
+                    attackerId: attacker.entityId
+                ));
             }
+            // --- end World Core slice 3 ---
         }
 
         public bool IsDodge(int attackerDex, int targetDex)

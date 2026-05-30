@@ -7,10 +7,14 @@ using VContainer;
 
 namespace LOP
 {
+    [DIMonoBehaviour]
     public class LOPEntityManager : MonoBehaviour, IEntityManager
     {
         [Inject]
         private ISessionManager sessionManager;
+
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
 
         private Dictionary<string, IEntity> entityMap = new Dictionary<string, IEntity>();
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
@@ -100,6 +104,13 @@ namespace LOP
                 {
                     cleanup.Cleanup();
                 }
+
+                // --- World Core (병렬·정리) — 마이그레이션 Slice 2: Unregister from World ---
+                if (entityRegistry.Remove(entityId))
+                {
+                    Debug.Log($"[World] Unregistered entity {entityId}");
+                }
+                // --- end World Core slice 2 ---
 
                 Destroy(lopEntity.transform.parent.gameObject);
 

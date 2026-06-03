@@ -6,7 +6,7 @@ namespace LOP
     public class CharacterComponent : LOPComponent
     {
         [Inject]
-        private IMasterDataManager masterDataManager;
+        private LOP.MasterData.LOPMasterData md;
 
         public string characterCode { get; private set; }
         public MasterData.Character masterData { get; private set; }
@@ -14,7 +14,7 @@ namespace LOP
         public void Initialize(string characterCode)
         {
             this.characterCode = characterCode;
-            this.masterData = masterDataManager.GetMasterData<MasterData.Character>(characterCode);
+            this.masterData = md.Tables.TbCharacter.Get(characterCode);
         }
     }
 }

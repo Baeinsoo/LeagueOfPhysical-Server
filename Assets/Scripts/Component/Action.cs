@@ -8,7 +8,7 @@ namespace LOP
     public abstract class Action : LOPComponent, IInitializable<string>
     {
         [Inject]
-        private IMasterDataManager masterDataManager;
+        private LOP.MasterData.LOPMasterData md;
 
         [Inject]
         private ISessionManager sessionManager;
@@ -32,7 +32,7 @@ namespace LOP
         public virtual void Initialize(string actionCode)
         {
             this.actionCode = actionCode;
-            this.masterData = masterDataManager.GetMasterData<MasterData.Action>(actionCode);
+            this.masterData = md.Tables.TbAction.Get(actionCode);
             this.initialized = true;
         }
 

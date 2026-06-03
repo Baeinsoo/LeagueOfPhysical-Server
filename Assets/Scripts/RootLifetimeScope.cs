@@ -8,7 +8,7 @@ namespace LOP
     {
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<IMasterDataManager, LOPMasterDataManager>(Lifetime.Singleton);
+            builder.Register<LOP.MasterData.LOPMasterData>(Lifetime.Singleton);
 
             builder.Register<RoomDataStore>(Lifetime.Singleton)
                 .As<IRoomDataStore>()

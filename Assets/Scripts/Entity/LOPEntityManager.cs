@@ -16,6 +16,9 @@ namespace LOP
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
 
+        [Inject]
+        private IEntityFactory entityFactory;
+
         private Dictionary<string, IEntity> entityMap = new Dictionary<string, IEntity>();
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
         private Dictionary<string, string> entityUserMap = new Dictionary<string, string>();
@@ -70,7 +73,7 @@ namespace LOP
             where TEntity : IEntity
             where TCreationData : struct, IEntityCreationData
         {
-            var entity = EntityFactory.CreateEntity<TEntity, TCreationData>(creationData);
+            var entity = entityFactory.CreateEntity<TEntity, TCreationData>(creationData);
 
             entityMap[entity.entityId] = entity;
 

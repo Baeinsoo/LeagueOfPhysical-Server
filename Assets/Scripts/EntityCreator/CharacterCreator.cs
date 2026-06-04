@@ -4,7 +4,6 @@ using VContainer;
 
 namespace LOP
 {
-    [EntityCreatorRegistration]
     public class CharacterCreator : IEntityCreator<LOPEntity, CharacterCreationData>
     {
         [Inject]
@@ -12,11 +11,6 @@ namespace LOP
 
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
-
-        public CharacterCreator()
-        {
-            SceneLifetimeScope.Inject(this);
-        }
 
         public LOPEntity Create(CharacterCreationData creationData)
         {
@@ -84,7 +78,7 @@ namespace LOP
                 LOPAIController aiController = root.CreateChildWithComponent<LOPAIController>();
                 objectResolver.Inject(aiController);
                 aiController.SetEntity(entity);
-                aiController.SetBrain(SceneLifetimeScope.Resolve<EnemyBrain>());
+                aiController.SetBrain(objectResolver.Resolve<EnemyBrain>());
             }
 
             // --- World Core (병렬·추가) — 마이그레이션 Slice 1: Walking Skeleton ---

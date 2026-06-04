@@ -56,23 +56,8 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
-            EventBus.Default.Subscribe<EntityDeath>(EventTopic.Entity, entityDeath =>
-            {
-                DespawnEntity(entityDeath.victimId);
-
-                SpawnExpMarble(entityDeath.position);
-            });
-
-            EventBus.Default.Subscribe<ItemTouch>(EventTopic.Entity, itemTouch =>
-            {
-                if (gameEngine.entityManager.GetEntity(itemTouch.itemId) != null)
-                {
-                    DespawnEntity(itemTouch.itemId);
-
-                    LOPEntity toucher = gameEngine.entityManager.GetEntity<LOPEntity>(itemTouch.toucherId);
-                    toucher.GetEntityComponent<LevelComponent>().AddExperience(10);
-                }
-            });
+            EventBus.Default.Subscribe<EntityDeath>(EventTopic.Entity, HandleEntityDeath);
+            EventBus.Default.Subscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
 
             gameState = Initializing.State;
 
@@ -150,6 +135,9 @@ namespace LOP
 
         public async Task DeinitializeAsync()
         {
+            EventBus.Default.Unsubscribe<EntityDeath>(EventTopic.Entity, HandleEntityDeath);
+            EventBus.Default.Unsubscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
+
             await gameEngine.DeinitializeAsync();
 
             foreach (var gameMessageHandler in gameMessageHandlers.OrEmpty())
@@ -164,11 +152,36 @@ namespace LOP
             initialized = false;
         }
 
+        private void HandleEntityDeath(EntityDeath entityDeath)
+        {
+            DespawnEntity(entityDeath.victimId);
+
+            SpawnExpMarble(entityDeath.position);
+        }
+
+        private void HandleItemTouch(ItemTouch itemTouch)
+        {
+            if (gameEngine.entityManager.GetEntity(itemTouch.itemId) != null)
+            {
+                DespawnEntity(itemTouch.itemId);
+
+                LOPEntity toucher = gameEngine.entityManager.GetEntity<LOPEntity>(itemTouch.toucherId);
+                toucher.GetEntityComponent<LevelComponent>().AddExperience(10);
+            }
+        }
+
         public void Run(long tick, double interval, double elapsedTime)
         {
-            gameState = Playing.State;
-
             gameEngine.Run(tick, interval, elapsedTime);
+
+            gameState = Playing.State;
+        }
+
+        public void Stop()
+        {
+            gameEngine.Stop();
+
+            gameState = Paused.State;
         }
 
         private void LateUpdate()

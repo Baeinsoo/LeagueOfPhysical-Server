@@ -28,7 +28,7 @@ namespace LOP
             builder.RegisterComponent(gameEngine).As<IGameEngine>();
             builder.RegisterComponent(entityManager).As<IEntityManager>();
 
-            builder.Register<IGameMessageHandler, GameMessageHandler>(Lifetime.Transient);
+            builder.Register<IGameMessageHandler, GameInfoMessageHandler>(Lifetime.Transient);
             builder.Register<IGameMessageHandler, GameEntityMessageHandler>(Lifetime.Transient);
             builder.Register<IGameMessageHandler, GameInputMessageHandler>(Lifetime.Transient);
 

@@ -17,11 +17,13 @@ namespace LOP
         private const int HEARTBEAT_INTERVAL = 2;       //  sec
         private const double TICK_INTERVAL = 1 / 50d;   //  sec
 
-        [Inject] public IGame game { get; private set; }
+        [Inject] private IGameFactory gameFactory;
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private ISessionManager sessionManager;
         [Inject] private IRoomDataStore roomDataStore;
         [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
+
+        public IGame game { get; private set; }
 
         public bool initialized { get; private set; }
 
@@ -61,6 +63,7 @@ namespace LOP
                 roomMessageHandler.Register();
             }
 
+            game = await gameFactory.CreateAsync();
             game.onGameStateChanged += OnGameStateChanged;
 
             InvokeRepeating("SendHeartbeat", 0, HEARTBEAT_INTERVAL);
@@ -86,6 +89,9 @@ namespace LOP
             CancelInvoke("SendHeartbeat");
 
             game.onGameStateChanged -= OnGameStateChanged;
+
+            await gameFactory.DestroyAsync();
+            game = null;
 
             foreach (var roomMessageHandler in roomMessageHandlers.OrEmpty())
             {

@@ -6,7 +6,7 @@ using VContainer;
 
 namespace LOP
 {
-    public class GameMessageHandler : IRoomMessageHandler
+    public class GameMessageHandler : IGameMessageHandler
     {
         [Inject]
         private IGameEngine gameEngine;

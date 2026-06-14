@@ -42,7 +42,6 @@ namespace LOP
             LOPEntityView view = root.CreateChildWithComponent<LOPEntityView>();
             objectResolver.Inject(view);
             view.SetEntity(entity);
-            view.SetEntityController(controller);
 
             return entity;
         }

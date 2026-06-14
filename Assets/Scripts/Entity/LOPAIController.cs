@@ -1,13 +1,21 @@
 using GameFramework;
 using LOP.Event.LOPGameEngine.Update;
+using UnityEngine;
 using VContainer;
 
 namespace LOP
 {
-    public class LOPAIController : MonoEntityController<LOPEntity>
+    public class LOPAIController : MonoBehaviour, ICleanup
     {
         [Inject]
         private IGameEngine gameEngine;
+
+        public LOPEntity entity { get; private set; }
+
+        public void SetEntity(LOPEntity entity)
+        {
+            this.entity = entity;
+        }
 
         public IBrain brain { get; private set; }
 
@@ -21,11 +29,10 @@ namespace LOP
             gameEngine.AddListener(this);
         }
 
-        public override void Cleanup()
+        public void Cleanup()
         {
-            base.Cleanup();
-
             gameEngine.RemoveListener(this);
+            entity = null;
         }
 
         [GameEngineListen(typeof(Begin))]

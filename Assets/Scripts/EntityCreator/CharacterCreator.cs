@@ -61,7 +61,6 @@ namespace LOP
             LOPEntityView view = root.CreateChildWithComponent<LOPEntityView>();
             objectResolver.Inject(view);
             view.SetEntity(entity);
-            view.SetEntityController(controller);
 
             bool isPlayer = !string.IsNullOrEmpty(creationData.userId);
             if (isPlayer)

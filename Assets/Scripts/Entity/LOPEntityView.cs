@@ -7,8 +7,15 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 
 namespace LOP
 {
-    public class LOPEntityView : MonoEntityView<LOPEntity, LOPEntityController>
+    public class LOPEntityView : MonoBehaviour, ICleanup
     {
+        public LOPEntity entity { get; private set; }
+
+        public void SetEntity(LOPEntity entity)
+        {
+            this.entity = entity;
+        }
+
         private GameObject _visualGameObject;
         public GameObject visualGameObject
         {
@@ -37,7 +44,7 @@ namespace LOP
             }
         }
 
-        public override void Cleanup()
+        public void Cleanup()
         {
             EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
 
@@ -51,7 +58,7 @@ namespace LOP
                 Destroy(_visualGameObject);
             }
 
-            base.Cleanup();
+            entity = null;
         }
 
         private void OnPropertyChange(PropertyChange propertyChange)

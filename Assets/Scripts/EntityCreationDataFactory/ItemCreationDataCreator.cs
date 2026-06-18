@@ -3,7 +3,6 @@ using System;
 
 namespace LOP
 {
-    [EntityCreationDataCreatorRegistration(EntityType.Item)]
     public class ItemCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
     {
         public EntityType EntityType => EntityType.Item;

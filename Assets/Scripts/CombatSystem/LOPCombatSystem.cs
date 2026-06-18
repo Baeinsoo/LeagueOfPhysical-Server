@@ -6,10 +6,17 @@ namespace LOP
     public class LOPCombatSystem : ICombatSystem
     {
         private readonly GameFramework.World.WorldEventBuffer worldEventBuffer;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly GameFramework.World.HealthSystem healthSystem;
 
-        public LOPCombatSystem(GameFramework.World.WorldEventBuffer worldEventBuffer)
+        public LOPCombatSystem(
+            GameFramework.World.WorldEventBuffer worldEventBuffer,
+            GameFramework.World.EntityRegistry entityRegistry,
+            GameFramework.World.HealthSystem healthSystem)
         {
             this.worldEventBuffer = worldEventBuffer;
+            this.entityRegistry = entityRegistry;
+            this.healthSystem = healthSystem;
         }
 
         public void Attack(LOPEntity attacker, LOPEntity target)
@@ -22,12 +29,15 @@ namespace LOP
                 return;
             }
 
-            if (target.TryGetEntityComponent<HealthComponent>(out var healthComponent) == false)
+            GameFramework.World.Entity worldEntity = entityRegistry.Get(target.entityId);
+            GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
+            if (health == null)
             {
+                Debug.LogWarning($"[World] Attack: Health not found for entity {target.entityId}");
                 return;
             }
 
-            if (healthComponent.currentHP <= 0)
+            if (health.IsDead)
             {
                 Debug.LogWarning($"Target {target.entityId} is already dead.");
                 return;
@@ -47,16 +57,18 @@ namespace LOP
                 damage = Mathf.RoundToInt(damage * Random.Range(1.25f, 1.75f));
             }
 
+            int dealtAmount = isDodged ? 0 : damage;
+
+            // --- World Core — Slice 2: writer flip + 사망 발행 재배치 ---
+            // World.Health가 HP 진실원본. Generation(여기)이 mutate, WorldEventApplicator(ProcessEvent)가
+            // remaining으로 재적용(멱등). 디스폰 구동 신호 EntityDeath도 사망 시 여기서 발행
+            // (예전엔 HealthComponent.TakeDamage 안에 있었음). 디스폰 경로/구독자는 무변경.
             if (!isDodged)
             {
-                healthComponent.TakeDamage(attacker.entityId, damage);
+                healthSystem.TakeDamage(health, dealtAmount);
             }
 
-            // --- World Core — 슬라이스 3: Generation → 버퍼 Append ---
-            // 송신은 WireBroadcaster, Application은 WorldEventApplicator가 ProcessEvent에서 처리.
-            // 레거시 HealthComponent.TakeDamage는 walking-skeleton 병렬 경로로 그대로 유지.
-            int dealtAmount = isDodged ? 0 : damage;
-            bool isDead = healthComponent.currentHP <= 0;
+            bool isDead = health.IsDead;
 
             worldEventBuffer.Append(new GameFramework.World.DamageDealtEvent(
                 targetId:   target.entityId,
@@ -64,7 +76,7 @@ namespace LOP
                 amount:     dealtAmount,
                 isCritical: isCritical,
                 isDodged:   isDodged,
-                remaining:  healthComponent.currentHP,
+                remaining:  health.Current,
                 isDead:     isDead
             ));
 
@@ -74,8 +86,11 @@ namespace LOP
                     victimId:   target.entityId,
                     attackerId: attacker.entityId
                 ));
+
+                EventBus.Default.Publish(EventTopic.Entity, new Event.Entity.EntityDeath(
+                    target.entityId, attacker.entityId, target.position));
             }
-            // --- end World Core slice 3 ---
+            // --- end World Core slice 2 ---
         }
 
         public bool IsDodge(int attackerDex, int targetDex)

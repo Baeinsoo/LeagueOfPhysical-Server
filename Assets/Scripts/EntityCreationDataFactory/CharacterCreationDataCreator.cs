@@ -29,6 +29,12 @@ namespace LOP
                 UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Health not found for entity {lopEntity.entityId}");
             }
 
+            GameFramework.World.Mana mana = worldEntity?.Get<GameFramework.World.Mana>();
+            if (mana == null)
+            {
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Mana not found for entity {lopEntity.entityId}");
+            }
+
             global::CharacterCreationData characterCreationData = new global::CharacterCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
@@ -37,8 +43,8 @@ namespace LOP
 
                 MaxHP = health?.Max ?? 0,
                 CurrentHP = health?.Current ?? 0,
-                MaxMP = lopEntity.GetEntityComponent<ManaComponent>().maxMP,
-                CurrentMP = lopEntity.GetEntityComponent<ManaComponent>().currentMP,
+                MaxMP = mana?.Max ?? 0,
+                CurrentMP = mana?.Current ?? 0,
                 Level = lopEntity.GetEntityComponent<LevelComponent>().level,
                 CurrentExp = lopEntity.GetEntityComponent<LevelComponent>().currentExp,
             };

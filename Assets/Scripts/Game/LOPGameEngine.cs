@@ -153,8 +153,13 @@ namespace LOP
                 UserEntitySnapToC entitySnapsToC = new UserEntitySnapToC();
                 entitySnapsToC.CurrentHP = health?.Current ?? 0;
                 entitySnapsToC.MaxHP = health?.Max ?? 0;
-                entitySnapsToC.CurrentMP = entity.GetEntityComponent<ManaComponent>().currentMP;
-                entitySnapsToC.MaxMP = entity.GetEntityComponent<ManaComponent>().maxMP;
+                GameFramework.World.Mana mana = worldEntity?.Get<GameFramework.World.Mana>();
+                if (mana == null)
+                {
+                    Debug.LogWarning($"[World] UserEntitySnap: Mana not found for entity {entity.entityId}");
+                }
+                entitySnapsToC.CurrentMP = mana?.Current ?? 0;
+                entitySnapsToC.MaxMP = mana?.Max ?? 0;
                 entitySnapsToC.CurrentExp = entity.GetEntityComponent<LevelComponent>().currentExp;
                 entitySnapsToC.Level = entity.GetEntityComponent<LevelComponent>().level;
                 entitySnapsToC.StatPoints = entity.GetEntityComponent<PlayerComponent>().statPoints;

@@ -3,9 +3,10 @@ using System;
 
 namespace LOP
 {
-    [EntityCreationDataCreatorRegistration(EntityType.Character)]
     public class CharacterCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
     {
+        public EntityType EntityType => EntityType.Character;
+
         public EntityCreationData Create(LOPEntity lopEntity)
         {
             var baseEntityCreationData = new BaseEntityCreationData

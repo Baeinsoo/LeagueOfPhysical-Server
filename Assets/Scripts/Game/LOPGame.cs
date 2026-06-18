@@ -31,6 +31,9 @@ namespace LOP
         [Inject]
         private ISessionManager sessionManager;
 
+        [Inject]
+        private IEntityCreationDataFactory entityCreationDataFactory;
+
         private IGameState _gameState;
         public IGameState gameState
         {
@@ -249,7 +252,7 @@ namespace LOP
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
-                EntityCreationData = EntityCreationDataFactory.Create(entity),
+                EntityCreationData = entityCreationDataFactory.Create(entity),
             };
 
             foreach (var session in sessionManager.GetAllSessions().OrEmpty())
@@ -277,7 +280,7 @@ namespace LOP
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
-                EntityCreationData = EntityCreationDataFactory.Create(entity),
+                EntityCreationData = entityCreationDataFactory.Create(entity),
             };
 
             foreach (var session in sessionManager.GetAllSessions().OrEmpty())

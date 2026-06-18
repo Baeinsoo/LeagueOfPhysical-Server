@@ -20,6 +20,9 @@ namespace LOP
         [Inject]
         private IEntityFactory entityFactory;
 
+        [Inject]
+        private IEntityCreationDataFactory entityCreationDataFactory;
+
         private Dictionary<string, IEntity> entityMap = new Dictionary<string, IEntity>();
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
         private Dictionary<string, string> entityUserMap = new Dictionary<string, string>();
@@ -190,7 +193,7 @@ namespace LOP
 
             foreach (var entity in GetEntities().OrEmpty())
             {
-                EntityCreationData entityCreationData = EntityCreationDataFactory.Create(entity);
+                EntityCreationData entityCreationData = entityCreationDataFactory.Create(entity);
 
                 entityCreationDataList.Add(entityCreationData);
             }

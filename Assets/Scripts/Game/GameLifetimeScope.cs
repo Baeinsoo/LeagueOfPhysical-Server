@@ -39,6 +39,9 @@ namespace LOP
             builder.Register<IEntityCreator, CharacterCreator>(Lifetime.Singleton);
             builder.Register<IEntityCreator, ItemCreator>(Lifetime.Singleton);
             builder.Register<IEntityFactory, EntityFactory>(Lifetime.Singleton);
+            builder.Register<IEntityCreationDataCreator, CharacterCreationDataCreator>(Lifetime.Singleton);
+            builder.Register<IEntityCreationDataCreator, ItemCreationDataCreator>(Lifetime.Singleton);
+            builder.Register<IEntityCreationDataFactory, EntityCreationDataFactory>(Lifetime.Singleton);
 
             builder.RegisterBuildCallback(container =>
             {

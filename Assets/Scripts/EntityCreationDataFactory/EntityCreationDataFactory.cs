@@ -1,42 +1,25 @@
 using GameFramework;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using UnityEngine;
 
 namespace LOP
 {
-    public static class EntityCreationDataFactory
+    public class EntityCreationDataFactory : IEntityCreationDataFactory
     {
-        private static readonly Dictionary<object, IEntityCreationDataCreator> entityCreationDataCreators;
+        private readonly Dictionary<EntityType, IEntityCreationDataCreator> creators
+            = new Dictionary<EntityType, IEntityCreationDataCreator>();
 
-        static EntityCreationDataFactory()
+        // creator는 DI 컨테이너가 생성·주입해 IEnumerable로 전달한다. (정적 캐시/Activator 없음 →
+        // 스코프와 함께 생성·해제되어 룸 재입장 시 stale 참조가 생기지 않는다.)
+        public EntityCreationDataFactory(IEnumerable<IEntityCreationDataCreator> creators)
         {
-            entityCreationDataCreators = new Dictionary<object, IEntityCreationDataCreator>();
-
-            RegisterCreators();
-        }
-
-        private static void RegisterCreators()
-        {
-            var types = AppDomain.CurrentDomain.GetAssemblies().SelectMany(a => a.GetTypes());
-            foreach (var type in types.OrEmpty())
+            foreach (var creator in creators.OrEmpty())
             {
-                var attribute = (EntityCreationDataCreatorRegistrationAttribute)Attribute.GetCustomAttribute(type, typeof(EntityCreationDataCreatorRegistrationAttribute));
-                if (attribute == null || attribute.value == false)
-                {
-                    continue;
-                }
-
-                if (Activator.CreateInstance(type) is IEntityCreationDataCreator instance)
-                {
-                    entityCreationDataCreators[attribute.type] = instance;
-                    Debug.Log($"Registered Creator: {type.Name} for {attribute.type}");
-                }
+                this.creators[creator.EntityType] = creator;
             }
         }
 
-        public static EntityCreationData Create(IEntity entity)
+        public EntityCreationData Create(IEntity entity)
         {
             if (entity.TryGetEntityComponent<EntityTypeComponent>(out var entityTypeComponent) == false)
             {
@@ -46,11 +29,11 @@ namespace LOP
                 );
             }
 
-            if (entityCreationDataCreators.TryGetValue(entityTypeComponent.entityType, out var creator) == false)
+            if (creators.TryGetValue(entityTypeComponent.entityType, out var creator) == false)
             {
                 throw new InvalidOperationException(
-                    $"No registered creator found for entity type '{entity.GetType().Name}' " +
-                    "Ensure the appropriate IEntityCreationDataCreator is registered."
+                    $"No registered creation-data creator found for entity type '{entityTypeComponent.entityType}'. " +
+                    "Ensure the appropriate IEntityCreationDataCreator is registered in the DI container."
                 );
             }
 

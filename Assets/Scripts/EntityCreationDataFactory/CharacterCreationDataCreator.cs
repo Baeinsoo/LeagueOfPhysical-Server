@@ -21,12 +21,18 @@ namespace LOP
                 Velocity = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.velocity),
             };
 
-            // HP는 World.Health(코어, Slice 1b)에서 읽는다. MP/Level/Exp는 각자 이행 전까지 legacy 컴포넌트 유지.
+            // HP/MP는 World.Health/World.Mana(코어)에서 읽는다. Level/Exp는 각자 이행 전까지 legacy 컴포넌트 유지.
             GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
             GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
             if (health == null)
             {
                 UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Health not found for entity {lopEntity.entityId}");
+            }
+
+            GameFramework.World.Mana mana = worldEntity?.Get<GameFramework.World.Mana>();
+            if (mana == null)
+            {
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Mana not found for entity {lopEntity.entityId}");
             }
 
             global::CharacterCreationData characterCreationData = new global::CharacterCreationData
@@ -37,8 +43,8 @@ namespace LOP
 
                 MaxHP = health?.Max ?? 0,
                 CurrentHP = health?.Current ?? 0,
-                MaxMP = lopEntity.GetEntityComponent<ManaComponent>().maxMP,
-                CurrentMP = lopEntity.GetEntityComponent<ManaComponent>().currentMP,
+                MaxMP = mana?.Max ?? 0,
+                CurrentMP = mana?.Current ?? 0,
                 Level = lopEntity.GetEntityComponent<LevelComponent>().level,
                 CurrentExp = lopEntity.GetEntityComponent<LevelComponent>().currentExp,
             };

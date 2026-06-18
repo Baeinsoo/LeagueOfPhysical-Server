@@ -142,6 +142,7 @@ namespace LOP
             {
                 LOPEntity entity = entityManager.GetEntityByUserId<LOPEntity>(session.userId);
 
+                // HP는 World.Health(코어, Slice 1b)에서 읽는다. MP/Exp/Level/StatPoints는 각자 이행 전까지 legacy 컴포넌트 유지.
                 GameFramework.World.Entity worldEntity = entityRegistry.Get(entity.entityId);
                 GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
                 if (health == null)

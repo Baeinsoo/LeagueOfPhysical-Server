@@ -1,10 +1,14 @@
 using GameFramework;
 using System;
+using VContainer;
 
 namespace LOP
 {
     public class CharacterCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
     {
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
+
         public EntityType EntityType => EntityType.Character;
 
         public EntityCreationData Create(LOPEntity lopEntity)
@@ -17,14 +21,21 @@ namespace LOP
                 Velocity = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.velocity),
             };
 
+            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
+            GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
+            if (health == null)
+            {
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Health not found for entity {lopEntity.entityId}");
+            }
+
             global::CharacterCreationData characterCreationData = new global::CharacterCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
                 CharacterCode = lopEntity.GetEntityComponent<CharacterComponent>().characterCode,
                 VisualId = lopEntity.GetEntityComponent<AppearanceComponent>().visualId,
 
-                MaxHP = lopEntity.GetEntityComponent<HealthComponent>().maxHP,
-                CurrentHP = lopEntity.GetEntityComponent<HealthComponent>().currentHP,
+                MaxHP = health?.Max ?? 0,
+                CurrentHP = health?.Current ?? 0,
                 MaxMP = lopEntity.GetEntityComponent<ManaComponent>().maxMP,
                 CurrentMP = lopEntity.GetEntityComponent<ManaComponent>().currentMP,
                 Level = lopEntity.GetEntityComponent<LevelComponent>().level,

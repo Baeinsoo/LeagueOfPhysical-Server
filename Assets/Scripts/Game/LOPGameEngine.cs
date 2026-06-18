@@ -22,6 +22,7 @@ namespace LOP
         [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
         [Inject] private GameFramework.World.WorldEventApplicator worldEventApplicator;
         [Inject] private WireBroadcaster wireBroadcaster;
+        [Inject] private GameFramework.World.EntityRegistry entityRegistry;
 
         public new LOPEntityManager entityManager => base.entityManager as LOPEntityManager;
 
@@ -141,9 +142,16 @@ namespace LOP
             {
                 LOPEntity entity = entityManager.GetEntityByUserId<LOPEntity>(session.userId);
 
+                GameFramework.World.Entity worldEntity = entityRegistry.Get(entity.entityId);
+                GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
+                if (health == null)
+                {
+                    Debug.LogWarning($"[World] UserEntitySnap: Health not found for entity {entity.entityId}");
+                }
+
                 UserEntitySnapToC entitySnapsToC = new UserEntitySnapToC();
-                entitySnapsToC.CurrentHP = entity.GetEntityComponent<HealthComponent>().currentHP;
-                entitySnapsToC.MaxHP = entity.GetEntityComponent<HealthComponent>().maxHP;
+                entitySnapsToC.CurrentHP = health?.Current ?? 0;
+                entitySnapsToC.MaxHP = health?.Max ?? 0;
                 entitySnapsToC.CurrentMP = entity.GetEntityComponent<ManaComponent>().currentMP;
                 entitySnapsToC.MaxMP = entity.GetEntityComponent<ManaComponent>().maxMP;
                 entitySnapsToC.CurrentExp = entity.GetEntityComponent<LevelComponent>().currentExp;

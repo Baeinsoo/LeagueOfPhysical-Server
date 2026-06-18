@@ -6,6 +6,8 @@ namespace LOP
     [EntityCreationDataCreatorRegistration(EntityType.Item)]
     public class ItemCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
     {
+        public EntityType EntityType => EntityType.Item;
+
         public EntityCreationData Create(LOPEntity lopEntity)
         {
             var baseEntityCreationData = new BaseEntityCreationData

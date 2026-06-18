@@ -4,6 +4,7 @@ namespace LOP
 {
     public interface IEntityCreationDataCreator
     {
+        EntityType EntityType { get; }
         EntityCreationData Create(IEntity entity);
     }
 

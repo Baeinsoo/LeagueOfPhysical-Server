@@ -1,4 +1,5 @@
 using GameFramework;
+using LOP.Event.Entity;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -76,6 +77,8 @@ namespace LOP
             var entity = entityFactory.CreateEntity<TEntity, TCreationData>(creationData);
 
             entityMap[entity.entityId] = entity;
+
+            EventBus.Default.Publish(nameof(EntityCreated), new EntityCreated(entity));
 
             if (creationData is CharacterCreationData characterCreationData
                 && string.IsNullOrEmpty(characterCreationData.userId) == false)

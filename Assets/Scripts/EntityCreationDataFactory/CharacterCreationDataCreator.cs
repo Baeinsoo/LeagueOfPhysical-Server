@@ -21,7 +21,7 @@ namespace LOP
                 Velocity = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.velocity),
             };
 
-            // HP는 World.Health(코어, Slice 1b)에서 읽는다. MP/Level/Exp는 각자 이행 전까지 legacy 컴포넌트 유지.
+            // HP/MP는 World.Health/World.Mana(코어)에서 읽는다. Level/Exp는 각자 이행 전까지 legacy 컴포넌트 유지.
             GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
             GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
             if (health == null)

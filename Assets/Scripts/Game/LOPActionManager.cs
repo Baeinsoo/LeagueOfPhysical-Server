@@ -16,6 +16,9 @@ namespace LOP
         [Inject]
         private ICombatSystem combatSystem;
 
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
+
         public bool TryStartAction(LOPEntity entity, string actionCode)
         {
             if (entity == null)
@@ -35,7 +38,7 @@ namespace LOP
             {
                 var entities = GameEngine.current.entityManager.GetEntities<LOPEntity>();
                 var targets = entities
-                    .Where(e => !e.HasEntityComponent<PlayerComponent>())
+                    .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() != true)
                     .Where(e => (e.position - entity.position).magnitude <= 20);
 
                 foreach (var target in targets.DefaultIfEmpty())

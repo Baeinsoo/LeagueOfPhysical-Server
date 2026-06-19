@@ -49,10 +49,6 @@ namespace LOP
             bool isPlayer = !string.IsNullOrEmpty(creationData.userId);
             if (isPlayer)
             {
-                PlayerComponent playerComponent = entity.AddEntityComponent<PlayerComponent>();
-                objectResolver.Inject(playerComponent);
-                playerComponent.Initialize(creationData.userId);
-
                 EntityInputComponent entityInputComponent = entity.AddEntityComponent<EntityInputComponent>();
                 objectResolver.Inject(entityInputComponent);
             }
@@ -82,6 +78,10 @@ namespace LOP
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Intelligence] = creationData.intelligence;
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Vitality] = creationData.vitality;
             worldEntity.Add(worldStats);
+            if (isPlayer)
+            {
+                worldEntity.Add(new GameFramework.World.Ownership(creationData.userId));
+            }
             entityRegistry.Add(worldEntity);
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");
             // --- end World Core ---

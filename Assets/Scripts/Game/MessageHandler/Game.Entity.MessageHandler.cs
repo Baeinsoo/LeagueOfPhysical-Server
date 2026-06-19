@@ -44,25 +44,18 @@ namespace LOP
                 return;
             }
 
-            int statValue = 0;
+            int statType;
             // wire stat 문자열은 소문자 필드명("strength" 등) — 클라가 보내는 기존 계약 유지.
             switch (statAllocationToS.Stat)
             {
-                case "strength":
-                    statValue = (int)statsSystem.AddBase(stats, (int)GameFramework.World.EntityStatType.Strength, 1);
-                    break;
-                case "dexterity":
-                    statValue = (int)statsSystem.AddBase(stats, (int)GameFramework.World.EntityStatType.Dexterity, 1);
-                    break;
-                case "intelligence":
-                    statValue = (int)statsSystem.AddBase(stats, (int)GameFramework.World.EntityStatType.Intelligence, 1);
-                    break;
-                case "vitality":
-                    statValue = (int)statsSystem.AddBase(stats, (int)GameFramework.World.EntityStatType.Vitality, 1);
-                    break;
+                case "strength": statType = (int)GameFramework.World.EntityStatType.Strength; break;
+                case "dexterity": statType = (int)GameFramework.World.EntityStatType.Dexterity; break;
+                case "intelligence": statType = (int)GameFramework.World.EntityStatType.Intelligence; break;
+                case "vitality": statType = (int)GameFramework.World.EntityStatType.Vitality; break;
+                default: return;
             }
 
-            entity.GetEntityComponent<PlayerComponent>().statPoints--;
+            int statValue = statsSystem.Allocate(stats, statType);
 
             StatAllocationToC statAllocationToC = new StatAllocationToC
             {

@@ -40,6 +40,9 @@ namespace LOP
         [Inject]
         private GameFramework.World.LevelSystem levelSystem;
 
+        [Inject]
+        private GameFramework.World.StatsSystem statsSystem;
+
         private IGameState _gameState;
         public IGameState gameState
         {
@@ -185,7 +188,11 @@ namespace LOP
                 int gained = levelSystem.AddExperience(level, 10);
                 if (gained > 0)
                 {
-                    toucher.GetEntityComponent<PlayerComponent>().statPoints += gained;
+                    GameFramework.World.Stats stats = entityRegistry.Get(toucher.entityId)?.Get<GameFramework.World.Stats>();
+                    if (stats != null)
+                    {
+                        statsSystem.AddUnspent(stats, gained);
+                    }
                 }
             }
         }

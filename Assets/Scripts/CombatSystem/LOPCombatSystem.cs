@@ -8,15 +8,18 @@ namespace LOP
         private readonly GameFramework.World.WorldEventBuffer worldEventBuffer;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.World.HealthSystem healthSystem;
+        private readonly GameFramework.World.StatsSystem statsSystem;
 
         public LOPCombatSystem(
             GameFramework.World.WorldEventBuffer worldEventBuffer,
             GameFramework.World.EntityRegistry entityRegistry,
-            GameFramework.World.HealthSystem healthSystem)
+            GameFramework.World.HealthSystem healthSystem,
+            GameFramework.World.StatsSystem statsSystem)
         {
             this.worldEventBuffer = worldEventBuffer;
             this.entityRegistry = entityRegistry;
             this.healthSystem = healthSystem;
+            this.statsSystem = statsSystem;
         }
 
         public void Attack(LOPEntity attacker, LOPEntity target)
@@ -45,13 +48,18 @@ namespace LOP
 
             int damage = 10;
 
-            StatsComponent attackerStats = attacker.GetEntityComponent<StatsComponent>();
-            StatsComponent targetStats = target.GetEntityComponent<StatsComponent>();
+            GameFramework.World.Stats attackerStats = entityRegistry.Get(attacker.entityId)?.Get<GameFramework.World.Stats>();
+            GameFramework.World.Stats targetStats = entityRegistry.Get(target.entityId)?.Get<GameFramework.World.Stats>();
 
-            damage += attackerStats.strength;
+            int attackerStrength = attackerStats != null ? Mathf.RoundToInt(statsSystem.GetValue(attackerStats, (int)GameFramework.World.EntityStatType.Strength)) : 0;
+            int attackerDexterity = attackerStats != null ? Mathf.RoundToInt(statsSystem.GetValue(attackerStats, (int)GameFramework.World.EntityStatType.Dexterity)) : 0;
+            int targetStrength = targetStats != null ? Mathf.RoundToInt(statsSystem.GetValue(targetStats, (int)GameFramework.World.EntityStatType.Strength)) : 0;
+            int targetDexterity = targetStats != null ? Mathf.RoundToInt(statsSystem.GetValue(targetStats, (int)GameFramework.World.EntityStatType.Dexterity)) : 0;
 
-            bool isDodged = IsDodge(attackerStats.dexterity, targetStats.dexterity);
-            bool isCritical = IsCritical(attackerStats.strength, targetStats.strength);
+            damage += attackerStrength;
+
+            bool isDodged = IsDodge(attackerDexterity, targetDexterity);
+            bool isCritical = IsCritical(attackerStrength, targetStrength);
             if (isCritical)
             {
                 damage = Mathf.RoundToInt(damage * Random.Range(1.25f, 1.75f));

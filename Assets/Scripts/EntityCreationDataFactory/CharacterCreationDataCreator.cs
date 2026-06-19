@@ -41,6 +41,12 @@ namespace LOP
                 UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Level not found for entity {lopEntity.entityId}");
             }
 
+            GameFramework.World.Stats stats = worldEntity?.Get<GameFramework.World.Stats>();
+            if (stats == null)
+            {
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Stats not found for entity {lopEntity.entityId}");
+            }
+
             global::CharacterCreationData characterCreationData = new global::CharacterCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
@@ -53,6 +59,10 @@ namespace LOP
                 CurrentMP = mana?.Current ?? 0,
                 Level = level?.Value ?? 0,
                 CurrentExp = level?.Exp ?? 0,
+                Strength = BaseStatInt(stats, GameFramework.World.EntityStatType.Strength),
+                Dexterity = BaseStatInt(stats, GameFramework.World.EntityStatType.Dexterity),
+                Intelligence = BaseStatInt(stats, GameFramework.World.EntityStatType.Intelligence),
+                Vitality = BaseStatInt(stats, GameFramework.World.EntityStatType.Vitality),
             };
 
             return new EntityCreationData
@@ -69,6 +79,11 @@ namespace LOP
             }
 
             throw new ArgumentException("Entity must be of type LOPEntity");
+        }
+
+        private static int BaseStatInt(GameFramework.World.Stats stats, GameFramework.World.EntityStatType statType)
+        {
+            return stats != null && stats.BaseStats.TryGetValue((int)statType, out var v) ? (int)v : 0;
         }
     }
 }

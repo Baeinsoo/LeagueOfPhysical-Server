@@ -38,10 +38,6 @@ namespace LOP
             objectResolver.Inject(physicsComponent);
             physicsComponent.Initialize(false, false);
 
-            StatsComponent statsComponent = entity.AddEntityComponent<StatsComponent>();
-            objectResolver.Inject(statsComponent);
-            statsComponent.Initialize(creationData.characterCode);
-
             LOPEntityController controller = root.CreateChildWithComponent<LOPEntityController>();
             objectResolver.Inject(controller);
             controller.SetEntity(entity);
@@ -80,6 +76,12 @@ namespace LOP
                 Rotation = Quaternion.Euler(entity.rotation).ToNumerics(),
             });
             worldEntity.Add(new GameFramework.World.Velocity { Linear = entity.velocity.ToNumerics() });
+            var worldStats = new GameFramework.World.Stats();
+            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Strength] = creationData.strength;
+            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Dexterity] = creationData.dexterity;
+            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Intelligence] = creationData.intelligence;
+            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Vitality] = creationData.vitality;
+            worldEntity.Add(worldStats);
             entityRegistry.Add(worldEntity);
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");
             // --- end World Core ---

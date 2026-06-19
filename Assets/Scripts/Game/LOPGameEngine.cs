@@ -142,7 +142,7 @@ namespace LOP
             {
                 LOPEntity entity = entityManager.GetEntityByUserId<LOPEntity>(session.userId);
 
-                // HP/MP는 World.Health/World.Mana(코어)에서 읽는다. Exp/Level/StatPoints는 각자 이행 전까지 legacy 컴포넌트 유지.
+                // HP/MP/Level/Exp는 World 코어에서 읽는다. StatPoints는 이행 전까지 legacy(PlayerComponent) 유지.
                 GameFramework.World.Entity worldEntity = entityRegistry.Get(entity.entityId);
                 GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
                 if (health == null)
@@ -160,8 +160,13 @@ namespace LOP
                 }
                 entitySnapsToC.CurrentMP = mana?.Current ?? 0;
                 entitySnapsToC.MaxMP = mana?.Max ?? 0;
-                entitySnapsToC.CurrentExp = entity.GetEntityComponent<LevelComponent>().currentExp;
-                entitySnapsToC.Level = entity.GetEntityComponent<LevelComponent>().level;
+                GameFramework.World.Level level = worldEntity?.Get<GameFramework.World.Level>();
+                if (level == null)
+                {
+                    Debug.LogWarning($"[World] UserEntitySnap: Level not found for entity {entity.entityId}");
+                }
+                entitySnapsToC.CurrentExp = level?.Exp ?? 0;
+                entitySnapsToC.Level = level?.Value ?? 0;
                 entitySnapsToC.StatPoints = entity.GetEntityComponent<PlayerComponent>().statPoints;
 
                 foreach (var action in entity.GetComponents<Action>())

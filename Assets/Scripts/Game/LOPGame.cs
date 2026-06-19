@@ -34,6 +34,12 @@ namespace LOP
         [Inject]
         private IEntityCreationDataFactory entityCreationDataFactory;
 
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
+
+        [Inject]
+        private GameFramework.World.LevelSystem levelSystem;
+
         private IGameState _gameState;
         public IGameState gameState
         {
@@ -169,7 +175,18 @@ namespace LOP
                 DespawnEntity(itemTouch.itemId);
 
                 LOPEntity toucher = gameEngine.entityManager.GetEntity<LOPEntity>(itemTouch.toucherId);
-                toucher.GetEntityComponent<LevelComponent>().AddExperience(10);
+                GameFramework.World.Level level = entityRegistry.Get(toucher.entityId)?.Get<GameFramework.World.Level>();
+                if (level == null)
+                {
+                    Debug.LogWarning($"[World] HandleItemTouch: Level not found for entity {toucher.entityId}");
+                    return;
+                }
+
+                int gained = levelSystem.AddExperience(level, 10);
+                if (gained > 0)
+                {
+                    toucher.GetEntityComponent<PlayerComponent>().statPoints += gained;
+                }
             }
         }
 

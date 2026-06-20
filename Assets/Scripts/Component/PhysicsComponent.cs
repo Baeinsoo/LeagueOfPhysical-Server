@@ -3,11 +3,14 @@ using LOP.Event.Entity;
 using UniRx;
 using Unity.VisualScripting;
 using UnityEngine;
+using VContainer;
 
 namespace LOP
 {
     public class PhysicsComponent : LOPComponent
     {
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
         private GameObject _physicsGameObject;
         public GameObject physicsGameObject
         {
@@ -85,7 +88,7 @@ namespace LOP
                 return;
             }
 
-            if (otherEntity.HasEntityComponent<PlayerComponent>())
+            if (entityRegistry.Get(otherEntity.entityId)?.Has<GameFramework.World.Ownership>() == true)
             {
                 EventBus.Default.Publish(EventTopic.Entity, new ItemTouch(entity.entityId, otherEntity.entityId));
             }

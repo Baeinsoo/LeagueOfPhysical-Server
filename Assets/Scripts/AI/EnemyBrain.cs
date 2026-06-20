@@ -8,10 +8,12 @@ namespace LOP
     public class EnemyBrain : IBrain<LOPEntity>
     {
         private IActionManager actionManager;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
 
-        public EnemyBrain(IActionManager actionManager)
+        public EnemyBrain(IActionManager actionManager, GameFramework.World.EntityRegistry entityRegistry)
         {
             this.actionManager = actionManager;
+            this.entityRegistry = entityRegistry;
         }
 
         public void Think(LOPEntity entity, double deltaTime)
@@ -19,7 +21,7 @@ namespace LOP
             //  Find the player
             var entities = GameEngine.current.entityManager.GetEntities<LOPEntity>();
             LOPEntity target = entities
-                .Where(e => e.HasEntityComponent<PlayerComponent>())
+                .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() == true)
                 .Where(e => (e.position - entity.position).magnitude <= 10)
                 .OrderBy(e => (e.position - entity.position).sqrMagnitude)
                 .FirstOrDefault();

@@ -24,8 +24,8 @@ namespace LOP
 
         public void Attack(LOPEntity attacker, LOPEntity target)
         {
-            bool attackerIsPlayer = attacker.HasEntityComponent<PlayerComponent>();
-            bool targetIsPlayer = target.HasEntityComponent<PlayerComponent>();
+            bool attackerIsPlayer = entityRegistry.Get(attacker.entityId)?.Has<GameFramework.World.Ownership>() == true;
+            bool targetIsPlayer = entityRegistry.Get(target.entityId)?.Has<GameFramework.World.Ownership>() == true;
 
             if (!attackerIsPlayer && !targetIsPlayer)
             {

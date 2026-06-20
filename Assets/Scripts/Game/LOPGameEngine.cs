@@ -67,6 +67,8 @@ namespace LOP
                     continue;
                 }
 
+                // Phase 3b: recent_inputs로 재구성된 입력은 EntityTransform이 null(클라 보고 transform 미전달)이라 entityTransform도 null이 된다.
+                // LOPMovementManager.ProcessInput은 entityTransform을 사용하지 않으므로 안전 — 향후 이 파라미터를 읽으려면 null 처리 필요.
                 EntityTransform entityTransform = MapperConfig.mapper.Map<EntityTransform>(input.EntityTransform);
 
                 movementManager.ProcessInput(entity, entityTransform, input.PlayerInput.Horizontal, input.PlayerInput.Vertical, input.PlayerInput.Jump);

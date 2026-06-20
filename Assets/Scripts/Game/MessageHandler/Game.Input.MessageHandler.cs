@@ -24,19 +24,16 @@ namespace LOP
 
         private void OnPlayerInputToS(PlayerInputToS playerInputToS)
         {
-            PlayerInput playerInput = new PlayerInput
-            {
-                tick = playerInputToS.Tick,
-                horizontal = playerInputToS.PlayerInput.Horizontal,
-                vertical = playerInputToS.PlayerInput.Vertical,
-                jump = playerInputToS.PlayerInput.Jump,
-                actionCode = playerInputToS.PlayerInput.ActionCode,
-                sequenceNumber = playerInputToS.PlayerInput.SequenceNumber,
-            };
-
             ISession session = sessionManager.GetSessionById(playerInputToS.SessionId);
             LOPEntity entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
-            entity.GetEntityComponent<EntityInputComponent>().AddInput(playerInputToS);
+            EntityInputComponent inputComponent = entity.GetEntityComponent<EntityInputComponent>();
+
+            // sliding-window redundancy: recent_inputs의 각 틱을 투입(이미 있는 tick은 AddInput이 dedup).
+            // 유실된 틱이 다음 패킷의 redundancy로 채워진다.
+            foreach (var entry in playerInputToS.RecentInputs)
+            {
+                inputComponent.AddInput(entry.Tick, entry.PlayerInput);
+            }
         }
     }
 }

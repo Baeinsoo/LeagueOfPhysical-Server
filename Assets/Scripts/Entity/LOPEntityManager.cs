@@ -25,7 +25,6 @@ namespace LOP
 
         private Dictionary<string, IEntity> entityMap = new Dictionary<string, IEntity>();
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
-        private Dictionary<string, string> entityUserMap = new Dictionary<string, string>();
 
         private int entityIdCounter = 1;
 
@@ -87,7 +86,6 @@ namespace LOP
                 && string.IsNullOrEmpty(characterCreationData.userId) == false)
             {
                 userEntityMap[characterCreationData.userId] = entity.entityId;
-                entityUserMap[entity.entityId] = characterCreationData.userId;
             }
 
             return entity;
@@ -103,6 +101,7 @@ namespace LOP
             foreach (var entityId in entitiesToDestroy)
             {
                 LOPEntity lopEntity = GetEntity<LOPEntity>(entityId);
+                string ownerId = GetUserIdByEntityId(entityId);   // capture before registry.Remove (reads Ownership)
 
                 foreach (var component in lopEntity.components.ToArray())
                 {
@@ -125,10 +124,9 @@ namespace LOP
 
                 entityMap.Remove(entityId);
 
-                if (entityUserMap.TryGetValue(entityId, out var userId))
+                if (ownerId != null)
                 {
-                    userEntityMap.Remove(userId);
-                    entityUserMap.Remove(entityId);
+                    userEntityMap.Remove(ownerId);
                 }
 
                 //  Send EntityDespawnToC
@@ -154,7 +152,7 @@ namespace LOP
 
         public string GetUserIdByEntityId(string entityId)
         {
-            return entityUserMap[entityId];
+            return entityRegistry.Get(entityId)?.Get<GameFramework.World.Ownership>()?.OwnerId;
         }
 
         public TEntity GetEntityByUserId<TEntity>(string userId) where TEntity : IEntity

@@ -6,7 +6,8 @@ namespace LOP
 {
     public class EntityInputComponent : LOPComponent
     {
-        private static int INPUT_DELAY_TICKS = 0;
+        // jitter buffer: 입력이 처리 시점(serverTick)보다 2틱 일찍 도착하도록 여유. (Phase 2 lead + 이 버퍼로 적시 도착)
+        private static int INPUT_DELAY_TICKS = 2;
 
         private SortedDictionary<long, PlayerInputToS> inputBuffer = new SortedDictionary<long, PlayerInputToS>();
 
@@ -15,26 +16,25 @@ namespace LOP
 
         public PlayerInputToS GetInput(long tick)
         {
-            if (inputBuffer.Count == 0)
-            {
-                return null;
-            }
-
-            // 지연을 적용한 처리 틱 계산
+            // command-frame 정렬: 입력의 클라 tick == 서버 처리 tick(= serverTick − jitter buffer)
             long targetTick = tick - INPUT_DELAY_TICKS;
 
-            var availableInputs = inputBuffer.Where(kvp => kvp.Key <= targetTick).ToList();
-            if (availableInputs.Count == 0)
+            // 처리 시점이 지난 입력(지각/처리불가)은 버린다 — 버퍼에 남아 나중에 잘못 처리되는 것 방지.
+            var staleTicks = inputBuffer.Keys.Where(k => k < targetTick).ToList();
+            foreach (var staleTick in staleTicks)
             {
-                return null;
+                inputBuffer.Remove(staleTick);
             }
 
-            PlayerInputToS input = availableInputs.First().Value;
-            inputBuffer.Remove(input.Tick);
+            // 정확히 targetTick의 입력만 처리. 없으면 miss → null(호출부가 no-input으로 진행, 클라 recon이 보정).
+            if (inputBuffer.TryGetValue(targetTick, out var input))
+            {
+                inputBuffer.Remove(targetTick);
+                lastProcessedSequence = input.PlayerInput.SequenceNumber;
+                return input;
+            }
 
-            lastProcessedSequence = input.PlayerInput.SequenceNumber;
-
-            return input;
+            return null;
         }
 
         public void AddInput(PlayerInputToS input)

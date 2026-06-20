@@ -22,6 +22,7 @@ namespace LOP
         [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
         [Inject] private GameFramework.World.WorldEventApplicator worldEventApplicator;
         [Inject] private WireBroadcaster wireBroadcaster;
+        [Inject] private WorldEventBridge worldEventBridge;
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
 
         public new LOPEntityManager entityManager => base.entityManager as LOPEntityManager;
@@ -119,6 +120,7 @@ namespace LOP
 
             worldEventApplicator.Apply(snapshot);
             wireBroadcaster.Broadcast(snapshot);
+            worldEventBridge.FanOut(snapshot);
             worldEventBuffer.Clear();
             // --- end World Core slice 3 ---
         }

@@ -24,6 +24,7 @@ namespace LOP
             builder.Register<GameFramework.World.StatsSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.WorldEventApplicator>(Lifetime.Singleton);
             builder.Register<WireBroadcaster>(Lifetime.Singleton);
+            builder.Register<WorldEventBridge>(Lifetime.Singleton);
 
             // game/gameEngine은 게임 서비스에 의존하므로 부모(Room)가 아닌 이 컨테이너에서 주입돼야 한다.
             builder.RegisterComponent(game).As<IGame>();

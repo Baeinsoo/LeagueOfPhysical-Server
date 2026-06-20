@@ -68,7 +68,7 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
-            EventBus.Default.Subscribe<EntityDeath>(EventTopic.Entity, HandleEntityDeath);
+            EventBus.Default.Subscribe<GameFramework.World.DeathEvent>(EventTopic.Entity, HandleDeath);
             EventBus.Default.Subscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
 
             gameState = Initializing.State;
@@ -147,7 +147,7 @@ namespace LOP
 
         public async Task DeinitializeAsync()
         {
-            EventBus.Default.Unsubscribe<EntityDeath>(EventTopic.Entity, HandleEntityDeath);
+            EventBus.Default.Unsubscribe<GameFramework.World.DeathEvent>(EventTopic.Entity, HandleDeath);
             EventBus.Default.Unsubscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
 
             await gameEngine.DeinitializeAsync();
@@ -164,11 +164,18 @@ namespace LOP
             initialized = false;
         }
 
-        private void HandleEntityDeath(EntityDeath entityDeath)
+        private void HandleDeath(GameFramework.World.DeathEvent deathEvent)
         {
-            DespawnEntity(entityDeath.victimId);
+            LOPEntity victim = gameEngine.entityManager.GetEntity<LOPEntity>(deathEvent.victimId);
+            if (victim == null)
+            {
+                Debug.LogWarning($"[World] HandleDeath: victim {deathEvent.victimId} not found");
+                return;
+            }
+            Vector3 position = victim.position;
 
-            SpawnExpMarble(entityDeath.position);
+            DespawnEntity(deathEvent.victimId);
+            SpawnExpMarble(position);
         }
 
         private void HandleItemTouch(ItemTouch itemTouch)

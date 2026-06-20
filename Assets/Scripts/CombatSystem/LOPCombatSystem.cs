@@ -67,10 +67,10 @@ namespace LOP
 
             int dealtAmount = isDodged ? 0 : damage;
 
-            // --- World Core — Slice 2: writer flip + 사망 발행 재배치 ---
+            // --- World Core — Slice 3: DeathEvent → WorldEventBridge → LOPGame.HandleDeath ---
             // World.Health가 HP 진실원본. Generation(여기)이 mutate, WorldEventApplicator(ProcessEvent)가
-            // remaining으로 재적용(멱등). 디스폰 구동 신호 EntityDeath도 사망 시 여기서 발행
-            // (예전엔 HealthComponent.TakeDamage 안에 있었음). 디스폰 경로/구독자는 무변경.
+            // remaining으로 재적용(멱등). DeathEvent를 WorldEventBuffer에 append →
+            // WorldEventBridge.FanOut이 EventBus로 fan-out → LOPGame.HandleDeath(디스폰+경험치 구슬).
             if (!isDodged)
             {
                 healthSystem.TakeDamage(health, dealtAmount);
@@ -94,11 +94,8 @@ namespace LOP
                     victimId:   target.entityId,
                     attackerId: attacker.entityId
                 ));
-
-                EventBus.Default.Publish(EventTopic.Entity, new Event.Entity.EntityDeath(
-                    target.entityId, attacker.entityId, target.position));
             }
-            // --- end World Core slice 2 ---
+            // --- end World Core slice 3 ---
         }
 
         public bool IsDodge(int attackerDex, int targetDex)

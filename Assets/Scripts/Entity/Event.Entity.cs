@@ -1,5 +1,3 @@
-using UnityEngine;
-
 namespace LOP.Event.Entity
 {
     public struct PropertyChange
@@ -35,20 +33,6 @@ namespace LOP.Event.Entity
         public ActionEnd(string actionCode)
         {
             this.actionCode = actionCode;
-        }
-    }
-
-    public struct EntityDeath
-    {
-        public string victimId;
-        public string killerId;
-        public Vector3 position;
-
-        public EntityDeath(string victimId, string killerId, Vector3 position)
-        {
-            this.victimId = victimId;
-            this.killerId = killerId;
-            this.position = position;
         }
     }
 

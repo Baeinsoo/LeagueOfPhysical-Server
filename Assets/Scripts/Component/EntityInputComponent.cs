@@ -37,27 +37,22 @@ namespace LOP
             return null;
         }
 
-        public void AddInput(PlayerInputToS input)
+        public void AddInput(long tick, global::PlayerInput playerInput)
         {
-            if (input.PlayerInput.SequenceNumber <= lastProcessedSequence)
+            // redundancy로 같은 입력이 여러 번 와도 정상 — 이미 처리됐거나 버퍼에 있으면 조용히 무시(dedup).
+            if (playerInput.SequenceNumber <= lastProcessedSequence)
             {
-                Debug.LogWarning($"무시된 입력: 시퀀스 {input.PlayerInput.SequenceNumber}는 이미 처리됨 (마지막 처리: {lastProcessedSequence})");
                 return;
             }
 
-            if (input.PlayerInput.SequenceNumber > expectedNextSequence)
+            if (inputBuffer.ContainsKey(tick) == false)
             {
-                Debug.LogWarning($"누락된 입력 시퀀스 감지: {expectedNextSequence}부터 {input.PlayerInput.SequenceNumber - 1}까지");
-            }
-
-            if (inputBuffer.ContainsKey(input.Tick) == false)
-            {
-                inputBuffer.Add(input.Tick, input);
-                expectedNextSequence = input.PlayerInput.SequenceNumber + 1;
-            }
-            else
-            {
-                Debug.LogWarning($"동일한 틱({input.Tick})에 대한 입력이 이미 존재합니다. 새 입력 무시됨.");
+                inputBuffer.Add(tick, new PlayerInputToS
+                {
+                    Tick = tick,
+                    PlayerInput = playerInput,
+                });
+                expectedNextSequence = playerInput.SequenceNumber + 1;
             }
         }
     }

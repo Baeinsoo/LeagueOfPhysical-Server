@@ -45,6 +45,8 @@ namespace LOP
 
             ProcessEvent();
 
+            SendInputTimingFeedback();
+
             EndUpdate();
         }
 
@@ -91,6 +93,48 @@ namespace LOP
                 string userId = entityManager.GetUserIdByEntityId(entity.entityId);
                 ISession session = sessionManager.GetSessionByUserId(userId);
                 session.Send(inputSequnceToC);
+            }
+        }
+
+        // ~0.5초마다 조종 엔티티별 입력 타이밍 요약을 그 세션에 전송(Phase 4). 활동 없으면 skip.
+        private const long InputTimingFeedbackIntervalTicks = 15;  // 틱레이트 기준 ~0.5초 — 필요시 조정
+
+        private void SendInputTimingFeedback()
+        {
+            if (GameEngine.Time.tick % InputTimingFeedbackIntervalTicks != 0)
+            {
+                return;
+            }
+
+            foreach (var entity in new List<LOPEntity>(entityManager.GetEntities<LOPEntity>()))
+            {
+                var inputComponent = entity.GetEntityComponent<EntityInputComponent>();
+                if (inputComponent == null)
+                {
+                    continue;
+                }
+
+                var summary = inputComponent.SummarizeTiming();
+                if (summary.HasActivity == false)
+                {
+                    continue;
+                }
+
+                string userId = entityManager.GetUserIdByEntityId(entity.entityId);
+                ISession session = sessionManager.GetSessionByUserId(userId);
+                if (session == null)
+                {
+                    continue;
+                }
+
+                session.Send(new InputTimingToC
+                {
+                    AvgD = summary.AvgD,
+                    MaxD = summary.MaxD,
+                    PruneCount = summary.PruneCount,
+                    SeqGapCount = summary.SeqGapCount,
+                    SampleCount = summary.SampleCount,
+                }, reliable: false);
             }
         }
 

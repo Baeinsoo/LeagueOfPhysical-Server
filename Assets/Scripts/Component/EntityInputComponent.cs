@@ -14,6 +14,10 @@ namespace LOP
         private long lastProcessedSequence = -1;
         public long expectedNextSequence { get; private set; }
 
+        private readonly GameFramework.InputTimingTracker timingTracker = new GameFramework.InputTimingTracker();
+
+        public GameFramework.InputTimingSummary SummarizeTiming() => timingTracker.Summarize();
+
         public PlayerInputToS GetInput(long tick)
         {
             // command-frame 정렬: 입력의 클라 tick == 서버 처리 tick(= serverTick − jitter buffer)
@@ -23,6 +27,7 @@ namespace LOP
             var staleTicks = inputBuffer.Keys.Where(k => k < targetTick).ToList();
             foreach (var staleTick in staleTicks)
             {
+                timingTracker.RecordPrune();
                 inputBuffer.Remove(staleTick);
             }
 
@@ -30,6 +35,11 @@ namespace LOP
             if (inputBuffer.TryGetValue(targetTick, out var input))
             {
                 inputBuffer.Remove(targetTick);
+                long gap = input.PlayerInput.SequenceNumber - lastProcessedSequence - 1;
+                if (gap > 0)
+                {
+                    timingTracker.RecordSeqGap((int)gap);
+                }
                 lastProcessedSequence = input.PlayerInput.SequenceNumber;
                 return input;
             }
@@ -47,6 +57,7 @@ namespace LOP
 
             if (inputBuffer.ContainsKey(tick) == false)
             {
+                timingTracker.RecordArrival((int)(GameFramework.GameEngine.Time.tick - tick));
                 inputBuffer.Add(tick, new PlayerInputToS
                 {
                     Tick = tick,

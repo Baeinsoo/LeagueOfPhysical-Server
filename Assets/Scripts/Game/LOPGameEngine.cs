@@ -24,6 +24,7 @@ namespace LOP
         [Inject] private WireBroadcaster wireBroadcaster;
         [Inject] private WorldEventBridge worldEventBridge;
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
+        [Inject] private IPhysicsSimulator physicsSimulator;
 
         public new LOPEntityManager entityManager => base.entityManager as LOPEntityManager;
 
@@ -155,7 +156,7 @@ namespace LOP
         {
             DispatchEvent<BeforePhysicsSimulation>();
 
-            Physics.Simulate((float)tickUpdater.interval);
+            physicsSimulator.Simulate((float)tickUpdater.interval);
 
             DispatchEvent<AfterPhysicsSimulation>();
         }

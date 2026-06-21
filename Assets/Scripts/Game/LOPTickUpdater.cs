@@ -9,7 +9,7 @@ namespace LOP
         {
             base.OnElapsedTimeUpdate();
 
-            elapsedTime = Mirror.NetworkTime.time;
+            elapsedTime = GameEngine.NetworkTime.serverNow;
         }
     }
 }

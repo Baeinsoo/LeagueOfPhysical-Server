@@ -37,8 +37,6 @@ namespace LOP
                             IsCritical  = dde.isCritical,
                             IsDodged    = dde.isDodged,
                             IsBlocked   = false,
-                            RemainingHP = dde.remaining,
-                            IsDead      = dde.isDead,
                         };
                         foreach (var session in _sessionManager.GetAllSessions())
                         {

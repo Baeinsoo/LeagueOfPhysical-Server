@@ -21,7 +21,7 @@ namespace LOP
 
         [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
         [Inject] private GameFramework.World.IEventSink eventSink;
-        [Inject] private WorldEventReactor reactor;
+        [Inject] private DeathCascadeSystem deathCascade;
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
         [Inject] private IPhysicsSimulator physicsSimulator;
 
@@ -42,6 +42,8 @@ namespace LOP
             UpdateAI();
 
             SimulatePhysics();
+
+            ProcessDeaths();
 
             ProcessEvent();
 
@@ -160,6 +162,13 @@ namespace LOP
             DispatchEvent<AfterPhysicsSimulation>();
         }
 
+        private void ProcessDeaths()
+        {
+            var snapshot = worldEventBuffer.Snapshot;
+            if (snapshot.Count == 0) return;
+            deathCascade.Resolve(snapshot);
+        }
+
         private void ProcessEvent()
         {
             // --- World Core — 슬라이스 3: 이벤트 버퍼 드레인 ---
@@ -167,7 +176,6 @@ namespace LOP
             if (snapshot.Count == 0) return;
 
             eventSink.Emit(snapshot);
-            reactor.React(snapshot);
             worldEventBuffer.Clear();
             // --- end World Core slice 3 ---
         }

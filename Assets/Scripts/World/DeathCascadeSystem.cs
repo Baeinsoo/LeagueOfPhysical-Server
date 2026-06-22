@@ -11,12 +11,12 @@ namespace LOP
     /// </summary>
     public class DeathCascadeSystem
     {
-        private readonly LOPEntityManager _entityManager;
+        private readonly IEntityManager _entityManager;
         private readonly ISessionManager _sessionManager;
         private readonly IEntityCreationDataFactory _entityCreationDataFactory;
 
         public DeathCascadeSystem(
-            LOPEntityManager entityManager,
+            IEntityManager entityManager,
             ISessionManager sessionManager,
             IEntityCreationDataFactory entityCreationDataFactory)
         {

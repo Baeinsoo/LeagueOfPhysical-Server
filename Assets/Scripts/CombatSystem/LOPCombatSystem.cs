@@ -87,9 +87,7 @@ namespace LOP
                 attackerId: attacker.entityId,
                 amount:     dealtAmount,
                 isCritical: isCritical,
-                isDodged:   isDodged,
-                remaining:  health.Current,
-                isDead:     isDead
+                isDodged:   isDodged
             ));
 
             if (isDead)

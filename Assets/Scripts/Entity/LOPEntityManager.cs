@@ -173,12 +173,15 @@ namespace LOP
 
             foreach (var entity in GetEntities().OrEmpty())
             {
+                GameFramework.World.Health health = entityRegistry.Get(entity.entityId)?.Get<GameFramework.World.Health>();
                 entitySnapList.Add(new EntitySnap
                 {
                     EntityId = entity.entityId,
                     Position = MapperConfig.mapper.Map<ProtoVector3>(entity.position),
                     Rotation = MapperConfig.mapper.Map<ProtoVector3>(entity.rotation),
                     Velocity = MapperConfig.mapper.Map<ProtoVector3>(entity.velocity),
+                    MaxHP = health?.Max ?? 0,
+                    CurrentHP = health?.Current ?? 0,
                 });
             }
 

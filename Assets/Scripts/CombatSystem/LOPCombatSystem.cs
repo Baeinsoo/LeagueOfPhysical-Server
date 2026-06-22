@@ -70,10 +70,10 @@ namespace LOP
 
             int dealtAmount = isDodged ? 0 : damage;
 
-            // --- World Core — Slice 3: DeathEvent → WorldEventBridge → LOPGame.HandleDeath ---
+            // --- World Core — Slice 3: DeathEvent → WorldEventReactor → LOPGame.HandleDeath ---
             // World.Health가 HP 진실원본. Generation(여기)이 mutate, WorldEventApplicator(ProcessEvent)가
             // remaining으로 재적용(멱등). DeathEvent를 WorldEventBuffer에 append →
-            // WorldEventBridge.FanOut이 EventBus로 fan-out → LOPGame.HandleDeath(디스폰+경험치 구슬).
+            // WorldEventReactor.React가 EventBus로 fan-out → LOPGame.HandleDeath(디스폰+경험치 구슬).
             if (!isDodged)
             {
                 healthSystem.TakeDamage(health, dealtAmount);

@@ -8,7 +8,6 @@ namespace LOP
     /// WorldEventBuffer 스냅샷을 와이어 메시지로 변환해 모든 세션에 송출하는 egress sink(서버). 출구=네트워크.
     /// 코어 상태·새 이벤트 안 만듦.
     ///   DamageDealtEvent → DamageEventToC → session.Send (모든 세션)
-    ///   DeathEvent       → Debug.Log only (별도 wire 메시지 없음)
     /// </summary>
     public class WorldEventSink : GameFramework.World.IEventSink
     {
@@ -47,9 +46,6 @@ namespace LOP
                         }
                         break;
                     }
-                    case GameFramework.World.DeathEvent de:
-                        Debug.Log($"[World] Death entity {de.victimId} (killer={de.attackerId})");
-                        break;
                 }
             }
         }

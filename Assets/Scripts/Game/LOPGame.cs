@@ -71,7 +71,6 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
-            EventBus.Default.Subscribe<GameFramework.World.DeathEvent>(EventTopic.Entity, HandleDeath);
             EventBus.Default.Subscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
 
             gameState = Initializing.State;
@@ -150,7 +149,6 @@ namespace LOP
 
         public async Task DeinitializeAsync()
         {
-            EventBus.Default.Unsubscribe<GameFramework.World.DeathEvent>(EventTopic.Entity, HandleDeath);
             EventBus.Default.Unsubscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
 
             await gameEngine.DeinitializeAsync();
@@ -165,20 +163,6 @@ namespace LOP
             await Addressables.UnloadSceneAsync(handle);
 
             initialized = false;
-        }
-
-        private void HandleDeath(GameFramework.World.DeathEvent deathEvent)
-        {
-            LOPEntity victim = gameEngine.entityManager.GetEntity<LOPEntity>(deathEvent.victimId);
-            if (victim == null)
-            {
-                Debug.LogWarning($"[World] HandleDeath: victim {deathEvent.victimId} not found");
-                return;
-            }
-            Vector3 position = victim.position;
-
-            DespawnEntity(deathEvent.victimId);
-            SpawnExpMarble(position);
         }
 
         private void HandleItemTouch(ItemTouch itemTouch)
@@ -283,34 +267,6 @@ namespace LOP
             };
 
             LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
-
-            EntitySpawnToC entitySpawnToC = new EntitySpawnToC
-            {
-                EntityCreationData = entityCreationDataFactory.Create(entity),
-            };
-
-            foreach (var session in sessionManager.GetAllSessions().OrEmpty())
-            {
-                session.Send(entitySpawnToC);
-            }
-        }
-
-        public void SpawnExpMarble(Vector3 position)
-        {
-            string visualId = "Assets/Art/Items/ExpMarble/ExpMarble.prefab";
-            string itemCode = "exp_marble";
-
-            ItemCreationData data = new ItemCreationData
-            {
-                entityId = gameEngine.entityManager.GenerateEntityId(),
-                visualId = visualId,
-                itemCode = itemCode,
-                position = position,
-                rotation = Vector3.zero,
-                velocity = Vector3.zero,
-            };
-
-            LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, ItemCreationData>(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {

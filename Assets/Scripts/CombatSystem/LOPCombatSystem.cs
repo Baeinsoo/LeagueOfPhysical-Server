@@ -70,10 +70,11 @@ namespace LOP
 
             int dealtAmount = isDodged ? 0 : damage;
 
-            // --- World Core — Slice 3: DeathEvent → WorldEventReactor → LOPGame.HandleDeath ---
-            // World.Health가 HP 진실원본. Generation(여기)이 mutate, WorldEventApplicator(ProcessEvent)가
-            // remaining으로 재적용(멱등). DeathEvent를 WorldEventBuffer에 append →
-            // WorldEventReactor.React가 EventBus로 fan-out → LOPGame.HandleDeath(디스폰+경험치 구슬).
+            // --- World Core: DeathEvent → WorldEventReactor → LOPGame.HandleDeath ---
+            // World.Health가 HP 진실원본 — Generation(여기)이 직접 mutate하고, 스냅샷(UserEntitySnap)이
+            // 클라로의 유일 권위 경로다. DamageDealtEvent는 연출(숫자/크리)용으로만 송출.
+            // DeathEvent를 WorldEventBuffer에 append → WorldEventReactor.React가 EventBus fan-out →
+            // LOPGame.HandleDeath(디스폰+경험치 구슬).
             if (!isDodged)
             {
                 healthSystem.TakeDamage(health, dealtAmount);

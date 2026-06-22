@@ -21,8 +21,8 @@ namespace LOP
 
         [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
         [Inject] private GameFramework.World.WorldEventApplicator worldEventApplicator;
-        [Inject] private WireBroadcaster wireBroadcaster;
-        [Inject] private WorldEventBridge worldEventBridge;
+        [Inject] private GameFramework.World.IEventSink eventSink;
+        [Inject] private WorldEventReactor reactor;
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
         [Inject] private IPhysicsSimulator physicsSimulator;
 
@@ -168,8 +168,8 @@ namespace LOP
             if (snapshot.Count == 0) return;
 
             worldEventApplicator.Apply(snapshot);
-            wireBroadcaster.Broadcast(snapshot);
-            worldEventBridge.FanOut(snapshot);
+            eventSink.Emit(snapshot);
+            reactor.React(snapshot);
             worldEventBuffer.Clear();
             // --- end World Core slice 3 ---
         }

@@ -38,6 +38,9 @@ namespace LOP
         private GameFramework.World.EntityRegistry entityRegistry;
 
         [Inject]
+        private IRandom rng;
+
+        [Inject]
         private GameFramework.World.LevelSystem levelSystem;
 
         [Inject]
@@ -101,7 +104,7 @@ namespace LOP
             {
                 string playerId = roomDataStore.match.playerList[i];
 
-                int random = UnityEngine.Random.Range(0, 3);
+                int random = rng.Range(0, 3);
                 string visualId = "";
                 string characterCode = "";
                 switch (random)
@@ -246,7 +249,7 @@ namespace LOP
 
         private void SpawnEnemy(Vector3 position)
         {
-            int random = UnityEngine.Random.Range(0, 2);
+            int random = rng.Range(0, 2);
             string visualId = "";
             string characterCode = "";
             switch (random)
@@ -322,7 +325,7 @@ namespace LOP
 
         private Vector3 GetRandomSpawnPosition()
         {
-            return new Vector3(UnityEngine.Random.Range(-20f, 20f), 0, UnityEngine.Random.Range(-20f, 20f));
+            return new Vector3(rng.Range(-20f, 20f), 0, rng.Range(-20f, 20f));
         }
 
         private void DespawnEntity(string entityId)

@@ -9,17 +9,20 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.World.HealthSystem healthSystem;
         private readonly GameFramework.World.StatsSystem statsSystem;
+        private readonly IRandom rng;
 
         public LOPCombatSystem(
             GameFramework.World.WorldEventBuffer worldEventBuffer,
             GameFramework.World.EntityRegistry entityRegistry,
             GameFramework.World.HealthSystem healthSystem,
-            GameFramework.World.StatsSystem statsSystem)
+            GameFramework.World.StatsSystem statsSystem,
+            IRandom rng)
         {
             this.worldEventBuffer = worldEventBuffer;
             this.entityRegistry = entityRegistry;
             this.healthSystem = healthSystem;
             this.statsSystem = statsSystem;
+            this.rng = rng;
         }
 
         public void Attack(LOPEntity attacker, LOPEntity target)
@@ -62,7 +65,7 @@ namespace LOP
             bool isCritical = IsCritical(attackerStrength, targetStrength);
             if (isCritical)
             {
-                damage = Mathf.RoundToInt(damage * Random.Range(1.25f, 1.75f));
+                damage = Mathf.RoundToInt(damage * rng.Range(1.25f, 1.75f));
             }
 
             int dealtAmount = isDodged ? 0 : damage;
@@ -102,7 +105,7 @@ namespace LOP
         {
             float dodgeChance = (float)targetDex / (attackerDex + targetDex);
             dodgeChance = Mathf.Clamp(dodgeChance, 0.05f, 0.95f);
-            double roll = Random.Range(0.0f, 1.0f);
+            double roll = rng.Range(0.0f, 1.0f);
             return roll < dodgeChance;
         }
 
@@ -110,7 +113,7 @@ namespace LOP
         {
             float critChance = (float)attackerStr / (attackerStr + targetStr);
             critChance = Mathf.Clamp(critChance, 0.05f, 0.50f);
-            double roll = Random.Range(0.0f, 1.0f);
+            double roll = rng.Range(0.0f, 1.0f);
             return roll < critChance;
         }
     }

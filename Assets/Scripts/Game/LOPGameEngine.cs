@@ -20,7 +20,6 @@ namespace LOP
         private IMovementManager movementManager;
 
         [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
-        [Inject] private GameFramework.World.WorldEventApplicator worldEventApplicator;
         [Inject] private GameFramework.World.IEventSink eventSink;
         [Inject] private WorldEventReactor reactor;
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
@@ -167,7 +166,6 @@ namespace LOP
             var snapshot = worldEventBuffer.Snapshot;
             if (snapshot.Count == 0) return;
 
-            worldEventApplicator.Apply(snapshot);
             eventSink.Emit(snapshot);
             reactor.React(snapshot);
             worldEventBuffer.Clear();

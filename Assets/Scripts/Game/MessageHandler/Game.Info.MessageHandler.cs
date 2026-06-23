@@ -1,5 +1,5 @@
 using GameFramework;
-using LOP.Event.LOPGameEngine.Update;
+using LOP.Event.LOPRunner.Update;
 using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
@@ -9,7 +9,7 @@ namespace LOP
     public class GameInfoMessageHandler : IGameMessageHandler
     {
         [Inject]
-        private IGameEngine gameEngine;
+        private IRunner runner;
 
         [Inject]
         private ISessionManager sessionManager;
@@ -20,14 +20,14 @@ namespace LOP
         {
             EventBus.Default.Subscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
 
-            gameEngine.AddListener(this);
+            runner.AddListener(this);
         }
 
         public void Unregister()
         {
             EventBus.Default.Unsubscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
 
-            gameEngine.RemoveListener(this);
+            runner.RemoveListener(this);
         }
 
         private void OnGameInfoToS(GameInfoToS gameInfoToS)
@@ -35,7 +35,7 @@ namespace LOP
             gameInfoToSList.Add(gameInfoToS);
         }
 
-        [GameEngineListen(typeof(End))]
+        [RunnerListen(typeof(End))]
         private void OnEnd()
         {
             if (gameInfoToSList.Count == 0)
@@ -43,12 +43,12 @@ namespace LOP
                 return;
             }
 
-            EntityCreationData[] allEntityCreationDatas = (gameEngine as LOPGameEngine).entityManager.GetAllEntityCreationDatas();
+            EntityCreationData[] allEntityCreationDatas = (runner as LOPRunner).entityManager.GetAllEntityCreationDatas();
 
             foreach (var gameInfoToS in gameInfoToSList)
             {
                 var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
-                var entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(gameInfoToS.UserId);
+                var entity = runner.entityManager.GetEntityByUserId<LOPEntity>(gameInfoToS.UserId);
 
                 var gameInfoToC = new GameInfoToC
                 {
@@ -57,9 +57,9 @@ namespace LOP
                     ExpectedNextSequence = entity.GetEntityComponent<EntityInputComponent>().expectedNextSequence,
                     GameInfo = new GameInfo
                     {
-                        Tick = GameEngine.Time.tick,
-                        Interval = GameEngine.Time.tickInterval,
-                        ElapsedTime = GameEngine.Time.elapsedTime,
+                        Tick = Runner.Time.tick,
+                        Interval = Runner.Time.tickInterval,
+                        ElapsedTime = Runner.Time.elapsedTime,
                     },
                 };
 

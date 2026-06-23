@@ -1,5 +1,5 @@
 using GameFramework;
-using LOP.Event.LOPGameEngine.Update;
+using LOP.Event.LOPRunner.Update;
 using UnityEngine;
 using VContainer;
 
@@ -8,7 +8,7 @@ namespace LOP
     public class LOPAIController : MonoBehaviour, ICleanup
     {
         [Inject]
-        private IGameEngine gameEngine;
+        private IRunner runner;
 
         public LOPEntity entity { get; private set; }
 
@@ -26,19 +26,19 @@ namespace LOP
 
         protected virtual void Start()
         {
-            gameEngine.AddListener(this);
+            runner.AddListener(this);
         }
 
         public void Cleanup()
         {
-            gameEngine.RemoveListener(this);
+            runner.RemoveListener(this);
             entity = null;
         }
 
-        [GameEngineListen(typeof(Begin))]
+        [RunnerListen(typeof(Begin))]
         private void OnUpdateBegin()
         {
-            brain.Think(entity, GameEngine.Time.deltaTime);
+            brain.Think(entity, Runner.Time.deltaTime);
         }
     }
 }

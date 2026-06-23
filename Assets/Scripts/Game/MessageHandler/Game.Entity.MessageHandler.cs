@@ -6,7 +6,7 @@ namespace LOP
     public class GameEntityMessageHandler : IGameMessageHandler
     {
         [Inject]
-        private IGameEngine gameEngine;
+        private IRunner runner;
 
         [Inject]
         private ISessionManager sessionManager;
@@ -36,7 +36,7 @@ namespace LOP
         private void OnStatAllocationToS(StatAllocationToS statAllocationToS)
         {
             ISession session = sessionManager.GetSessionById(statAllocationToS.SessionId);
-            LOPEntity entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
+            LOPEntity entity = runner.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
             GameFramework.World.Stats stats = entityRegistry.Get(entity.entityId)?.Get<GameFramework.World.Stats>();
             if (stats == null)
             {

@@ -19,7 +19,7 @@ namespace LOP
         public void Think(LOPEntity entity, double deltaTime)
         {
             //  Find the player
-            var entities = GameEngine.current.entityManager.GetEntities<LOPEntity>();
+            var entities = Runner.current.entityManager.GetEntities<LOPEntity>();
             LOPEntity target = entities
                 .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() == true)
                 .Where(e => (e.position - entity.position).magnitude <= 10)

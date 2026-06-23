@@ -23,7 +23,7 @@ namespace LOP
         private IRoomDataStore roomDataStore;
 
         [Inject]
-        public IGameEngine gameEngine { get; private set; }
+        public IRunner runner { get; private set; }
 
         [Inject]
         private IEnumerable<IGameMessageHandler> gameMessageHandlers;
@@ -95,7 +95,7 @@ namespace LOP
 
             handle = Addressables.LoadSceneAsync(/*roomDataStore.match.mapId*/"Assets/Art/Scenes/FlapWangMap.unity", LoadSceneMode.Additive);
 
-            await gameEngine.InitializeAsync();
+            await runner.InitializeAsync();
 
             await UniTask.WaitUntil(() => handle.IsDone);
 
@@ -125,7 +125,7 @@ namespace LOP
                 CharacterCreationData data = new CharacterCreationData
                 {
                     userId = playerId,
-                    entityId = gameEngine.entityManager.GenerateEntityId(),
+                    entityId = runner.entityManager.GenerateEntityId(),
                     visualId = visualId,
                     characterCode = characterCode,
                     position = Vector3.right * i * 5,
@@ -139,7 +139,7 @@ namespace LOP
                     currentExp = 0,
                 };
 
-                LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
+                LOPEntity entity = runner.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
             }
 
             gameState = Initialized.State;
@@ -151,7 +151,7 @@ namespace LOP
         {
             EventBus.Default.Unsubscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
 
-            await gameEngine.DeinitializeAsync();
+            await runner.DeinitializeAsync();
 
             foreach (var gameMessageHandler in gameMessageHandlers.OrEmpty())
             {
@@ -167,11 +167,11 @@ namespace LOP
 
         private void HandleItemTouch(ItemTouch itemTouch)
         {
-            if (gameEngine.entityManager.GetEntity(itemTouch.itemId) != null)
+            if (runner.entityManager.GetEntity(itemTouch.itemId) != null)
             {
                 DespawnEntity(itemTouch.itemId);
 
-                LOPEntity toucher = gameEngine.entityManager.GetEntity<LOPEntity>(itemTouch.toucherId);
+                LOPEntity toucher = runner.entityManager.GetEntity<LOPEntity>(itemTouch.toucherId);
                 GameFramework.World.Level level = entityRegistry.Get(toucher.entityId)?.Get<GameFramework.World.Level>();
                 if (level == null)
                 {
@@ -193,30 +193,30 @@ namespace LOP
 
         public void Run(long tick, double interval, double elapsedTime)
         {
-            gameEngine.Run(tick, interval, elapsedTime);
+            runner.Run(tick, interval, elapsedTime);
 
             gameState = Playing.State;
         }
 
         public void Stop()
         {
-            gameEngine.Stop();
+            runner.Stop();
 
             gameState = Paused.State;
         }
 
         private void LateUpdate()
         {
-            if (gameEngine.tickUpdater.elapsedTime - lastEnemySpawnTime >= 10f)
+            if (runner.tickUpdater.elapsedTime - lastEnemySpawnTime >= 10f)
             {
-                if (gameEngine.entityManager.GetEntities().Count() < 100)
+                if (runner.entityManager.GetEntities().Count() < 100)
                 {
                     SpawnEnemies(10);
-                    lastEnemySpawnTime = gameEngine.tickUpdater.elapsedTime;
+                    lastEnemySpawnTime = runner.tickUpdater.elapsedTime;
                 }
             }
 
-            if (gameEngine.tickUpdater.elapsedTime > 60 * 5)
+            if (runner.tickUpdater.elapsedTime > 60 * 5)
             {
                 gameState = GameOver.State;
             }
@@ -252,7 +252,7 @@ namespace LOP
             CharacterCreationData data = new CharacterCreationData
             {
                 userId = "",
-                entityId = gameEngine.entityManager.GenerateEntityId(),
+                entityId = runner.entityManager.GenerateEntityId(),
                 visualId = visualId,
                 characterCode = characterCode,
                 position = position,
@@ -266,7 +266,7 @@ namespace LOP
                 currentExp = 0,
             };
 
-            LOPEntity entity = gameEngine.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
+            LOPEntity entity = runner.entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
@@ -286,7 +286,7 @@ namespace LOP
 
         private void DespawnEntity(string entityId)
         {
-            gameEngine.entityManager.DeleteEntityById(entityId);
+            runner.entityManager.DeleteEntityById(entityId);
         }
         #endregion
     }

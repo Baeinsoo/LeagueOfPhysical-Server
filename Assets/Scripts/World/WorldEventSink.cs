@@ -28,7 +28,7 @@ namespace LOP
                     {
                         var msg = new DamageEventToC
                         {
-                            Tick        = GameEngine.Time.tick,
+                            Tick        = Runner.Time.tick,
                             AttackerId  = dde.attackerId,
                             TargetId    = dde.targetId,
                             ActionCode  = "attack",

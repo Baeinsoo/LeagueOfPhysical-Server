@@ -9,10 +9,10 @@ namespace LOP.UI
     /// </summary>
     public class DebugHudViewModel
     {
-        public bool IsRunning => GameEngine.current != null;
+        public bool IsRunning => Runner.current != null;
 
-        public long Tick => GameEngine.Time.tick;
+        public long Tick => Runner.Time.tick;
 
-        public double ElapsedTime => GameEngine.Time.elapsedTime;
+        public double ElapsedTime => Runner.Time.elapsedTime;
     }
 }

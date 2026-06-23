@@ -36,7 +36,7 @@ namespace LOP
             //  Dummy..
             if (actionCode == "spawn_001")
             {
-                var entities = GameEngine.current.entityManager.GetEntities<LOPEntity>();
+                var entities = Runner.current.entityManager.GetEntities<LOPEntity>();
                 var targets = entities
                     .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() != true)
                     .Where(e => (e.position - entity.position).magnitude <= 20);

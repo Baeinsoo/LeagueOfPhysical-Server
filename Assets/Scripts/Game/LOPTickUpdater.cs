@@ -9,7 +9,7 @@ namespace LOP
         {
             base.OnElapsedTimeUpdate();
 
-            elapsedTime = GameEngine.NetworkTime.serverNow;
+            elapsedTime = Runner.NetworkTime.serverNow;
         }
     }
 }

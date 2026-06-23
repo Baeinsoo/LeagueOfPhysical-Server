@@ -57,7 +57,7 @@ namespace LOP
 
             if (inputBuffer.ContainsKey(tick) == false)
             {
-                timingTracker.RecordArrival((int)(GameFramework.GameEngine.Time.tick - tick));
+                timingTracker.RecordArrival((int)(GameFramework.Runner.Time.tick - tick));
                 inputBuffer.Add(tick, new PlayerInputToS
                 {
                     Tick = tick,

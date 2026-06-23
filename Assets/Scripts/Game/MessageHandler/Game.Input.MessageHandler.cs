@@ -7,7 +7,7 @@ namespace LOP
     public class GameInputMessageHandler : IGameMessageHandler
     {
         [Inject]
-        private IGameEngine gameEngine;
+        private IRunner runner;
 
         [Inject]
         private ISessionManager sessionManager;
@@ -25,7 +25,7 @@ namespace LOP
         private void OnPlayerInputToS(PlayerInputToS playerInputToS)
         {
             ISession session = sessionManager.GetSessionById(playerInputToS.SessionId);
-            LOPEntity entity = gameEngine.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
+            LOPEntity entity = runner.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
             EntityInputComponent inputComponent = entity.GetEntityComponent<EntityInputComponent>();
 
             // sliding-window redundancy: recent_inputs의 각 틱을 투입(이미 있는 tick은 AddInput이 dedup).

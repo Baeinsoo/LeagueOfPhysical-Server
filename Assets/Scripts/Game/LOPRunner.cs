@@ -3,12 +3,12 @@ using System.Collections.Generic;
 using UnityEngine;
 using GameFramework;
 using VContainer;
-using LOP.Event.LOPGameEngine.Update;
+using LOP.Event.LOPRunner.Update;
 
 namespace LOP
 {
     [DIMonoBehaviour]
-    public class LOPGameEngine : GameEngineBase
+    public class LOPRunner : RunnerBase
     {
         [Inject]
         private ISessionManager sessionManager;
@@ -29,7 +29,7 @@ namespace LOP
 
         protected override INetworkTime CreateNetworkTime() => new MirrorNetworkTime();
 
-        public override void UpdateEngine()
+        public override void UpdateRunner()
         {
             BeginUpdate();
 
@@ -67,7 +67,7 @@ namespace LOP
 
             foreach (var entity in LOPEntities)
             {
-                var input = entity.GetEntityComponent<EntityInputComponent>()?.GetInput(GameEngine.Time.tick);
+                var input = entity.GetEntityComponent<EntityInputComponent>()?.GetInput(Runner.Time.tick);
                 if (input == null)
                 {
                     continue;
@@ -88,7 +88,7 @@ namespace LOP
                 inputSequnceToC.EntityId = entity.entityId;
                 inputSequnceToC.InputSequence = new InputSequence
                 {
-                    Tick = GameEngine.Time.tick,
+                    Tick = Runner.Time.tick,
                     Sequence = input.PlayerInput.SequenceNumber,
                 };
 
@@ -103,7 +103,7 @@ namespace LOP
 
         private void SendInputTimingFeedback()
         {
-            if (GameEngine.Time.tick % InputTimingFeedbackIntervalTicks != 0)
+            if (Runner.Time.tick % InputTimingFeedbackIntervalTicks != 0)
             {
                 return;
             }

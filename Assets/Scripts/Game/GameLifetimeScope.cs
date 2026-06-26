@@ -22,6 +22,7 @@ namespace LOP
             builder.Register<GameFramework.World.HealthSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.LevelSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.StatsSystem>(Lifetime.Singleton);
+            builder.Register<StatusEffectSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IEventSink, WorldEventSink>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld, LOPWorld>(Lifetime.Singleton);
             builder.Register<DeathCascadeSystem>(Lifetime.Singleton);

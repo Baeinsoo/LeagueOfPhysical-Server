@@ -152,7 +152,6 @@ MonoBehaviour:
     TypeName: 
   autoRun: 1
   autoInjectGameObjects: []
-  game: {fileID: 707173724}
   gameEngine: {fileID: 1325402485}
   entityManager: {fileID: 1325402487}
 --- !u!4 &10645445
@@ -179,7 +178,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 707173725}
-  - component: {fileID: 707173724}
   m_Layer: 0
   m_Name: LOPGame
   m_TagString: Untagged
@@ -187,18 +185,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &707173724
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 707173723}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 7837911b78cc66b4da8b71108678a73f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!4 &707173725
 Transform:
   m_ObjectHideFlags: 0

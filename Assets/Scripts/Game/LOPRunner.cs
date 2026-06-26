@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using UnityEngine;
 using GameFramework;
 using VContainer;
@@ -26,9 +27,78 @@ namespace LOP
         [Inject] private IPhysicsSimulator physicsSimulator;
         [Inject] private GameFramework.World.IWorld world;
 
+        [Inject] private IMapLoader mapLoader;
+        [Inject] private GameRuleSystem gameRuleSystem;
+
+        private const string MapId = "Assets/Art/Scenes/FlapWangMap.unity";
+
+        private readonly Restorer restorer = new Restorer();
+
         public new LOPEntityManager entityManager => base.entityManager as LOPEntityManager;
 
         protected override INetworkTime CreateNetworkTime() => new MirrorNetworkTime();
+
+        public override async Task InitializeAsync()
+        {
+            gameState = Initializing.State;
+
+            var oldSimulationMode = Physics.simulationMode;
+            var oldAutoSyncTransforms = Physics.autoSyncTransforms;
+
+            restorer.action += () =>
+            {
+                Physics.simulationMode = oldSimulationMode;
+                Physics.autoSyncTransforms = oldAutoSyncTransforms;
+            };
+
+            Physics.simulationMode = SimulationMode.Script;
+            Physics.autoSyncTransforms = false;
+            Physics.gravity = new Vector3(0, -9.81f * 2, 0);
+
+            // 맵 로딩과 베이스 초기화를 병렬로 — 둘 다 끝나길 기다린다.
+            var mapLoadTask = mapLoader.LoadAsync(MapId);
+
+            await base.InitializeAsync();
+
+            await mapLoadTask;
+
+            gameRuleSystem.Initialize();
+
+            gameState = Initialized.State;
+        }
+
+        public override async Task DeinitializeAsync()
+        {
+            gameRuleSystem.Deinitialize();
+
+            await base.DeinitializeAsync();
+
+            restorer.Dispose();
+
+            await mapLoader.UnloadAsync();
+        }
+
+        public override void Run(long tick, double interval, double elapsedTime)
+        {
+            base.Run(tick, interval, elapsedTime);
+
+            gameState = Playing.State;
+        }
+
+        public override void Stop()
+        {
+            base.Stop();
+
+            gameState = Paused.State;
+        }
+
+        private void LateUpdate()
+        {
+            if (initialized && tickUpdater.elapsedTime > 60 * 5)
+            {
+                gameState = GameOver.State;
+            }
+        }
 
         public override void UpdateRunner()
         {

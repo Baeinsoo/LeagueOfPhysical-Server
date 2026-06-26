@@ -16,14 +16,14 @@ namespace LOP
 
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
 
-        public void Register()
+        public void Initialize()
         {
             EventBus.Default.Subscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
 
             runner.AddListener(this);
         }
 
-        public void Unregister()
+        public void Dispose()
         {
             EventBus.Default.Unsubscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
 

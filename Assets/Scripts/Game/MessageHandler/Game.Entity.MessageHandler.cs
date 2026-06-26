@@ -17,7 +17,7 @@ namespace LOP
         [Inject]
         private GameFramework.World.StatsSystem statsSystem;
 
-        public void Register()
+        public void Initialize()
         {
             EventBus.Default.Subscribe<StatAllocationToS>(nameof(IMessage), OnStatAllocationToS);
 
@@ -25,7 +25,7 @@ namespace LOP
             //RoomNetwork.instance.UnregisterHandler(typeof(EntityStatesToC), OnEntityStatesToC);
         }
 
-        public void Unregister()
+        public void Dispose()
         {
             EventBus.Default.Unsubscribe<StatAllocationToS>(nameof(IMessage), OnStatAllocationToS);
 

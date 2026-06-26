@@ -82,6 +82,8 @@ namespace LOP
             {
                 worldEntity.Add(new GameFramework.World.Ownership(creationData.userId));
             }
+            worldEntity.Add(new Abilities());        // 3d까지 빈 컨테이너(inert)
+            worldEntity.Add(new StatusEffects());
             entityRegistry.Add(worldEntity);
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");
             // --- end World Core ---

@@ -23,7 +23,7 @@ namespace LOP
         [Inject] private IRoomDataStore roomDataStore;
         [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
 
-        public IGame game { get; private set; }
+        public IRunner runner { get; private set; }
 
         public bool initialized { get; private set; }
 
@@ -63,12 +63,12 @@ namespace LOP
                 roomMessageHandler.Register();
             }
 
-            game = await gameFactory.CreateAsync();
-            game.onGameStateChanged += OnGameStateChanged;
+            runner = await gameFactory.CreateAsync();
+            runner.onGameStateChanged += OnGameStateChanged;
 
             InvokeRepeating("SendHeartbeat", 0, HEARTBEAT_INTERVAL);
 
-            await game.InitializeAsync();
+            await runner.InitializeAsync();
 
             if (!EnvironmentSettings.active.Standalone)
             {
@@ -84,14 +84,14 @@ namespace LOP
 
         public async Task DeinitializeAsync()
         {
-            await game.DeinitializeAsync();
+            await runner.DeinitializeAsync();
 
             CancelInvoke("SendHeartbeat");
 
-            game.onGameStateChanged -= OnGameStateChanged;
+            runner.onGameStateChanged -= OnGameStateChanged;
 
             await gameFactory.DestroyAsync();
-            game = null;
+            runner = null;
 
             foreach (var roomMessageHandler in roomMessageHandlers.OrEmpty())
             {
@@ -140,7 +140,7 @@ namespace LOP
                 });
             }
 
-            game.Run(0, TICK_INTERVAL, 0);
+            runner.Run(0, TICK_INTERVAL, 0);
         }
 
         private void SendHeartbeat()

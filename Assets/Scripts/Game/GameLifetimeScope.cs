@@ -1,4 +1,5 @@
 using GameFramework;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -12,9 +13,11 @@ namespace LOP
     /// </summary>
     public class GameLifetimeScope : LifetimeScope
     {
-        [SerializeField] private LOPGame game;
         [SerializeField, FormerlySerializedAs("gameEngine")] private LOPRunner runner;
         [SerializeField] private LOPEntityManager entityManager;
+
+        // 메시지 핸들러 구독 생명주기는 게임 세션 스코프에 속한다(호스트 아님). 컴포지션 루트가 구동·해제.
+        private List<IGameMessageHandler> _gameMessageHandlers;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -30,10 +33,11 @@ namespace LOP
             builder.Register<GameFramework.IRandom, GameFramework.UnityRandom>(Lifetime.Singleton);
             builder.Register<GameFramework.IMapLoader, AddressablesMapLoader>(Lifetime.Singleton);
 
-            // game/runner은 게임 서비스에 의존하므로 부모(Room)가 아닌 이 컨테이너에서 주입돼야 한다.
-            builder.RegisterComponent(game).As<IGame>();
+            // runner은 게임 서비스에 의존하므로 부모(Room)가 아닌 이 컨테이너에서 주입돼야 한다.
             builder.RegisterComponent(runner).As<IRunner>();
             builder.RegisterComponent(entityManager).As<IEntityManager>();
+            // GameRuleSystem이 sim 서비스로 쓰는 ITickUpdater (runner의 형제 컴포넌트). 호스트 역참조를 피하기 위해 직접 등록.
+            builder.Register<ITickUpdater>(_ => runner.GetComponent<ITickUpdater>(), Lifetime.Singleton);
 
             builder.Register<IGameMessageHandler, GameInfoMessageHandler>(Lifetime.Transient);
             builder.Register<IGameMessageHandler, GameEntityMessageHandler>(Lifetime.Transient);
@@ -57,11 +61,22 @@ namespace LOP
             {
                 container.InjectSceneObjects(gameObject.scene);
                 SceneManager.sceneLoaded += OnSceneLoaded;
+
+                _gameMessageHandlers = new List<IGameMessageHandler>(container.Resolve<IEnumerable<IGameMessageHandler>>());
+                foreach (var gameMessageHandler in _gameMessageHandlers.OrEmpty())
+                {
+                    gameMessageHandler.Register();
+                }
             });
         }
 
         protected override void OnDestroy()
         {
+            foreach (var gameMessageHandler in _gameMessageHandlers.OrEmpty())
+            {
+                gameMessageHandler.Unregister();
+            }
+
             SceneManager.sceneLoaded -= OnSceneLoaded;
             base.OnDestroy();
         }

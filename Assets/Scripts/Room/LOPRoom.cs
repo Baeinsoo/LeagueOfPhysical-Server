@@ -21,7 +21,6 @@ namespace LOP
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private ISessionManager sessionManager;
         [Inject] private IRoomDataStore roomDataStore;
-        [Inject] private IEnumerable<IRoomMessageHandler> roomMessageHandlers;
 
         public IRunner runner { get; private set; }
 
@@ -58,11 +57,6 @@ namespace LOP
 
         public async Task InitializeAsync()
         {
-            foreach (var roomMessageHandler in roomMessageHandlers.OrEmpty())
-            {
-                roomMessageHandler.Register();
-            }
-
             runner = await gameFactory.CreateAsync();
             runner.onGameStateChanged += OnGameStateChanged;
 
@@ -92,11 +86,6 @@ namespace LOP
 
             await gameFactory.DestroyAsync();
             runner = null;
-
-            foreach (var roomMessageHandler in roomMessageHandlers.OrEmpty())
-            {
-                roomMessageHandler.Unregister();
-            }
 
             roomDataStore.Clear();
 

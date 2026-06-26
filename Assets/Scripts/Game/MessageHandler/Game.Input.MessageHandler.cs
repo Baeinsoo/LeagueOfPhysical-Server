@@ -12,12 +12,12 @@ namespace LOP
         [Inject]
         private ISessionManager sessionManager;
 
-        public void Register()
+        public void Initialize()
         {
             EventBus.Default.Subscribe<PlayerInputToS>(nameof(IMessage), OnPlayerInputToS);
         }
 
-        public void Unregister()
+        public void Dispose()
         {
             EventBus.Default.Unsubscribe<PlayerInputToS>(nameof(IMessage), OnPlayerInputToS);
         }

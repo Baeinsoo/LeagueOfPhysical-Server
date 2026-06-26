@@ -18,6 +18,9 @@ namespace LOP
         private IActionManager actionManager;
 
         [Inject]
+        private AbilityActivator abilityActivator;
+
+        [Inject]
         private IMovementManager movementManager;
 
         [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
@@ -154,7 +157,10 @@ namespace LOP
 
                 if (string.IsNullOrEmpty(input.PlayerInput.ActionCode) == false)
                 {
-                    actionManager.TryStartAction(entity, input.PlayerInput.ActionCode);
+                    if (abilityActivator.TryActivate(entity.entityId, input.PlayerInput.ActionCode, Runner.Time.tick) == false)
+                    {
+                        actionManager.TryStartAction(entity, input.PlayerInput.ActionCode);
+                    }
                 }
 
                 InputSequenceToC inputSequnceToC = new InputSequenceToC();

@@ -155,12 +155,13 @@ namespace LOP
 
                 movementManager.ProcessInput(entity, entityTransform, input.PlayerInput.Horizontal, input.PlayerInput.Vertical, input.PlayerInput.Jump);
 
-                if (string.IsNullOrEmpty(input.PlayerInput.ActionCode) == false)
+                if (input.PlayerInput.AbilityId != 0)
                 {
-                    if (abilityActivator.TryActivate(entity.entityId, input.PlayerInput.ActionCode, Runner.Time.tick) == false)
-                    {
-                        actionManager.TryStartAction(entity, input.PlayerInput.ActionCode);
-                    }
+                    abilityActivator.TryActivate(entity.entityId, input.PlayerInput.AbilityId, Runner.Time.tick);
+                }
+                else if (string.IsNullOrEmpty(input.PlayerInput.ActionCode) == false)
+                {
+                    actionManager.TryStartAction(entity, input.PlayerInput.ActionCode);
                 }
 
                 InputSequenceToC inputSequnceToC = new InputSequenceToC();

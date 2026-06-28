@@ -28,6 +28,7 @@ namespace LOP
             builder.Register<StatusEffectDataProvider>(Lifetime.Singleton);
             builder.Register<AbilityDataProvider>(Lifetime.Singleton);
             builder.Register<AbilityActivator>(Lifetime.Singleton);
+            builder.Register<AbilityMotionSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IEventSink, WorldEventSink>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld, LOPWorld>(Lifetime.Singleton);
             builder.Register<DeathCascadeSystem>(Lifetime.Singleton);

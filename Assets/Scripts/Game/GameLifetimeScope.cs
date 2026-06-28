@@ -28,7 +28,14 @@ namespace LOP
             builder.Register<StatusEffectDataProvider>(Lifetime.Singleton);
             builder.Register<AbilityDataProvider>(Lifetime.Singleton);
             builder.Register<AbilityActivator>(Lifetime.Singleton);
-            builder.Register<AbilityMotionSystem>(Lifetime.Singleton);
+
+            // effect 실행 — executor가 타입별 핸들러로 디스패치. AbilitySystem이 Active 창에서 구동.
+            // (entity manager는 아래 RegisterComponent(entityManager).As<IEntityManager>()로 이미 등록 → 핸들러가 주입받음.)
+            builder.Register<AbilityEffectExecutor>(Lifetime.Singleton);
+            builder.Register<MotionEffectHandler>(Lifetime.Singleton).As<IAbilityEffectHandler>();
+            builder.Register<IAbilityEffectHandler>(c => new StatusEffectApplyEffectHandler(
+                c.Resolve<StatusEffectSystem>(),
+                id => c.Resolve<StatusEffectDataProvider>().Get(id)), Lifetime.Singleton);
             builder.Register<GameFramework.World.IEventSink, WorldEventSink>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld, LOPWorld>(Lifetime.Singleton);
             builder.Register<DeathCascadeSystem>(Lifetime.Singleton);

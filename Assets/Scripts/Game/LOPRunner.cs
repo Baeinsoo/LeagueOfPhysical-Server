@@ -146,17 +146,30 @@ namespace LOP
 
             foreach (var entity in LOPEntities)
             {
-                var input = entity.GetEntityComponent<EntityInputComponent>()?.GetInput(Runner.Time.tick);
-                if (input == null)
+                var inputComponent = entity.GetEntityComponent<EntityInputComponent>();
+                if (inputComponent == null)
                 {
-                    continue;
+                    continue;   // 입력 비조종(AI 등) — 이동 모터 미사용
                 }
 
-                // Phase 3b: recent_inputs로 재구성된 입력은 EntityTransform이 null(클라 보고 transform 미전달)이라 entityTransform도 null이 된다.
-                // LOPMovementManager.ProcessInput은 entityTransform을 사용하지 않으므로 안전 — 향후 이 파라미터를 읽으려면 null 처리 필요.
-                EntityTransform entityTransform = MapperConfig.mapper.Map<EntityTransform>(input.EntityTransform);
+                var input = inputComponent.GetInput(Runner.Time.tick);
 
-                movementManager.ProcessInput(entity, entityTransform, input.PlayerInput.Horizontal, input.PlayerInput.Vertical, input.PlayerInput.Jump);
+                // 무입력 틱에도 수평 속도를 0으로 제동해야 클·서 결정론이 유지된다(미스 시 0 입력으로 movement만 실행).
+                // Phase 3b: recent_inputs로 재구성된 입력은 EntityTransform이 null이라 entityTransform도 null/default가 된다.
+                // LOPMovementManager.ProcessInput은 entityTransform을 사용하지 않으므로 안전.
+                EntityTransform entityTransform = input != null
+                    ? MapperConfig.mapper.Map<EntityTransform>(input.EntityTransform)
+                    : default;
+                float horizontal = input != null ? input.PlayerInput.Horizontal : 0f;
+                float vertical = input != null ? input.PlayerInput.Vertical : 0f;
+                bool jump = input != null ? input.PlayerInput.Jump : false;
+
+                movementManager.ProcessInput(entity, entityTransform, horizontal, vertical, jump);
+
+                if (input == null)
+                {
+                    continue;   // 미스 — 어빌리티/시퀀스 송신은 입력 있을 때만
+                }
 
                 if (input.PlayerInput.AbilityId != 0)
                 {

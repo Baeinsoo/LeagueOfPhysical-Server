@@ -36,6 +36,9 @@ namespace LOP
             builder.Register<IAbilityEffectHandler>(c => new StatusEffectApplyEffectHandler(
                 c.Resolve<StatusEffectSystem>(),
                 id => c.Resolve<StatusEffectDataProvider>().Get(id)), Lifetime.Singleton);
+            // DamageEffectHandler = 서버 전용 등록. 클라엔 미등록이라 executor가 DamageEffect를 무시 → 데미지 서버권위.
+            builder.Register<IAbilityEffectHandler>(c => new DamageEffectHandler(
+                c.Resolve<ICombatSystem>()), Lifetime.Singleton);
             builder.Register<GameFramework.World.IEventSink, WorldEventSink>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld, LOPWorld>(Lifetime.Singleton);
             builder.Register<DeathCascadeSystem>(Lifetime.Singleton);

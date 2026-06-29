@@ -44,6 +44,20 @@ namespace LOP
                         }
                         break;
                     }
+                    case GameFramework.World.AbilityActivatedEvent ae:
+                    {
+                        // 발동 연출 cue(애니/VFX) — 모든 세션에 송출. cue 해석은 클라(어떤 애니인지 = 클라 마스터데이터).
+                        var msg = new AbilityActivatedToC
+                        {
+                            EntityId  = ae.entityId,
+                            AbilityId = ae.abilityId,
+                        };
+                        foreach (var session in _sessionManager.GetAllSessions())
+                        {
+                            session.Send(msg);
+                        }
+                        break;
+                    }
                 }
             }
         }

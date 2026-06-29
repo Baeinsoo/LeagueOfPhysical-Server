@@ -183,7 +183,11 @@ namespace LOP
 
                 if (input.PlayerInput.AbilityId != 0)
                 {
-                    abilityActivator.TryActivate(entity.entityId, input.PlayerInput.AbilityId, Runner.Time.tick);
+                    // 실제 발동 시 발동 연출 이벤트 append → WorldEventSink가 AbilityActivatedToC로 브로드캐스트.
+                    if (abilityActivator.TryActivate(entity.entityId, input.PlayerInput.AbilityId, Runner.Time.tick))
+                    {
+                        worldEventBuffer.Append(new GameFramework.World.AbilityActivatedEvent(entity.entityId, input.PlayerInput.AbilityId));
+                    }
                 }
                 else if (string.IsNullOrEmpty(input.PlayerInput.ActionCode) == false)
                 {

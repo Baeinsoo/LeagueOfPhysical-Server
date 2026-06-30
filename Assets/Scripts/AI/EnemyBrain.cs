@@ -7,12 +7,14 @@ namespace LOP
 {
     public class EnemyBrain : IBrain<LOPEntity>
     {
-        private IActionManager actionManager;
+        private const int AttackAbilityId = 3;   // TbAbility attack 행(grant-all로 모든 캐릭터 보유)
+
+        private AbilityActivator abilityActivator;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
 
-        public EnemyBrain(IActionManager actionManager, GameFramework.World.EntityRegistry entityRegistry)
+        public EnemyBrain(AbilityActivator abilityActivator, GameFramework.World.EntityRegistry entityRegistry)
         {
-            this.actionManager = actionManager;
+            this.abilityActivator = abilityActivator;
             this.entityRegistry = entityRegistry;
         }
 
@@ -41,19 +43,8 @@ namespace LOP
 
             if (direction.magnitude < 2)
             {
-                //  Attack the player
-                switch (entity.GetEntityComponent<AppearanceComponent>().visualId)
-                {
-                    case "Assets/Art/Characters/Knight/Knight.prefab":
-                        actionManager.TryStartAction(entity, "knight_attack_001");
-                        break;
-                    case "Assets/Art/Characters/Archer/Archer.prefab":
-                        actionManager.TryStartAction(entity, "archer_attack_001");
-                        break;
-                    case "Assets/Art/Characters/Necromancer/Necromancer.prefab":
-                        actionManager.TryStartAction(entity, "necromancer_attack_001");
-                        break;
-                }
+                //  Attack the player — 공격 어빌리티(id=3) 발동. 플레이어와 동일 경로라 데미지·연출 cue 자동.
+                abilityActivator.TryActivate(entity.entityId, AttackAbilityId, Runner.Time.tick);
             }
             else
             {

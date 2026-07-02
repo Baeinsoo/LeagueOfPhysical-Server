@@ -21,8 +21,15 @@ namespace LOP
             GameObject visual = root.CreateChild("Visual");
             GameObject physics = root.CreateChild("Physics");
 
+            var worldEntity = new GameFramework.World.Entity(creationData.entityId);
+            worldEntity.Add(new GameFramework.World.Transform());
+            worldEntity.Add(new GameFramework.World.Velocity());
+
             LOPEntity entity = root.CreateChildWithComponent<LOPEntity>();
             objectResolver.Inject(entity);
+            entity.LinkWorldMotion(
+                worldEntity.Get<GameFramework.World.Transform>(),
+                worldEntity.Get<GameFramework.World.Velocity>());
             entity.Initialize(creationData);
 
             EntityTypeComponent entityTypeComponent = entity.AddEntityComponent<EntityTypeComponent>();
@@ -63,18 +70,11 @@ namespace LOP
                 aiController.SetBrain(objectResolver.Resolve<EnemyBrain>());
             }
 
-            // --- World Core (병렬·추가) — Slice 1: Health, 서버 Motion: Transform/Velocity ---
-            var worldEntity = new GameFramework.World.Entity(creationData.entityId);
+            // --- World Core (병렬·추가) — Health/Mana/Level/Stats/Ownership/Abilities. Transform/Velocity는 위에서 생성(파사드 백킹). ---
             var worldHealth = new GameFramework.World.Health(creationData.maxHP) { Current = creationData.currentHP };
             worldEntity.Add(worldHealth);
             worldEntity.Add(new GameFramework.World.Mana(creationData.maxMP) { Current = creationData.currentMP });
             worldEntity.Add(new GameFramework.World.Level { Value = creationData.level, Exp = creationData.currentExp, ExpToNext = 100 });
-            worldEntity.Add(new GameFramework.World.Transform
-            {
-                Position = entity.position.ToNumerics(),
-                Rotation = Quaternion.Euler(entity.rotation).ToNumerics(),
-            });
-            worldEntity.Add(new GameFramework.World.Velocity { Linear = entity.velocity.ToNumerics() });
             var worldStats = new GameFramework.World.Stats();
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Strength] = creationData.strength;
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Dexterity] = creationData.dexterity;

@@ -9,14 +9,24 @@ namespace LOP
         [Inject]
         private IObjectResolver objectResolver;
 
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
+
         public LOPEntity Create(ItemCreationData creationData)
         {
             GameObject root = new GameObject($"Item_{creationData.entityId}");
             GameObject visual = root.CreateChild("Visual");
             GameObject physics = root.CreateChild("Physics");
 
+            var worldEntity = new GameFramework.World.Entity(creationData.entityId);
+            worldEntity.Add(new GameFramework.World.Transform());
+            worldEntity.Add(new GameFramework.World.Velocity());
+
             LOPEntity entity = root.CreateChildWithComponent<LOPEntity>();
             objectResolver.Inject(entity);
+            entity.LinkWorldMotion(
+                worldEntity.Get<GameFramework.World.Transform>(),
+                worldEntity.Get<GameFramework.World.Velocity>());
             entity.Initialize(creationData);
 
             EntityTypeComponent entityTypeComponent = entity.AddEntityComponent<EntityTypeComponent>();
@@ -42,6 +52,8 @@ namespace LOP
             LOPEntityView view = root.CreateChildWithComponent<LOPEntityView>();
             objectResolver.Inject(view);
             view.SetEntity(entity);
+
+            entityRegistry.Add(worldEntity);
 
             return entity;
         }

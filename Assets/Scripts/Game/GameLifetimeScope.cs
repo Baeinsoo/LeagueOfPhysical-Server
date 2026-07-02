@@ -56,7 +56,6 @@ namespace LOP
             builder.RegisterEntryPoint<GameInfoMessageHandler>();
             builder.RegisterEntryPoint<GameEntityMessageHandler>();
             builder.RegisterEntryPoint<GameInputMessageHandler>();
-            builder.RegisterEntryPoint<EntityBinder>();
 
             builder.Register<IMovementManager, LOPMovementManager>(Lifetime.Singleton);
             builder.Register<ICombatSystem, LOPCombatSystem>(Lifetime.Singleton);

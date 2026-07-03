@@ -22,6 +22,8 @@ namespace LOP
             builder.Register<GameFramework.World.HealthSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.LevelSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.StatsSystem>(Lifetime.Singleton);
+            builder.Register<MovementSystem>(Lifetime.Singleton);
+            builder.Register<InputBufferSystem>(Lifetime.Singleton);
             builder.Register<StatusEffectSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.ManaSystem>(Lifetime.Singleton);
             builder.Register<AbilitySystem>(Lifetime.Singleton);
@@ -57,7 +59,6 @@ namespace LOP
             builder.RegisterEntryPoint<GameEntityMessageHandler>();
             builder.RegisterEntryPoint<GameInputMessageHandler>();
 
-            builder.Register<IMovementManager, LOPMovementManager>(Lifetime.Singleton);
             builder.Register<ICombatSystem, LOPCombatSystem>(Lifetime.Singleton);
             builder.Register<IEntityCreator, CharacterCreator>(Lifetime.Singleton);
             builder.Register<IEntityCreator, ItemCreator>(Lifetime.Singleton);

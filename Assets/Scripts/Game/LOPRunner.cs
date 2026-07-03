@@ -17,9 +17,6 @@ namespace LOP
         [Inject]
         private AbilityActivator abilityActivator;
 
-        [Inject]
-        private IMovementManager movementManager;
-
         [Inject] private GameFramework.World.WorldEventBuffer worldEventBuffer;
         [Inject] private GameFramework.World.IEventSink eventSink;
         [Inject] private DeathCascadeSystem deathCascade;
@@ -27,6 +24,7 @@ namespace LOP
         [Inject] private IPhysicsSimulator physicsSimulator;
         [Inject] private GameFramework.World.IWorld world;
         [Inject] private AbilityEffectExecutor abilityEffectExecutor;
+        [Inject] private InputBufferSystem inputBufferSystem;
 
         [Inject] private IMapLoader mapLoader;
         [Inject] private GameRuleSystem gameRuleSystem;
@@ -147,41 +145,49 @@ namespace LOP
         {
         }
 
+        // jitter buffer: 입력의 클라 tick == 서버 처리 tick(= serverTick − 이 값)에 정렬. (Phase 2 lead + 이 버퍼로 적시 도착)
+        private const int InputDelayTicks = 2;
+
         private void ProcessInput()
         {
             IEnumerable<LOPEntity> LOPEntities = new List<LOPEntity>(entityManager.GetEntities<LOPEntity>());
 
             foreach (var entity in LOPEntities)
             {
-                var inputComponent = entity.GetEntityComponent<EntityInputComponent>();
-                if (inputComponent == null)
+                var buffer = entityRegistry.Get(entity.entityId).Get<InputBuffer>();
+                if (buffer == null)
                 {
-                    continue;   // 입력 비조종(AI 등) — 이동 모터 미사용
+                    continue;   // 입력 비조종(AI 등) — 버퍼 없음
                 }
 
-                var input = inputComponent.GetInput(Runner.Time.tick);
+                // command-frame 정렬 + 지각 prune → 이번 틱 커맨드 확정(Current). 소비는 LOPWorld.Tick(MovementSystem).
+                long targetTick = Runner.Time.tick - InputDelayTicks;
+                int pruned = inputBufferSystem.PruneBefore(buffer, targetTick);
+                for (int i = 0; i < pruned; i++)
+                {
+                    buffer.TimingTracker.RecordPrune();
+                }
 
-                // 무입력 틱에도 수평 속도를 0으로 제동해야 클·서 결정론이 유지된다(미스 시 0 입력으로 movement만 실행).
-                // Phase 3b: recent_inputs로 재구성된 입력은 EntityTransform이 null이라 entityTransform도 null/default가 된다.
-                // LOPMovementManager.ProcessInput은 entityTransform을 사용하지 않으므로 안전.
-                EntityTransform entityTransform = input != null
-                    ? MapperConfig.mapper.Map<EntityTransform>(input.EntityTransform)
-                    : default;
-                float horizontal = input != null ? input.PlayerInput.Horizontal : 0f;
-                float vertical = input != null ? input.PlayerInput.Vertical : 0f;
-                bool jump = input != null ? input.PlayerInput.Jump : false;
-
-                movementManager.ProcessInput(entity, entityTransform, horizontal, vertical, jump);
+                long previousSequence = buffer.LastProcessedSequence;
+                var input = inputBufferSystem.Consume(buffer, targetTick);
 
                 if (input == null)
                 {
-                    continue;   // 미스 — 어빌리티/시퀀스 송신은 입력 있을 때만
+                    // 미스 → 0 커맨드 확정(수평 제동). 어빌리티/시퀀스 송신은 입력 있을 때만.
+                    inputBufferSystem.SetCurrent(buffer, new InputCommand());
+                    continue;
                 }
 
-                if (input.PlayerInput.AbilityId != 0)
+                long gap = input.SequenceNumber - previousSequence - 1;
+                if (gap > 0)
+                {
+                    buffer.TimingTracker.RecordSeqGap((int)gap);
+                }
+
+                if (input.AbilityId != 0)
                 {
                     // 발동 연출 cue는 AbilityActivator가 내부에서 append한다(플레이어·AI 공용).
-                    abilityActivator.TryActivate(entity.entityId, input.PlayerInput.AbilityId, Runner.Time.tick);
+                    abilityActivator.TryActivate(entity.entityId, input.AbilityId, Runner.Time.tick);
                 }
 
                 InputSequenceToC inputSequnceToC = new InputSequenceToC();
@@ -189,7 +195,7 @@ namespace LOP
                 inputSequnceToC.InputSequence = new InputSequence
                 {
                     Tick = Runner.Time.tick,
-                    Sequence = input.PlayerInput.SequenceNumber,
+                    Sequence = input.SequenceNumber,
                 };
 
                 string userId = entityManager.GetUserIdByEntityId(entity.entityId);
@@ -210,13 +216,13 @@ namespace LOP
 
             foreach (var entity in new List<LOPEntity>(entityManager.GetEntities<LOPEntity>()))
             {
-                var inputComponent = entity.GetEntityComponent<EntityInputComponent>();
-                if (inputComponent == null)
+                var buffer = entityRegistry.Get(entity.entityId).Get<InputBuffer>();
+                if (buffer == null)
                 {
                     continue;
                 }
 
-                var summary = inputComponent.SummarizeTiming();
+                var summary = buffer.TimingTracker.Summarize();
                 if (summary.HasActivity == false)
                 {
                     continue;

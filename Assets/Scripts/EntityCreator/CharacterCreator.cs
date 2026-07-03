@@ -61,12 +61,7 @@ namespace LOP
             view.SetEntity(entity);
 
             bool isPlayer = !string.IsNullOrEmpty(creationData.userId);
-            if (isPlayer)
-            {
-                EntityInputComponent entityInputComponent = entity.AddEntityComponent<EntityInputComponent>();
-                objectResolver.Inject(entityInputComponent);
-            }
-            else
+            if (isPlayer == false)
             {
                 LOPAIController aiController = root.CreateChildWithComponent<LOPAIController>();
                 objectResolver.Inject(aiController);
@@ -85,10 +80,13 @@ namespace LOP
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Intelligence] = creationData.intelligence;
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Vitality] = creationData.vitality;
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.MoveSpeed] = characterComponent.masterData.Speed;
+            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.JumpPower] = characterComponent.masterData.JumpPower;
             worldEntity.Add(worldStats);
             if (isPlayer)
             {
                 worldEntity.Add(new GameFramework.World.Ownership(creationData.userId));
+                // 입력으로 조종되는 엔티티(플레이어)만 — 수신 커맨드를 틱별 버퍼링하고 MovementSystem이 읽는다. AI는 미부여.
+                worldEntity.Add(new InputBuffer());
             }
             worldEntity.Add(new Abilities());
             worldEntity.Add(new StatusEffects());

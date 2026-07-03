@@ -14,6 +14,9 @@ namespace LOP
         [Inject]
         private ISessionManager sessionManager;
 
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
+
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
 
         public void Initialize()
@@ -54,7 +57,7 @@ namespace LOP
                 {
                     EntityId = entity.entityId,
                     SessionId = session.sessionId,
-                    ExpectedNextSequence = entity.GetEntityComponent<EntityInputComponent>().expectedNextSequence,
+                    ExpectedNextSequence = entityRegistry.Get(entity.entityId).Get<InputBuffer>().ExpectedNextSequence,
                     GameInfo = new GameInfo
                     {
                         Tick = Runner.Time.tick,

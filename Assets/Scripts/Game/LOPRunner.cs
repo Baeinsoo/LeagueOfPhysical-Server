@@ -145,9 +145,6 @@ namespace LOP
         {
         }
 
-        // jitter buffer: 입력의 클라 tick == 서버 처리 tick(= serverTick − 이 값)에 정렬. (Phase 2 lead + 이 버퍼로 적시 도착)
-        private const int InputDelayTicks = 2;
-
         private void ProcessInput()
         {
             IEnumerable<LOPEntity> LOPEntities = new List<LOPEntity>(entityManager.GetEntities<LOPEntity>());
@@ -160,8 +157,11 @@ namespace LOP
                     continue;   // 입력 비조종(AI 등) — 버퍼 없음
                 }
 
+                // 입력을 스탬프된 틱에 제때 처리 — 클라 예측(즉시 적용)과 정렬(offset 0). 이건 하드 롤백 재조정의 전제다:
+                // 서버를 늦추면(입력을 과거 틱에 소비) 클라 예측과 항상 어긋나 낙하·충돌에서 발산한다. 늦추지 말 것.
+                // 지터로 입력이 늦게 도착할 여유가 더 필요하면 서버가 아니라 클라 lead(AheadMargin)를 키운다(표준).
                 // command-frame 정렬 + 지각 prune → 이번 틱 커맨드 확정(Current). 소비는 LOPWorld.Tick(MovementSystem).
-                long targetTick = Runner.Time.tick - InputDelayTicks;
+                long targetTick = Runner.Time.tick;
                 int pruned = inputBufferSystem.PruneBefore(buffer, targetTick);
                 for (int i = 0; i < pruned; i++)
                 {

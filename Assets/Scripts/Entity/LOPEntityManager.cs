@@ -173,8 +173,9 @@ namespace LOP
 
             foreach (var entity in GetEntities().OrEmpty())
             {
-                GameFramework.World.Health health = entityRegistry.Get(entity.entityId)?.Get<GameFramework.World.Health>();
-                entitySnapList.Add(new EntitySnap
+                var worldEntity = entityRegistry.Get(entity.entityId);
+                GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
+                var snap = new EntitySnap
                 {
                     EntityId = entity.entityId,
                     Position = MapperConfig.mapper.Map<ProtoVector3>(entity.position),
@@ -182,7 +183,26 @@ namespace LOP
                     Velocity = MapperConfig.mapper.Map<ProtoVector3>(entity.velocity),
                     MaxHP = health?.Max ?? 0,
                     CurrentHP = health?.Current ?? 0,
-                });
+                };
+
+                var contributions = worldEntity?.Get<MotionContributions>();
+                if (contributions != null)
+                {
+                    foreach (var c in contributions.Items)
+                    {
+                        snap.MotionContributions.Add(new ProtoMotionContribution
+                        {
+                            Horizontal = new ProtoVector3 { X = c.Horizontal.X, Y = c.Horizontal.Y, Z = c.Horizontal.Z },
+                            Mode = (int)c.Mode,
+                            Priority = c.Priority,
+                            StartTick = c.StartTick,
+                            EndTick = c.EndTick,
+                            DecayPerTick = c.DecayPerTick,
+                        });
+                    }
+                }
+
+                entitySnapList.Add(snap);
             }
 
             return entitySnapList.ToArray();

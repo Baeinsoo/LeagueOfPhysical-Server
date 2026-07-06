@@ -31,9 +31,14 @@ jobs:
 
       - name: Unity Linux 서버 빌드 (batchmode)
         run: |
+          set -eo pipefail
           UNITY="/Applications/Unity/Hub/Editor/6000.3.16f1/Unity.app/Contents/MacOS/Unity"
-          "$UNITY" -batchmode -quit -nographics -projectPath . \
-            -executeMethod BuildScript.BuildLinuxServer -logFile - 2>&1 | tail -40
+          # 전체 로그를 파일로 보존하고 Unity 종료코드를 그대로 전파(삼키지 않음)
+          if ! "$UNITY" -batchmode -quit -nographics -projectPath . \
+                -executeMethod BuildScript.BuildLinuxServer -logFile - > unity-build.log 2>&1; then
+            echo "::error::Unity build failed"; tail -80 unity-build.log; exit 1
+          fi
+          tail -20 unity-build.log
           test -f GameServer/Build/lop-server.x86_64
 
       - name: 도커 이미지 빌드·푸시 (amd64)
@@ -46,6 +51,7 @@ jobs:
           # launchd 러너는 맥 keychain에 접근 못 함. docker login 대신 임시 DOCKER_CONFIG에
           # inline auth(base64 user:token)를 직접 써넣어 keychain/credsStore를 완전히 우회.
           export DOCKER_CONFIG="$(mktemp -d)"
+          trap 'rm -rf "$DOCKER_CONFIG"' EXIT   # 셀프호스트 맥 — 토큰이 담긴 config를 잡 종료 시 제거
           AUTH="$(printf '%s:%s' "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN" | base64)"
           printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
           IMG="re5nardo/game-server:${{ steps.tag.outputs.sha }}"
@@ -59,6 +65,7 @@ jobs:
         run: |
           set -e
           TMP="$(mktemp -d)"
+          trap 'rm -rf "$TMP"' EXIT   # .git/config에 토큰이 남으므로 잡 종료 시 클론 제거
           # keychain 우회 — 토큰을 URL에 임베드 (GitHub Actions가 로그에서 마스킹)
           git clone --depth 1 "https://x-access-token:${INFRA_REPO_TOKEN}@github.com/Baeinsoo/infrastructure" "$TMP/infra"
           cd "$TMP/infra"

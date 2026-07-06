@@ -14,6 +14,12 @@ public static class BuildScript
         const string exe = outputDir + "/lop-server.x86_64";
 
         var scenes = EditorBuildSettings.scenes.Where(s => s.enabled).Select(s => s.path).ToArray();
+        if (scenes.Length == 0)
+        {
+            Debug.LogError("Build FAILED: no enabled scenes in EditorBuildSettings");
+            EditorApplication.Exit(1);
+            return;
+        }
 
         // Dedicated Server 서브타겟. 백엔드는 Mono2x —
         // IL2CPP는 Linux 크로스컴파일 sysroot 툴체인이 이 머신에 없어(Unable to find Linux Sysroot) 빌드 실패.
@@ -30,16 +36,25 @@ public static class BuildScript
             options = BuildOptions.None,
         };
 
-        BuildReport report = BuildPipeline.BuildPlayer(options);
-        BuildSummary summary = report.summary;
-
-        if (summary.result != BuildResult.Succeeded)
+        try
         {
-            Debug.LogError($"Build FAILED: result={summary.result}, errors={summary.totalErrors}");
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            BuildSummary summary = report.summary;
+
+            if (summary.result != BuildResult.Succeeded)
+            {
+                Debug.LogError($"Build FAILED: result={summary.result}, errors={summary.totalErrors}");
+                EditorApplication.Exit(1);
+                return;
+            }
+
+            Debug.Log($"Build OK: {summary.outputPath}, size={summary.totalSize} bytes");
+            EditorApplication.Exit(0);
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogError($"Build threw: {e}");
             EditorApplication.Exit(1);
         }
-
-        Debug.Log($"Build OK: {summary.outputPath}, size={summary.totalSize} bytes");
-        EditorApplication.Exit(0);
     }
 }

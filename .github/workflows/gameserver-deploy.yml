@@ -43,9 +43,11 @@ jobs:
           DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
           set -e
-          # launchd 러너는 맥 keychain(credsStore)에 접근 못 하므로, 임시 DOCKER_CONFIG로 keychain 우회 (inline auth)
+          # launchd 러너는 맥 keychain에 접근 못 함. docker login 대신 임시 DOCKER_CONFIG에
+          # inline auth(base64 user:token)를 직접 써넣어 keychain/credsStore를 완전히 우회.
           export DOCKER_CONFIG="$(mktemp -d)"
-          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
+          AUTH="$(printf '%s:%s' "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN" | base64)"
+          printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
           IMG="re5nardo/game-server:${{ steps.tag.outputs.sha }}"
           docker build --platform linux/amd64 -t "$IMG" .
           docker push "$IMG"

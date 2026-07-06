@@ -1,0 +1,50 @@
+name: gameserver-deploy
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: gameserver-deploy
+  cancel-in-progress: false
+
+jobs:
+  build-deploy:
+    runs-on: self-hosted      # 맥 러너 (Unity 라이선스·docker·git 자격증명 ambient)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: sha 산출
+        id: tag
+        run: echo "sha=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Unity Linux 서버 빌드 (batchmode)
+        run: |
+          UNITY="/Applications/Unity/Hub/Editor/6000.3.16f1/Unity.app/Contents/MacOS/Unity"
+          "$UNITY" -batchmode -quit -nographics -projectPath . \
+            -executeMethod BuildScript.BuildLinuxServer -logFile - 2>&1 | tail -40
+          test -f GameServer/Build/lop-server.x86_64
+
+      - name: 도커 이미지 빌드·푸시 (amd64, ambient docker login)
+        working-directory: GameServer
+        run: |
+          IMG="re5nardo/game-server:${{ steps.tag.outputs.sha }}"
+          docker build --platform linux/amd64 -t "$IMG" .
+          docker push "$IMG"
+          echo "pushed $IMG"
+
+      - name: infra game-server-config 태그 bump
+        run: |
+          set -e
+          TMP="$(mktemp -d)"
+          git clone --depth 1 https://github.com/Baeinsoo/infrastructure "$TMP/infra"
+          cd "$TMP/infra"
+          CM=k8s/apps/backend/game-server-config/configmap.yaml
+          # GAME_SERVER_IMAGE 값을 새 sha로 교체 (BSD sed — 맥 러너)
+          sed -i '' -E "s|(GAME_SERVER_IMAGE: ).*|\\1re5nardo/game-server:${{ steps.tag.outputs.sha }}|" "$CM"
+          if git diff --quiet; then
+            echo "변경 없음 (태그 동일)"
+          else
+            git config user.name "lop-ci"
+            git config user.email "ci@lop.local"
+            git commit -am "ci(gameserver): bump GAME_SERVER_IMAGE -> ${{ steps.tag.outputs.sha }} [skip ci]"
+            git push origin main
+          fi

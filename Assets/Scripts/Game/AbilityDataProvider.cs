@@ -52,9 +52,9 @@ namespace LOP
                         break;
                     case LOP.MasterData.DamageEffect d:
                         result.Add(new DamageEffect(d.Amount, d.Range, d.Angle));
-                        // TEMP(슬라이스2): 공격에 넉백을 얹는다. MasterData KnockbackEffect 승격은 후속.
-                        result.Add(new KnockbackEffect(strength: 5f, range: d.Range, angle: d.Angle,
-                            durationTicks: 12, decayPerTick: 0.8f));
+                        break;
+                    case LOP.MasterData.KnockbackEffect k:
+                        result.Add(new KnockbackEffect(k.Strength, k.Range, k.Angle, k.DurationTicks, k.DecayPerTick));
                         break;
                 }
             }

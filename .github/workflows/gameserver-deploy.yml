@@ -36,19 +36,29 @@ jobs:
             -executeMethod BuildScript.BuildLinuxServer -logFile - 2>&1 | tail -40
           test -f GameServer/Build/lop-server.x86_64
 
-      - name: 도커 이미지 빌드·푸시 (amd64, ambient docker login)
+      - name: 도커 이미지 빌드·푸시 (amd64)
         working-directory: GameServer
+        env:
+          DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_TOKEN }}
         run: |
+          set -e
+          # launchd 러너는 맥 keychain(credsStore)에 접근 못 하므로, 임시 DOCKER_CONFIG로 keychain 우회 (inline auth)
+          export DOCKER_CONFIG="$(mktemp -d)"
+          echo "$DOCKERHUB_TOKEN" | docker login -u "$DOCKERHUB_USERNAME" --password-stdin
           IMG="re5nardo/game-server:${{ steps.tag.outputs.sha }}"
           docker build --platform linux/amd64 -t "$IMG" .
           docker push "$IMG"
           echo "pushed $IMG"
 
       - name: infra game-server-config 태그 bump
+        env:
+          INFRA_REPO_TOKEN: ${{ secrets.INFRA_REPO_TOKEN }}
         run: |
           set -e
           TMP="$(mktemp -d)"
-          git clone --depth 1 https://github.com/Baeinsoo/infrastructure "$TMP/infra"
+          # keychain 우회 — 토큰을 URL에 임베드 (GitHub Actions가 로그에서 마스킹)
+          git clone --depth 1 "https://x-access-token:${INFRA_REPO_TOKEN}@github.com/Baeinsoo/infrastructure" "$TMP/infra"
           cd "$TMP/infra"
           CM=k8s/apps/backend/game-server-config/configmap.yaml
           # GAME_SERVER_IMAGE 값을 새 sha로 교체 (BSD sed — 맥 러너)

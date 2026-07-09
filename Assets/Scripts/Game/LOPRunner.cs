@@ -145,12 +145,14 @@ namespace LOP
         {
             Physics.SyncTransforms();   // 캐스트가 최신 콜라이더 포즈를 보도록(autoSyncTransforms=false)
             float dt = (float)tickUpdater.interval;
+            int layerMask = LayerMask.GetMask("Default");
             foreach (var entity in entityManager.GetEntities<LOPEntity>())
             {
                 if (entity.GetEntityComponent<EntityTypeComponent>()?.entityType != EntityType.Character)
                 {
                     continue;   // 캐릭터만 — 아이템(kinematic-trigger)은 이동 안 함
                 }
+                entity.GetEntityComponent<PhysicsComponent>().Depenetrate(layerMask);   // 겹침 해소(스폰 flush 등) → sweep이 지면을 잡음
                 kinematicMoveSystem.Tick(entityRegistry.Get(entity.entityId), dt);
                 entity.PushMotionToPhysics();   // 새 World 위치·회전을 rb에 반영
             }

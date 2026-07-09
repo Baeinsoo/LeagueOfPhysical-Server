@@ -1,0 +1,3 @@
+Build/*_BackUpThisFolder_ButDontShipItWithYourGame/
+Build/*_BurstDebugInformation_DoNotShip/
+Build/.DS_Store

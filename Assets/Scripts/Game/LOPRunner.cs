@@ -25,6 +25,7 @@ namespace LOP
         [Inject] private GameFramework.World.IWorld world;
         [Inject] private AbilityEffectExecutor abilityEffectExecutor;
         [Inject] private InputBufferSystem inputBufferSystem;
+        [Inject] private KinematicMoveSystem kinematicMoveSystem;
 
         [Inject] private IMapLoader mapLoader;
         [Inject] private GameRuleSystem gameRuleSystem;
@@ -114,6 +115,8 @@ namespace LOP
             world.Tick(Runner.Time.tick, (float)tickUpdater.interval);
             DriveAbilityEffects();
 
+            MoveCharacters();
+
             SimulatePhysics();
 
             ProcessDeaths();
@@ -133,6 +136,23 @@ namespace LOP
             foreach (var entity in entityManager.GetEntities<LOPEntity>())
             {
                 abilityEffectExecutor.DriveActiveEntity(entityRegistry.Get(entity.entityId), entityManager, tick);
+            }
+        }
+
+        // 캐릭터를 키네마틱 이동(중력+collide-and-slide)시켜 World.Transform에 쓰고 rb에 반영한다.
+        // 다이나믹 PhysX 캐릭터 적분을 대체 — 이후 SimulatePhysics는 다이나믹 물체만 처리.
+        private void MoveCharacters()
+        {
+            Physics.SyncTransforms();   // 캐스트가 최신 콜라이더 포즈를 보도록(autoSyncTransforms=false)
+            float dt = (float)tickUpdater.interval;
+            foreach (var entity in entityManager.GetEntities<LOPEntity>())
+            {
+                if (entity.GetEntityComponent<EntityTypeComponent>()?.entityType != EntityType.Character)
+                {
+                    continue;   // 캐릭터만 — 아이템(kinematic-trigger)은 이동 안 함
+                }
+                kinematicMoveSystem.Tick(entityRegistry.Get(entity.entityId), dt);
+                entity.PushMotionToPhysics();   // 새 World 위치·회전을 rb에 반영
             }
         }
 

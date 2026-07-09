@@ -50,7 +50,7 @@ namespace LOP
 
             PhysicsComponent physicsComponent = entity.AddEntityComponent<PhysicsComponent>();
             objectResolver.Inject(physicsComponent);
-            physicsComponent.Initialize(false, false);
+            physicsComponent.Initialize(true, false);   // kinematic, non-trigger — 우리가 직접 이동시킴
 
             LOPEntityController controller = root.CreateChildWithComponent<LOPEntityController>();
             objectResolver.Inject(controller);

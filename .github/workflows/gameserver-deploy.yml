@@ -36,19 +36,22 @@ jobs:
           dotnet tool run nugetforunity restore .
           test -f Assets/NuGetForUnity/Packages/AutoMapper.11.0.0/lib/netstandard2.1/AutoMapper.dll
 
-      - name: Unity Linux 서버 빌드 (batchmode)
+      - name: Unity IL2CPP 빌드 (amd64 + arm64)
         run: |
           set -eo pipefail
           UNITY="/Applications/Unity/Hub/Editor/6000.3.16f1/Unity.app/Contents/MacOS/Unity"
-          # 전체 로그를 파일로 보존하고 Unity 종료코드를 그대로 전파(삼키지 않음)
-          if ! "$UNITY" -batchmode -quit -nographics -projectPath . \
-                -executeMethod BuildScript.BuildLinuxServer -logFile - > unity-build.log 2>&1; then
-            echo "::error::Unity build failed"; tail -80 unity-build.log; exit 1
-          fi
-          tail -20 unity-build.log
-          test -f GameServer/Build/lop-server.x86_64
+          for ARCH in x86_64 arm64; do
+            echo "::group::Unity build $ARCH"
+            if ! LOP_BUILD_ARCH=$ARCH "$UNITY" -batchmode -quit -nographics -projectPath . \
+                  -executeMethod BuildScript.BuildLinuxServer -logFile - > unity-$ARCH.log 2>&1; then
+              echo "::error::Unity build $ARCH failed"; tail -80 unity-$ARCH.log; exit 1
+            fi
+            tail -5 unity-$ARCH.log
+            test -f GameServer/Build-$ARCH/lop-server.x86_64
+            echo "::endgroup::"
+          done
 
-      - name: 도커 이미지 빌드·푸시 (amd64)
+      - name: 도커 멀티아치 빌드·푸시 (amd64+arm64 manifest)
         working-directory: GameServer
         env:
           DOCKERHUB_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -61,10 +64,17 @@ jobs:
           trap 'rm -rf "$DOCKER_CONFIG"' EXIT   # 셀프호스트 맥 — 토큰이 담긴 config를 잡 종료 시 제거
           AUTH="$(printf '%s:%s' "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN" | base64)"
           printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
-          IMG="re5nardo/game-server:${{ steps.tag.outputs.sha }}"
-          docker build --platform linux/amd64 -t "$IMG" .
-          docker push "$IMG"
-          echo "pushed $IMG"
+          SHA="${{ steps.tag.outputs.sha }}"
+          BASE="re5nardo/game-server"
+          # 아치별 산출이 서로 달라 buildx 단일 컨텍스트 불가 → 아치별 이미지 push 후 manifest로 합침
+          docker build --platform linux/amd64 --build-arg BUILD_DIR=Build-x86_64 -t "$BASE:$SHA-amd64" .
+          docker push "$BASE:$SHA-amd64"
+          docker build --platform linux/arm64 --build-arg BUILD_DIR=Build-arm64 -t "$BASE:$SHA-arm64" .
+          docker push "$BASE:$SHA-arm64"
+          docker manifest rm "$BASE:$SHA" 2>/dev/null || true
+          docker manifest create "$BASE:$SHA" --amend "$BASE:$SHA-amd64" --amend "$BASE:$SHA-arm64"
+          docker manifest push "$BASE:$SHA"
+          echo "pushed multiarch $BASE:$SHA"
 
       - name: infra game-server-config 태그 bump
         env:

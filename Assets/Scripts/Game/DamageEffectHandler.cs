@@ -10,11 +10,17 @@ namespace LOP
     /// </summary>
     public class DamageEffectHandler : AbilityEffectHandler<DamageEffect>
     {
-        private readonly ICombatSystem combatSystem;
+        private readonly LOPCombatSystem combatSystem;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly MatchSeed matchSeed;
 
-        public DamageEffectHandler(ICombatSystem combatSystem)
+        public DamageEffectHandler(LOPCombatSystem combatSystem,
+                                   GameFramework.World.EntityRegistry entityRegistry,
+                                   MatchSeed matchSeed)
         {
             this.combatSystem = combatSystem;
+            this.entityRegistry = entityRegistry;
+            this.matchSeed = matchSeed;
         }
 
         protected override void OnActiveEnter(AbilityEffectContext ctx, DamageEffect effect)
@@ -44,7 +50,12 @@ namespace LOP
                     continue;
                 }
 
-                combatSystem.Attack(attacker, target, ctx.CurrentTick, ctx.EffectIndex);
+                var targetWorld = entityRegistry.Get(target.entityId);
+                if (targetWorld == null)
+                {
+                    continue;
+                }
+                combatSystem.Attack(ctx.Caster, targetWorld, ctx.CurrentTick, ctx.EffectIndex, matchSeed.Value);
             }
         }
 

@@ -50,7 +50,7 @@ namespace LOP
 
             PhysicsComponent physicsComponent = entity.AddEntityComponent<PhysicsComponent>();
             objectResolver.Inject(physicsComponent);
-            physicsComponent.Initialize(false, false);
+            physicsComponent.Initialize(true, false);   // kinematic, non-trigger — 우리가 직접 이동시킴
 
             LOPEntityController controller = root.CreateChildWithComponent<LOPEntityController>();
             objectResolver.Inject(controller);
@@ -90,6 +90,7 @@ namespace LOP
             }
             worldEntity.Add(new Abilities());
             worldEntity.Add(new StatusEffects());
+            worldEntity.Add(new MotionContributions());
             entityRegistry.Add(worldEntity);
 
             // 3d: 헤이스트 어빌리티 부여(발동은 입력 트리거 — AbilityActivator). TEMP: 전체 부여, 캐릭터별 셋은 후속.

@@ -71,9 +71,9 @@ jobs:
           docker push "$BASE:$SHA-amd64"
           docker build --platform linux/arm64 --build-arg BUILD_DIR=Build-arm64 -t "$BASE:$SHA-arm64" .
           docker push "$BASE:$SHA-arm64"
-          docker manifest rm "$BASE:$SHA" 2>/dev/null || true
-          docker manifest create "$BASE:$SHA" --amend "$BASE:$SHA-amd64" --amend "$BASE:$SHA-arm64"
-          docker manifest push "$BASE:$SHA"
+          # 멀티아치 매니페스트 — buildx imagetools가 아치별 이미지(OCI index 포함)를 견고하게 합침
+          # (docker manifest create --amend는 per-arch가 index면 실패).
+          docker buildx imagetools create -t "$BASE:$SHA" "$BASE:$SHA-amd64" "$BASE:$SHA-arm64"
           echo "pushed multiarch $BASE:$SHA"
 
       - name: infra game-server-config 태그 bump

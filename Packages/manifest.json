@@ -3,15 +3,16 @@
     {
       "name": "Unity NuGet",
       "url": "https://unitynuget-registry.openupm.com",
-      "scopes": ["org.nuget"]
+      "scopes": [
+        "org.nuget"
+      ]
     }
   ],
   "dependencies": {
     "com.baegames.gameframework": "file:../../GameFramework",
-    "com.baegames.lop.shared":    "file:../../LeagueOfPhysical-Shared",
     "com.baegames.lop.masterdata.server": "file:../../LeagueOfPhysical-MasterData-Server",
+    "com.baegames.lop.shared": "file:../../LeagueOfPhysical-Shared",
     "com.code-philosophy.luban": "https://github.com/focus-creative-games/luban_unity.git#v1.2.0",
-    "org.nuget.google.protobuf":  "3.28.2",
     "com.coplaydev.unity-mcp": "https://github.com/CoplayDev/unity-mcp.git?path=/MCPForUnity#main",
     "com.cysharp.unitask": "https://github.com/Cysharp/UniTask.git?path=src/UniTask/Assets/Plugins/UniTask#2.5.4",
     "com.github-glitchenzo.nugetforunity": "https://github.com/GlitchEnzo/NuGetForUnity.git?path=/src/NuGetForUnity",
@@ -23,10 +24,14 @@
     "com.unity.multiplayer.center": "1.0.1",
     "com.unity.nuget.newtonsoft-json": "3.2.2",
     "com.unity.render-pipelines.universal": "17.3.0",
+    "com.unity.sdk.linux-arm64": "1.1.0",
+    "com.unity.sdk.linux-x86_64": "1.1.0",
     "com.unity.timeline": "1.8.12",
+    "com.unity.toolchain.macos-arm64-linux": "1.1.0",
     "com.unity.ugui": "2.0.0",
     "com.unity.visualscripting": "1.9.11",
     "jp.hadashikick.vcontainer": "https://github.com/hadashiA/VContainer.git?path=VContainer/Assets/VContainer#1.16.2",
+    "org.nuget.google.protobuf": "3.28.2",
     "com.unity.modules.accessibility": "1.0.0",
     "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.ai": "1.0.0",

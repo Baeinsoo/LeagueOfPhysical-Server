@@ -1,5 +1,8 @@
-# 베이스 이미지로 Ubuntu 20.04 LTS 사용
+# 베이스 이미지로 Ubuntu 20.04 LTS 사용 (멀티아치: amd64+arm64 지원)
 FROM ubuntu:20.04
+
+# 아치별 Unity 산출 디렉토리 (멀티아치 빌드 시 --build-arg BUILD_DIR=Build-<arch>)
+ARG BUILD_DIR=Build
 
 # 환경변수 설정
 ENV DEBIAN_FRONTEND=noninteractive
@@ -27,9 +30,8 @@ RUN apt-get update && \
 # 작업 디렉토리 생성
 WORKDIR /app
 
-# 유니티로 빌드된 바이너리를 컨테이너의 /app 디렉토리에 복사
-# 예: 빌드된 파일이 현재 디렉토리의 Build/ 폴더에 있다고 가정
-COPY Build/ /app/
+# 유니티로 빌드된 바이너리를 컨테이너의 /app 디렉토리에 복사 (BUILD_DIR = Build-<arch>)
+COPY ${BUILD_DIR}/ /app/
 
 # 실행 파일에 실행 권한 부여
 RUN chmod +x /app/lop-server.x86_64

@@ -1,5 +1,6 @@
-# 베이스 이미지로 Ubuntu 20.04 LTS 사용 (멀티아치: amd64+arm64 지원)
-FROM ubuntu:20.04
+# 베이스 이미지로 Ubuntu 22.04 LTS 사용 (멀티아치 amd64+arm64 + glibc 2.35 —
+# Unity 6 IL2CPP 산출 바이너리가 GLIBC_2.34~2.35 요구. 20.04(2.31)는 너무 오래됨.)
+FROM ubuntu:22.04
 
 # 아치별 Unity 산출 디렉토리 (멀티아치 빌드 시 --build-arg BUILD_DIR=Build-<arch>)
 ARG BUILD_DIR=Build

@@ -44,7 +44,7 @@ namespace LOP
                     continue;
                 }
 
-                combatSystem.Attack(attacker, target);
+                combatSystem.Attack(attacker, target, ctx.CurrentTick, ctx.EffectIndex);
             }
         }
 

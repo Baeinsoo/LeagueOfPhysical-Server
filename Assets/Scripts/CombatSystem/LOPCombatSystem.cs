@@ -9,23 +9,23 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.World.HealthSystem healthSystem;
         private readonly GameFramework.World.StatsSystem statsSystem;
-        private readonly IRandom rng;
+        private readonly MatchSeed matchSeed;
 
         public LOPCombatSystem(
             GameFramework.World.WorldEventBuffer worldEventBuffer,
             GameFramework.World.EntityRegistry entityRegistry,
             GameFramework.World.HealthSystem healthSystem,
             GameFramework.World.StatsSystem statsSystem,
-            IRandom rng)
+            MatchSeed matchSeed)
         {
             this.worldEventBuffer = worldEventBuffer;
             this.entityRegistry = entityRegistry;
             this.healthSystem = healthSystem;
             this.statsSystem = statsSystem;
-            this.rng = rng;
+            this.matchSeed = matchSeed;
         }
 
-        public void Attack(LOPEntity attacker, LOPEntity target)
+        public void Attack(LOPEntity attacker, LOPEntity target, long tick, int effectIndex)
         {
             bool attackerIsPlayer = entityRegistry.Get(attacker.entityId)?.Has<GameFramework.World.Ownership>() == true;
             bool targetIsPlayer = entityRegistry.Get(target.entityId)?.Has<GameFramework.World.Ownership>() == true;
@@ -61,8 +61,17 @@ namespace LOP
 
             damage += attackerStrength;
 
-            bool isDodged = IsDodge(attackerDexterity, targetDexterity);
-            bool isCritical = IsCritical(attackerStrength, targetStrength);
+            ulong seed = GameFramework.Hashing.Combine(
+                GameFramework.Hashing.Combine(
+                    GameFramework.Hashing.Combine(
+                        GameFramework.Hashing.Combine(matchSeed.Value, (ulong)tick),
+                        GameFramework.Hashing.Fnv1a64(attacker.entityId)),
+                    GameFramework.Hashing.Fnv1a64(target.entityId)),
+                (ulong)effectIndex);
+            var rng = new GameFramework.DeterministicRandom(seed);
+
+            bool isDodged   = IsDodge(attackerDexterity, targetDexterity, ref rng);
+            bool isCritical = IsCritical(attackerStrength, targetStrength, ref rng);
             if (isCritical)
             {
                 damage = Mathf.RoundToInt(damage * rng.Range(1.25f, 1.75f));
@@ -100,7 +109,7 @@ namespace LOP
             // --- end World Core slice 3 ---
         }
 
-        public bool IsDodge(int attackerDex, int targetDex)
+        public bool IsDodge(int attackerDex, int targetDex, ref GameFramework.DeterministicRandom rng)
         {
             float dodgeChance = (float)targetDex / (attackerDex + targetDex);
             dodgeChance = Mathf.Clamp(dodgeChance, 0.05f, 0.95f);
@@ -108,7 +117,7 @@ namespace LOP
             return roll < dodgeChance;
         }
 
-        public bool IsCritical(int attackerStr, int targetStr)
+        public bool IsCritical(int attackerStr, int targetStr, ref GameFramework.DeterministicRandom rng)
         {
             float critChance = (float)attackerStr / (attackerStr + targetStr);
             critChance = Mathf.Clamp(critChance, 0.05f, 0.50f);

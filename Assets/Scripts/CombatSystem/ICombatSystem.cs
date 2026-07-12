@@ -3,6 +3,6 @@ namespace LOP
 {
     public interface ICombatSystem
     {
-        void Attack(LOPEntity attacker, LOPEntity target);
+        void Attack(LOPEntity attacker, LOPEntity target, long tick, int effectIndex);
     }
 }

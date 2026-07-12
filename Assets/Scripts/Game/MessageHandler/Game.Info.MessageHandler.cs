@@ -17,6 +17,9 @@ namespace LOP
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
 
+        [Inject]
+        private MatchSeed matchSeed;
+
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
 
         public void Initialize()
@@ -63,6 +66,7 @@ namespace LOP
                         Tick = Runner.Time.tick,
                         Interval = Runner.Time.tickInterval,
                         ElapsedTime = Runner.Time.elapsedTime,
+                        MatchSeed = matchSeed.Value,
                     },
                 };
 

@@ -29,6 +29,13 @@ jobs:
             echo "$r @ $(git -C "$r" rev-parse --short HEAD)"
           done
 
+      - name: NuGet 패키지 복원 (NuGetForUnity CLI, packages.config 기반)
+        run: |
+          set -e
+          dotnet tool restore
+          dotnet tool run nugetforunity restore .
+          test -f Assets/NuGetForUnity/Packages/AutoMapper.11.0.0/lib/netstandard2.1/AutoMapper.dll
+
       - name: Unity Linux 서버 빌드 (batchmode)
         run: |
           set -eo pipefail

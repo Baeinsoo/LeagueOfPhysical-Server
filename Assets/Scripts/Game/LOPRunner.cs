@@ -26,6 +26,7 @@ namespace LOP
         [Inject] private AbilityEffectExecutor abilityEffectExecutor;
         [Inject] private InputBufferSystem inputBufferSystem;
         [Inject] private KinematicMoveSystem kinematicMoveSystem;
+        [Inject] private MotionContributionSystem motionContributionSystem;
 
         [Inject] private IMapLoader mapLoader;
         [Inject] private GameRuleSystem gameRuleSystem;
@@ -135,7 +136,7 @@ namespace LOP
             long tick = Runner.Time.tick;
             foreach (var entity in entityManager.GetEntities<LOPEntity>())
             {
-                abilityEffectExecutor.DriveActiveEntity(entityRegistry.Get(entity.entityId), entityManager, tick);
+                abilityEffectExecutor.DriveActiveEntity(entityRegistry.Get(entity.entityId), tick);
             }
         }
 
@@ -145,6 +146,7 @@ namespace LOP
         {
             Physics.SyncTransforms();   // 캐스트가 최신 콜라이더 포즈를 보도록(autoSyncTransforms=false)
             float dt = (float)tickUpdater.interval;
+            long tick = Runner.Time.tick;
             int layerMask = LayerMask.GetMask("Default");
             foreach (var entity in entityManager.GetEntities<LOPEntity>())
             {
@@ -152,8 +154,15 @@ namespace LOP
                 {
                     continue;   // 캐릭터만 — 아이템(kinematic-trigger)은 이동 안 함
                 }
+                var worldEntity = entityRegistry.Get(entity.entityId);
+                // 입력 비조종(AI 등)은 world.Tick의 MovementSystem을 안 타므로 외력(넉백)을 여기서 folding.
+                // 플레이어는 이미 MovementSystem.Tick이 입력 기반 base로 같은 Resolve를 태웠다.
+                if (worldEntity.Get<InputBuffer>() == null)
+                {
+                    motionContributionSystem.ApplyToVelocity(worldEntity, tick);
+                }
                 entity.GetEntityComponent<PhysicsComponent>().Depenetrate(layerMask);   // 겹침 해소(스폰 flush 등) → sweep이 지면을 잡음
-                kinematicMoveSystem.Tick(entityRegistry.Get(entity.entityId), dt);
+                kinematicMoveSystem.Tick(worldEntity, dt);
                 entity.PushMotionToPhysics();   // 새 World 위치·회전을 rb에 반영
             }
         }

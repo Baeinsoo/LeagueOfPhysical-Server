@@ -314,13 +314,38 @@ namespace LOP
 
             EntitySnap[] allEntitySnaps = entityManager.GetAllEntitySnaps();
 
+            // durable 스냅샷 → unreliable(막 배송). 유실돼도 다음 스냅이 최신 전체를 덮음.
+            // Mirror unreliable은 큰 메시지 조각내기(fragment) 불가 → 배치 한도(≈1184B) 초과 시 통째 드롭.
+            // 그래서 엔티티를 바이트 예산으로 나눠 여러 메시지(같은 tick)로 청킹(서브셋 청킹, Quake/Source식).
+            // 각 청크 독립 → 하나 유실돼도 그 엔티티만 한 틱 놓치고 다음 틱 복구(fragment-재조립의 손실 복리 회피).
+            const int MaxEntityBytesPerMessage = 1000;   // 한도(1184) 밑 여유(tick 필드·메시지 프레이밍 몫).
+
+            List<EntitySnapsToC> chunks = new List<EntitySnapsToC>();   // 세션 무관(같은 스냅) → 한 번 만들어 모두에게.
+            EntitySnapsToC chunk = new EntitySnapsToC { Tick = tickUpdater.tick };
+            int chunkBytes = 0;
+            foreach (var snap in allEntitySnaps)
+            {
+                int snapBytes = snap.CalculateSize() + 2;   // +반복 필드 태그/길이 근사
+                if (chunk.EntitySnaps.Count > 0 && chunkBytes + snapBytes > MaxEntityBytesPerMessage)
+                {
+                    chunks.Add(chunk);
+                    chunk = new EntitySnapsToC { Tick = tickUpdater.tick };
+                    chunkBytes = 0;
+                }
+                chunk.EntitySnaps.Add(snap);
+                chunkBytes += snapBytes;
+            }
+            if (chunk.EntitySnaps.Count > 0)
+            {
+                chunks.Add(chunk);
+            }
+
             foreach (var session in sessionManager.GetAllSessions())
             {
-                EntitySnapsToC entitySnapsToC = new EntitySnapsToC();
-                entitySnapsToC.Tick = tickUpdater.tick;
-                entitySnapsToC.EntitySnaps.AddRange(allEntitySnaps);
-
-                session.Send(entitySnapsToC);
+                foreach (var entitySnapsToC in chunks)
+                {
+                    session.Send(entitySnapsToC, reliable: false);
+                }
             }
 
             foreach (var session in sessionManager.GetAllSessions())

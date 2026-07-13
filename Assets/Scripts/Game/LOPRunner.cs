@@ -24,7 +24,6 @@ namespace LOP
         [Inject] private IPhysicsSimulator physicsSimulator;
         [Inject] private GameFramework.World.IWorld world;
         [Inject] private InputBufferSystem inputBufferSystem;
-        [Inject] private KinematicMoveSystem kinematicMoveSystem;
 
         [Inject] private IMapLoader mapLoader;
         [Inject] private GameRuleSystem gameRuleSystem;
@@ -113,8 +112,6 @@ namespace LOP
 
             world.Tick(Runner.Time.tick, (float)tickUpdater.interval);
 
-            MoveCharacters();
-
             SimulatePhysics();
 
             ProcessDeaths();
@@ -124,27 +121,6 @@ namespace LOP
             SendInputTimingFeedback();
 
             EndUpdate();
-        }
-
-        // 캐릭터를 키네마틱 이동(중력+collide-and-slide)시켜 World.Transform에 쓰고 rb에 반영한다.
-        // 다이나믹 PhysX 캐릭터 적분을 대체 — 이후 SimulatePhysics는 다이나믹 물체만 처리.
-        private void MoveCharacters()
-        {
-            Physics.SyncTransforms();   // 캐스트가 최신 콜라이더 포즈를 보도록(autoSyncTransforms=false)
-            float dt = (float)tickUpdater.interval;
-            int layerMask = LayerMask.GetMask("Default");
-            foreach (var entity in entityManager.GetEntities<LOPEntity>())
-            {
-                if (entity.GetEntityComponent<EntityTypeComponent>()?.entityType != EntityType.Character)
-                {
-                    continue;   // 캐릭터만 — 아이템(kinematic-trigger)은 이동 안 함
-                }
-                var worldEntity = entityRegistry.Get(entity.entityId);
-                // 외력(넉백)은 이제 world.Tick의 MovementSystem이 Simulated 전원에 대해 resolve한다(입력 유무 무관).
-                entity.GetEntityComponent<PhysicsComponent>().Depenetrate(layerMask);   // 겹침 해소(스폰 flush 등) → sweep이 지면을 잡음
-                kinematicMoveSystem.Tick(worldEntity, dt);
-                entity.PushMotionToPhysics();   // 새 World 위치·회전을 rb에 반영
-            }
         }
 
         private void BeginUpdate()

@@ -12,7 +12,7 @@ namespace LOP
     {
         public string[] OverlapSphere(System.Numerics.Vector3 center, float radius)
         {
-            LayerMask layerMask = LayerMask.GetMask("Default");
+            LayerMask layerMask = LayerMask.GetMask("Character");
             Collider[] hits = Physics.OverlapSphere(center.ToUnity(), radius, layerMask);
 
             var ids = new HashSet<string>();   // 한 엔티티 다중 콜라이더 → 중복 제거(키 기반 RNG라 순서·중복 무관)

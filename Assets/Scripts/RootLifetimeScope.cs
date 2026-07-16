@@ -28,6 +28,9 @@ namespace LOP
             builder.RegisterMessageBroker<StatAllocationToS>(options);
             builder.Register<NetworkMessageDispatcher>(Lifetime.Singleton);
 
+            // 엔티티별 이벤트(keyed, 키=entityId) — 서버는 PropertyChange만 사용
+            builder.RegisterMessageBroker<string, Event.Entity.PropertyChange>(options);
+
             builder.Register<LOP.MasterData.LOPMasterData>(Lifetime.Singleton);
 
             builder.Register<RoomDataStore>(Lifetime.Singleton)

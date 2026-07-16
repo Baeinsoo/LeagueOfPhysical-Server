@@ -28,9 +28,11 @@ namespace LOP
         public Rigidbody entityRigidbody { get; private set; }
         public Collider[] entityColliders { get; private set; }
 
+        private System.IDisposable propertyChangeSubscription;
+
         public void Initialize(bool isKinematic, bool isTrigger)
         {
-            EventBus.Default.Subscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
+            propertyChangeSubscription = GlobalMessagePipe.GetSubscriber<string, PropertyChange>().Subscribe(entity.entityId, OnPropertyChange);
 
             GameObject physics = entity.transform.parent.Find("Physics").gameObject;
             physicsGameObject = physics.CreateChild("PhysicsGameObject");
@@ -61,7 +63,7 @@ namespace LOP
 
         public override void OnDetach()
         {
-            EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
+            propertyChangeSubscription?.Dispose();
 
             base.OnDetach();
         }

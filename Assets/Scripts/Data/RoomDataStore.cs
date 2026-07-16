@@ -1,5 +1,5 @@
 using System;
-using GameFramework;
+using MessagePipe;
 
 namespace LOP
 {
@@ -8,18 +8,23 @@ namespace LOP
         public Room room { get; set; }
         public Match match { get; set; }
 
-        public RoomDataStore()
+        private readonly IDisposable subscriptions;
+
+        public RoomDataStore(
+            ISubscriber<GetMatchResponse> getMatchSubscriber,
+            ISubscriber<GetRoomResponse> getRoomSubscriber,
+            ISubscriber<UpdateRoomStatusResponse> updateRoomStatusSubscriber)
         {
-            EventBus.Default.Subscribe<GetMatchResponse>(EventTopic.WebResponse, HandleGetMatch);
-            EventBus.Default.Subscribe<GetRoomResponse>(EventTopic.WebResponse, HandleGetRoom);
-            EventBus.Default.Subscribe<UpdateRoomStatusResponse>(EventTopic.WebResponse, HandleUpdateRoomStatus);
+            var bag = DisposableBag.CreateBuilder();
+            getMatchSubscriber.Subscribe(HandleGetMatch).AddTo(bag);
+            getRoomSubscriber.Subscribe(HandleGetRoom).AddTo(bag);
+            updateRoomStatusSubscriber.Subscribe(HandleUpdateRoomStatus).AddTo(bag);
+            subscriptions = bag.Build();
         }
 
         public void Dispose()
         {
-            EventBus.Default.Unsubscribe<GetMatchResponse>(EventTopic.WebResponse, HandleGetMatch);
-            EventBus.Default.Unsubscribe<GetRoomResponse>(EventTopic.WebResponse, HandleGetRoom);
-            EventBus.Default.Unsubscribe<UpdateRoomStatusResponse>(EventTopic.WebResponse, HandleUpdateRoomStatus);
+            subscriptions.Dispose();
         }
 
         private void HandleGetMatch(GetMatchResponse response)

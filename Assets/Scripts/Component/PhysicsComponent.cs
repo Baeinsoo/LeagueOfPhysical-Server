@@ -1,5 +1,6 @@
 using GameFramework;
 using LOP.Event.Entity;
+using MessagePipe;
 using UniRx;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -11,6 +12,9 @@ namespace LOP
     {
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
+
+        [Inject]
+        private IPublisher<ItemTouch> itemTouchPublisher;
         private GameObject _physicsGameObject;
         public GameObject physicsGameObject
         {
@@ -99,7 +103,7 @@ namespace LOP
 
             if (entityRegistry.Get(otherEntity.entityId)?.Has<GameFramework.World.Ownership>() == true)
             {
-                EventBus.Default.Publish(EventTopic.Entity, new ItemTouch(entity.entityId, otherEntity.entityId));
+                itemTouchPublisher.Publish(new ItemTouch(entity.entityId, otherEntity.entityId));
             }
         }
 

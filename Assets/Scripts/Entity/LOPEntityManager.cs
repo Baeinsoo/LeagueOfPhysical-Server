@@ -1,5 +1,6 @@
 using GameFramework;
 using LOP.Event.Entity;
+using MessagePipe;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -22,6 +23,9 @@ namespace LOP
 
         [Inject]
         private IEntityCreationDataFactory entityCreationDataFactory;
+
+        [Inject]
+        private IPublisher<EntityCreated> entityCreatedPublisher;
 
         private Dictionary<string, IEntity> entityMap = new Dictionary<string, IEntity>();
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
@@ -80,7 +84,7 @@ namespace LOP
 
             entityMap[entity.entityId] = entity;
 
-            EventBus.Default.Publish(nameof(EntityCreated), new EntityCreated(entity));
+            entityCreatedPublisher.Publish(new EntityCreated(entity));
 
             if (creationData is CharacterCreationData characterCreationData
                 && string.IsNullOrEmpty(characterCreationData.userId) == false)

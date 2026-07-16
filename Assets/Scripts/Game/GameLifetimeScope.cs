@@ -51,7 +51,8 @@ namespace LOP
             builder.Register<GameFramework.IOverlapQuery, LOPOverlapQuery>(Lifetime.Singleton);
             builder.Register<KinematicMoveSystem>(c => new KinematicMoveSystem(
                 c.Resolve<GameFramework.ICollisionQuery>(), LayerMask.GetMask("Default")), Lifetime.Singleton);
-            builder.Register<GameFramework.World.IMotionBridge, MotionBridge>(Lifetime.Singleton);
+            builder.Register<GameFramework.World.IMotionBridge>(_ => new MotionBridge(
+                LayerMask.GetMask("Default"), LayerMask.GetMask("Character"), 0.5f), Lifetime.Singleton);
             builder.Register<GameFramework.IRandom, GameFramework.UnityRandom>(Lifetime.Singleton);
             builder.Register<GameFramework.IMapLoader, AddressablesMapLoader>(Lifetime.Singleton);
 

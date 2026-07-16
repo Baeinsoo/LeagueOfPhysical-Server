@@ -1,5 +1,6 @@
 using GameFramework;
 using LOP.Event.Entity;
+using MessagePipe;
 using UniRx;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -33,10 +34,11 @@ namespace LOP
 
         private string visualId;
         private AsyncOperationHandle<GameObject> asyncOperationHandle;
+        private System.IDisposable propertyChangeSubscription;
 
         protected virtual void Start()
         {
-            EventBus.Default.Subscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
+            propertyChangeSubscription = GlobalMessagePipe.GetSubscriber<string, PropertyChange>().Subscribe(entity.entityId, OnPropertyChange);
 
             if (entity.TryGetEntityComponent<AppearanceComponent>(out var appearanceComponent))
             {
@@ -46,7 +48,7 @@ namespace LOP
 
         public void Cleanup()
         {
-            EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
+            propertyChangeSubscription?.Dispose();
 
             if (asyncOperationHandle.IsValid())
             {

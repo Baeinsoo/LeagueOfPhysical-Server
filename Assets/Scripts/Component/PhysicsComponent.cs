@@ -1,5 +1,6 @@
 using GameFramework;
 using LOP.Event.Entity;
+using MessagePipe;
 using UniRx;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -11,6 +12,9 @@ namespace LOP
     {
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
+
+        [Inject]
+        private IPublisher<ItemTouch> itemTouchPublisher;
         private GameObject _physicsGameObject;
         public GameObject physicsGameObject
         {
@@ -24,9 +28,11 @@ namespace LOP
         public Rigidbody entityRigidbody { get; private set; }
         public Collider[] entityColliders { get; private set; }
 
+        private System.IDisposable propertyChangeSubscription;
+
         public void Initialize(bool isKinematic, bool isTrigger)
         {
-            EventBus.Default.Subscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
+            propertyChangeSubscription = GlobalMessagePipe.GetSubscriber<string, PropertyChange>().Subscribe(entity.entityId, OnPropertyChange);
 
             GameObject physics = entity.transform.parent.Find("Physics").gameObject;
             physicsGameObject = physics.CreateChild("PhysicsGameObject");
@@ -57,7 +63,7 @@ namespace LOP
 
         public override void OnDetach()
         {
-            EventBus.Default.Unsubscribe<PropertyChange>(EventTopic.EntityId<LOPEntity>(entity.entityId), OnPropertyChange);
+            propertyChangeSubscription?.Dispose();
 
             base.OnDetach();
         }
@@ -99,7 +105,7 @@ namespace LOP
 
             if (entityRegistry.Get(otherEntity.entityId)?.Has<GameFramework.World.Ownership>() == true)
             {
-                EventBus.Default.Publish(EventTopic.Entity, new ItemTouch(entity.entityId, otherEntity.entityId));
+                itemTouchPublisher.Publish(new ItemTouch(entity.entityId, otherEntity.entityId));
             }
         }
 

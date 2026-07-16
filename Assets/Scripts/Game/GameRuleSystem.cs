@@ -1,5 +1,7 @@
 using GameFramework;
 using LOP.Event.Entity;
+using MessagePipe;
+using System;
 using System.Linq;
 using UnityEngine;
 
@@ -27,8 +29,10 @@ namespace LOP
         // 룰은 호스트(IRunner)를 역참조하지 않는다(Runner↔Rule 순환 방지). sim 서비스만 주입받는다.
         private readonly IEntityManager entityManager;
         private readonly ITickUpdater tickUpdater;
+        private readonly ISubscriber<ItemTouch> itemTouchSubscriber;
 
         private double lastEnemySpawnTime;
+        private IDisposable itemTouchSubscription;
 
         public GameRuleSystem(
             IRoomDataStore roomDataStore,
@@ -39,7 +43,8 @@ namespace LOP
             GameFramework.World.LevelSystem levelSystem,
             GameFramework.World.StatsSystem statsSystem,
             IEntityManager entityManager,
-            ITickUpdater tickUpdater)
+            ITickUpdater tickUpdater,
+            ISubscriber<ItemTouch> itemTouchSubscriber)
         {
             this.roomDataStore = roomDataStore;
             this.sessionManager = sessionManager;
@@ -50,11 +55,12 @@ namespace LOP
             this.statsSystem = statsSystem;
             this.entityManager = entityManager;
             this.tickUpdater = tickUpdater;
+            this.itemTouchSubscriber = itemTouchSubscriber;
         }
 
         public void Initialize()
         {
-            EventBus.Default.Subscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
+            itemTouchSubscription = itemTouchSubscriber.Subscribe(HandleItemTouch);
             tickUpdater.onTick += OnTick;
 
             CreateInitialPlayers();
@@ -62,7 +68,7 @@ namespace LOP
 
         public void Deinitialize()
         {
-            EventBus.Default.Unsubscribe<ItemTouch>(EventTopic.Entity, HandleItemTouch);
+            itemTouchSubscription?.Dispose();
             tickUpdater.onTick -= OnTick;
         }
 

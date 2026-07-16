@@ -1,4 +1,5 @@
 using GameFramework;
+using MessagePipe;
 using VContainer;
 
 namespace LOP
@@ -17,20 +18,19 @@ namespace LOP
         [Inject]
         private GameFramework.World.StatsSystem statsSystem;
 
+        [Inject]
+        private ISubscriber<StatAllocationToS> statAllocationSubscriber;
+
+        private System.IDisposable subscription;
+
         public void Initialize()
         {
-            EventBus.Default.Subscribe<StatAllocationToS>(nameof(IMessage), OnStatAllocationToS);
-
-            //RoomNetwork.instance.UnregisterHandler(typeof(EnterRoomToC), OnEnterRoomToC);
-            //RoomNetwork.instance.UnregisterHandler(typeof(EntityStatesToC), OnEntityStatesToC);
+            subscription = statAllocationSubscriber.Subscribe(OnStatAllocationToS);
         }
 
         public void Dispose()
         {
-            EventBus.Default.Unsubscribe<StatAllocationToS>(nameof(IMessage), OnStatAllocationToS);
-
-            //RoomNetwork.instance.UnregisterHandler(typeof(EnterRoomToC), OnEnterRoomToC);
-            //RoomNetwork.instance.UnregisterHandler(typeof(EntityStatesToC), OnEntityStatesToC);
+            subscription?.Dispose();
         }
 
         private void OnStatAllocationToS(StatAllocationToS statAllocationToS)

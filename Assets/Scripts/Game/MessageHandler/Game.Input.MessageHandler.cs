@@ -1,4 +1,5 @@
 using GameFramework;
+using MessagePipe;
 using VContainer;
 
 namespace LOP
@@ -17,14 +18,19 @@ namespace LOP
         [Inject]
         private InputBufferSystem inputBufferSystem;
 
+        [Inject]
+        private ISubscriber<InputCommandToS> inputCommandSubscriber;
+
+        private System.IDisposable subscription;
+
         public void Initialize()
         {
-            EventBus.Default.Subscribe<InputCommandToS>(nameof(IMessage), OnInputCommandToS);
+            subscription = inputCommandSubscriber.Subscribe(OnInputCommandToS);
         }
 
         public void Dispose()
         {
-            EventBus.Default.Unsubscribe<InputCommandToS>(nameof(IMessage), OnInputCommandToS);
+            subscription?.Dispose();
         }
 
         private void OnInputCommandToS(InputCommandToS inputCommandToS)

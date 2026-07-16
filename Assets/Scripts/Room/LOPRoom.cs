@@ -21,6 +21,7 @@ namespace LOP
         [Inject] private LOPNetworkManager networkManager;
         [Inject] private ISessionManager sessionManager;
         [Inject] private IRoomDataStore roomDataStore;
+        [Inject] private NetworkMessageDispatcher dispatcher;
 
         public IRunner runner { get; private set; }
 
@@ -96,7 +97,7 @@ namespace LOP
         {
             NetworkServer.RegisterHandler<CustomMirrorMessage>((id, message) =>
             {
-                EventBus.Default.Publish(nameof(IMessage), message.payload);
+                dispatcher.Dispatch(message.payload);
             });
 
             networkManager.onServerConnect += OnPlayerConnect;

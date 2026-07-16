@@ -1,4 +1,5 @@
 using GameFramework;
+using MessagePipe;
 using VContainer;
 using VContainer.Unity;
 
@@ -8,6 +9,28 @@ namespace LOP
     {
         protected override void Configure(IContainerBuilder builder)
         {
+            // 앱 전역 메시지 버스(MessagePipe). 메시지 타입별 브로커는 각 마이그레이션 슬라이스에서
+            // RegisterMessageBroker<T>로 명시 등록한다(IL2CPP open-generic 미지원 대비).
+            var options = builder.RegisterMessagePipe();
+
+            // WebResponse — 정적 인터셉터(LOPWebRequestInterceptor)가 GlobalMessagePipe로 발행하므로 SetProvider 필요.
+            builder.RegisterMessageBroker<GetMatchResponse>(options);
+            builder.RegisterMessageBroker<GetRoomResponse>(options);
+            builder.RegisterMessageBroker<UpdateRoomStatusResponse>(options);
+
+            // 엔티티 라이프사이클 / 아이템 접촉
+            builder.RegisterMessageBroker<Event.Entity.EntityCreated>(options);
+            builder.RegisterMessageBroker<Event.Entity.ItemTouch>(options);
+
+            // 네트워크 수신(NetworkMessageDispatcher가 발행 → MessageHandler가 구독)
+            builder.RegisterMessageBroker<GameInfoToS>(options);
+            builder.RegisterMessageBroker<InputCommandToS>(options);
+            builder.RegisterMessageBroker<StatAllocationToS>(options);
+            builder.Register<NetworkMessageDispatcher>(Lifetime.Singleton);
+
+            // 엔티티별 이벤트(keyed, 키=entityId) — 서버는 PropertyChange만 사용
+            builder.RegisterMessageBroker<string, Event.Entity.PropertyChange>(options);
+
             builder.Register<LOP.MasterData.LOPMasterData>(Lifetime.Singleton);
 
             builder.Register<RoomDataStore>(Lifetime.Singleton)
@@ -20,6 +43,8 @@ namespace LOP
             #region RegisterBuildCallback
             builder.RegisterBuildCallback(container =>
             {
+                // 정적/비-DI 코드(웹 인터셉터)가 GlobalMessagePipe.GetPublisher<T>로 발행할 수 있도록 provider 설정.
+                GlobalMessagePipe.SetProvider(container.AsServiceProvider());
             });
             #endregion
         }

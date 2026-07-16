@@ -1,5 +1,6 @@
 using GameFramework;
 using LOP.Event.LOPRunner.Update;
+using MessagePipe;
 using System.Collections.Generic;
 using UnityEngine;
 using VContainer;
@@ -20,18 +21,22 @@ namespace LOP
         [Inject]
         private MatchSeed matchSeed;
 
+        [Inject]
+        private ISubscriber<GameInfoToS> gameInfoSubscriber;
+
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
+        private System.IDisposable subscription;
 
         public void Initialize()
         {
-            EventBus.Default.Subscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
+            subscription = gameInfoSubscriber.Subscribe(OnGameInfoToS);
 
             runner.AddListener(this);
         }
 
         public void Dispose()
         {
-            EventBus.Default.Unsubscribe<GameInfoToS>(nameof(IMessage), OnGameInfoToS);
+            subscription?.Dispose();
 
             runner.RemoveListener(this);
         }

@@ -1,13 +1,12 @@
 using GameFramework;
 using System.Collections.Generic;
-using UnityEngine;
 
 namespace LOP
 {
     /// <summary>
-    /// WorldEventBuffer 스냅샷을 와이어 메시지로 변환해 모든 세션에 송출하는 egress sink(서버). 출구=네트워크.
-    /// 코어 상태·새 이벤트 안 만듦.
-    ///   DamageDealtEvent → DamageEventToC → session.Send (모든 세션)
+    /// WorldEventBuffer 스냅샷을 단일 폴리모픽 배치(WorldEventBatchToC)로 조립해 모든 세션에 1회 송출하는
+    /// egress sink(서버). 코어 상태·새 이벤트 안 만듦. 개념별 패킷(DamageEventToC 등)은 배치 안의
+    /// WorldEventToC(oneof) 레코드로 담긴다 — 새 WorldEvent 타입이 와이어 포맷을 흔들지 않음.
     /// </summary>
     public class WorldEventSink : GameFramework.World.IEventSink
     {
@@ -20,45 +19,24 @@ namespace LOP
 
         public void Emit(IReadOnlyList<GameFramework.World.WorldEvent> events)
         {
+            var batch = new WorldEventBatchToC { Tick = Runner.Time.tick };
             foreach (var e in events)
             {
-                switch (e)
+                var rec = WorldEventWire.ToWire(e);   // 매핑 없는 타입은 null → 무시
+                if (rec != null)
                 {
-                    case GameFramework.World.DamageDealtEvent dde:
-                    {
-                        var msg = new DamageEventToC
-                        {
-                            Tick        = Runner.Time.tick,
-                            AttackerId  = dde.attackerId,
-                            TargetId    = dde.targetId,
-                            ActionCode  = "attack",
-                            DamageType  = "physical",
-                            Damage      = dde.amount,
-                            IsCritical  = dde.isCritical,
-                            IsDodged    = dde.isDodged,
-                            IsBlocked   = false,
-                        };
-                        foreach (var session in _sessionManager.GetAllSessions())
-                        {
-                            session.Send(msg);
-                        }
-                        break;
-                    }
-                    case GameFramework.World.AbilityActivatedEvent ae:
-                    {
-                        // 발동 연출 cue(애니/VFX) — 모든 세션에 송출. cue 해석은 클라(어떤 애니인지 = 클라 마스터데이터).
-                        var msg = new AbilityActivatedToC
-                        {
-                            EntityId  = ae.entityId,
-                            AbilityId = ae.abilityId,
-                        };
-                        foreach (var session in _sessionManager.GetAllSessions())
-                        {
-                            session.Send(msg);
-                        }
-                        break;
-                    }
+                    batch.Events.Add(rec);
                 }
+            }
+
+            if (batch.Events.Count == 0)
+            {
+                return;   // 연출 이벤트 없는 틱은 송신 안 함
+            }
+
+            foreach (var session in _sessionManager.GetAllSessions())
+            {
+                session.Send(batch);   // 세션당 1패킷(기존 이벤트당 1패킷 → 배치)
             }
         }
     }

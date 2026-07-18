@@ -104,10 +104,10 @@ namespace LOP
         {
             foreach (var entityId in entitiesToDestroy)
             {
-                LOPActor lopEntity = GetEntity<LOPActor>(entityId);
+                LOPActor lopActor = GetEntity<LOPActor>(entityId);
                 string ownerId = GetUserIdByEntityId(entityId);   // capture before registry.Remove (reads Ownership)
 
-                foreach (var cleanup in lopEntity.transform.parent.GetComponentsInChildren<ICleanup>(true))
+                foreach (var cleanup in lopActor.transform.GetComponentsInChildren<ICleanup>(true))
                 {
                     cleanup.Cleanup();
                 }
@@ -119,7 +119,7 @@ namespace LOP
                 }
                 // --- end World Core slice 2 ---
 
-                Destroy(lopEntity.transform.parent.gameObject);
+                Destroy(lopActor.gameObject);
 
                 entityMap.Remove(entityId);
 

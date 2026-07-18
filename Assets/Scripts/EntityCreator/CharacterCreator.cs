@@ -95,6 +95,10 @@ namespace LOP
             abilitySystem.Grant(worldEntity, 1);
             abilitySystem.Grant(worldEntity, 2);   // dash (TEMP 전체 부여)
             abilitySystem.Grant(worldEntity, 3);   // attack (TEMP 전체 부여)
+            if (isPlayer)
+            {
+                abilitySystem.Grant(worldEntity, 4);   // 전역 공격 — 플레이어 전용 테스트 툴
+            }
 
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");
             // --- end World Core ---

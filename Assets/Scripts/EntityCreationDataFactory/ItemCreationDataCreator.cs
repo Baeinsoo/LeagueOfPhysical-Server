@@ -1,5 +1,4 @@
 using GameFramework;
-using System;
 using VContainer;
 
 namespace LOP
@@ -34,16 +33,6 @@ namespace LOP
             {
                 ItemCreationData = itemCreationData
             };
-        }
-
-        public EntityCreationData Create(IEntity entity)
-        {
-            if (entity is LOPActor lopEntity)
-            {
-                return Create(lopEntity);
-            }
-
-            throw new ArgumentException("Entity must be of type LOPActor");
         }
     }
 }

@@ -1,5 +1,4 @@
 using GameFramework;
-using System;
 using System.Linq;
 using UnityEngine;
 
@@ -60,18 +59,6 @@ namespace LOP
                 var velocity = direction.normalized * speed;
                 var currentVelocity = GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity);
                 GameFramework.World.EntityMotionExtensions.SetVelocity(worldEntity, new Vector3(velocity.x, currentVelocity.y, velocity.z));
-            }
-        }
-
-        public void Think(IEntity entity, double deltaTime)
-        {
-            if (entity is LOPActor lopEntity)
-            {
-                Think(lopEntity, deltaTime);
-            }
-            else
-            {
-                throw new InvalidCastException("Entity is not of type LOPActor");
             }
         }
     }

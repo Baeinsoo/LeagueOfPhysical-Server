@@ -5,7 +5,7 @@ namespace LOP
     public interface IEntityCreationDataCreator
     {
         EntityType EntityType { get; }
-        EntityCreationData Create(IEntity entity);
+        EntityCreationData Create(LOPActor entity);
     }
 
     public interface IEntityCreationDataCreator<in TEntity> : IEntityCreationDataCreator

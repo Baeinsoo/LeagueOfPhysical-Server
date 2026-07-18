@@ -1,5 +1,4 @@
 using GameFramework;
-using System;
 using VContainer;
 
 namespace LOP
@@ -70,16 +69,6 @@ namespace LOP
             {
                 CharacterCreationData = characterCreationData
             };
-        }
-
-        public EntityCreationData Create(IEntity entity)
-        {
-            if (entity is LOPActor lopEntity)
-            {
-                return Create(lopEntity);
-            }
-
-            throw new ArgumentException("Entity must be of type LOPActor");
         }
 
         private static int BaseStatInt(GameFramework.World.Stats stats, GameFramework.World.EntityStatType statType)

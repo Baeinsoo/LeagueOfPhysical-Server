@@ -38,7 +38,7 @@ namespace LOP
         [RunnerListen(typeof(Begin))]
         private void OnUpdateBegin()
         {
-            brain.Think(entity, Runner.Time.deltaTime);
+            ((IBrain<LOPActor>)brain).Think(entity, Runner.Time.deltaTime);
         }
     }
 }

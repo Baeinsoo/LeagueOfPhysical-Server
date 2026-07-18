@@ -17,9 +17,9 @@ namespace LOP
             this.entity = entity;
         }
 
-        public IBrain brain { get; private set; }
+        public IBrain<LOPActor> brain { get; private set; }
 
-        public void SetBrain(IBrain brain)
+        public void SetBrain(IBrain<LOPActor> brain)
         {
             this.brain = brain;
         }
@@ -38,7 +38,7 @@ namespace LOP
         [RunnerListen(typeof(Begin))]
         private void OnUpdateBegin()
         {
-            ((IBrain<LOPActor>)brain).Think(entity, Runner.Time.deltaTime);
+            brain.Think(entity, Runner.Time.deltaTime);
         }
     }
 }

@@ -1,4 +1,4 @@
-using GameFramework;
+using UnityEngine;
 
 namespace LOP
 {
@@ -6,7 +6,7 @@ namespace LOP
     {
     }
 
-    public interface IBrain<T> : IBrain where T : IEntity
+    public interface IBrain<T> : IBrain where T : MonoBehaviour
     {
         void Think(T entity, double deltaTime);
     }

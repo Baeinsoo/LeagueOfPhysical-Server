@@ -35,17 +35,17 @@ namespace LOP
 
         private HashSet<string> entitiesToDestroy = new HashSet<string>();
 
-        public IEntity GetEntity(string entityId)
+        public MonoBehaviour GetEntity(string entityId)
         {
             return entityMap[entityId];
         }
 
-        public T GetEntity<T>(string entityId) where T : IEntity
+        public T GetEntity<T>(string entityId) where T : MonoBehaviour
         {
             return (T)(object)entityMap[entityId];
         }
 
-        public bool TryGetEntity(string entityId, out IEntity entity)
+        public bool TryGetEntity(string entityId, out MonoBehaviour entity)
         {
             if (entityMap.TryGetValue(entityId, out var value) == false)
             {
@@ -57,7 +57,7 @@ namespace LOP
             return true;
         }
 
-        public bool TryGetEntity<T>(string entityId, out T entity) where T : IEntity
+        public bool TryGetEntity<T>(string entityId, out T entity) where T : MonoBehaviour
         {
             if (entityMap.TryGetValue(entityId, out var value) == false)
             {
@@ -69,18 +69,18 @@ namespace LOP
             return true;
         }
 
-        public IEnumerable<IEntity> GetEntities()
+        public IEnumerable<MonoBehaviour> GetEntities()
         {
-            return entityMap.Values.Cast<IEntity>().ToList();
+            return entityMap.Values.Cast<MonoBehaviour>().ToList();
         }
 
-        public IEnumerable<T> GetEntities<T>() where T : IEntity
+        public IEnumerable<T> GetEntities<T>() where T : MonoBehaviour
         {
             return entityMap.Values.Cast<T>().ToList();
         }
 
         public TEntity CreateEntity<TEntity, TCreationData>(TCreationData creationData)
-            where TEntity : IEntity
+            where TEntity : MonoBehaviour
             where TCreationData : struct, IEntityCreationData
         {
             var entity = entityFactory.CreateEntity<TEntity, TCreationData>(creationData);
@@ -93,7 +93,7 @@ namespace LOP
             if (creationData is CharacterCreationData characterCreationData
                 && string.IsNullOrEmpty(characterCreationData.userId) == false)
             {
-                userEntityMap[characterCreationData.userId] = entity.entityId;
+                userEntityMap[characterCreationData.userId] = actor.entityId;
             }
 
             return entity;
@@ -154,7 +154,7 @@ namespace LOP
             return entityRegistry.Get(entityId)?.Get<GameFramework.World.Ownership>()?.OwnerId;
         }
 
-        public TEntity GetEntityByUserId<TEntity>(string userId) where TEntity : IEntity
+        public TEntity GetEntityByUserId<TEntity>(string userId) where TEntity : MonoBehaviour
         {
             string entityId = userEntityMap[userId];
 

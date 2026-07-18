@@ -1,4 +1,4 @@
-using GameFramework;
+using UnityEngine;
 
 namespace LOP
 {
@@ -9,7 +9,7 @@ namespace LOP
     }
 
     public interface IEntityCreationDataCreator<in TEntity> : IEntityCreationDataCreator
-        where TEntity : IEntity
+        where TEntity : MonoBehaviour
     {
         EntityCreationData Create(TEntity entity);
     }

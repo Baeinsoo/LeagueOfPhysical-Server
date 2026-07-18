@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class EnemyBrain : IBrain<LOPEntity>
+    public class EnemyBrain : IBrain<LOPActor>
     {
         private const int AttackAbilityId = 3;   // TbAbility attack 행(grant-all로 모든 캐릭터 보유)
 
@@ -20,11 +20,11 @@ namespace LOP
             this.statsSystem = statsSystem;
         }
 
-        public void Think(LOPEntity entity, double deltaTime)
+        public void Think(LOPActor entity, double deltaTime)
         {
             //  Find the player
-            var entities = Runner.current.entityManager.GetEntities<LOPEntity>();
-            LOPEntity target = entities
+            var entities = Runner.current.entityManager.GetEntities<LOPActor>();
+            LOPActor target = entities
                 .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() == true)
                 .Where(e => (e.position - entity.position).magnitude <= 10)
                 .OrderBy(e => (e.position - entity.position).sqrMagnitude)
@@ -60,13 +60,13 @@ namespace LOP
 
         public void Think(IEntity entity, double deltaTime)
         {
-            if (entity is LOPEntity lopEntity)
+            if (entity is LOPActor lopEntity)
             {
                 Think(lopEntity, deltaTime);
             }
             else
             {
-                throw new InvalidCastException("Entity is not of type LOPEntity");
+                throw new InvalidCastException("Entity is not of type LOPActor");
             }
         }
     }

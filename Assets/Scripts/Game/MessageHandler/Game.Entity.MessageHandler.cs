@@ -36,7 +36,7 @@ namespace LOP
         private void OnStatAllocationToS(StatAllocationToS statAllocationToS)
         {
             ISession session = sessionManager.GetSessionById(statAllocationToS.SessionId);
-            LOPEntity entity = runner.entityManager.GetEntityByUserId<LOPEntity>(session.userId);
+            LOPActor entity = runner.entityManager.GetEntityByUserId<LOPActor>(session.userId);
             GameFramework.World.Stats stats = entityRegistry.Get(entity.entityId)?.Get<GameFramework.World.Stats>();
             if (stats == null)
             {

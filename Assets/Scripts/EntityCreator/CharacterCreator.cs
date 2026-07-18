@@ -4,7 +4,7 @@ using VContainer;
 
 namespace LOP
 {
-    public class CharacterCreator : IEntityCreator<LOPEntity, CharacterCreationData>
+    public class CharacterCreator : IEntityCreator<LOPActor, CharacterCreationData>
     {
         [Inject]
         private IObjectResolver objectResolver;
@@ -18,7 +18,7 @@ namespace LOP
         [Inject]
         private LOP.MasterData.LOPMasterData md;
 
-        public LOPEntity Create(CharacterCreationData creationData)
+        public LOPActor Create(CharacterCreationData creationData)
         {
             GameObject root = new GameObject($"Character_{creationData.entityId}");
             GameObject visual = root.CreateChild("Visual");
@@ -35,7 +35,7 @@ namespace LOP
             worldEntity.Add(new MasterDataRef(creationData.characterCode));
             worldEntity.Add(new Appearance(creationData.visualId));
 
-            LOPEntity entity = root.CreateChildWithComponent<LOPEntity>();
+            LOPActor entity = root.CreateChildWithComponent<LOPActor>();
             objectResolver.Inject(entity);
             entity.LinkWorldMotion(
                 worldEntity.Get<GameFramework.World.Transform>(),
@@ -82,7 +82,7 @@ namespace LOP
             worldEntity.Add(new Abilities());
             worldEntity.Add(new StatusEffects());
             worldEntity.Add(new MotionContributions());
-            // 물리 핸들(rb/콜라이더)을 공유 컴포넌트로 — 공유 MotionBridge가 이걸로 겹침해소·rb 반영(per-side LOPEntity 안 만짐).
+            // 물리 핸들(rb/콜라이더)을 공유 컴포넌트로 — 공유 MotionBridge가 이걸로 겹침해소·rb 반영(per-side LOPActor 안 만짐).
             worldEntity.Add(new PhysicsBody(physicsFollower.entityRigidbody, (CapsuleCollider)physicsFollower.entityColliders[0]));
             worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 캐릭터를 시뮬
             entityRegistry.Add(worldEntity);

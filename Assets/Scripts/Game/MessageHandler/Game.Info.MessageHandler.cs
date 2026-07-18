@@ -59,7 +59,7 @@ namespace LOP
             foreach (var gameInfoToS in gameInfoToSList)
             {
                 var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
-                var entity = runner.entityManager.GetEntityByUserId<LOPEntity>(gameInfoToS.UserId);
+                var entity = runner.entityManager.GetEntityByUserId<LOPActor>(gameInfoToS.UserId);
 
                 var gameInfoToC = new GameInfoToC
                 {

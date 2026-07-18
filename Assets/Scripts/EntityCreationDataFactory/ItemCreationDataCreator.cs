@@ -4,14 +4,14 @@ using VContainer;
 
 namespace LOP
 {
-    public class ItemCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
+    public class ItemCreationDataCreator : IEntityCreationDataCreator<LOPActor>
     {
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
 
         public EntityType EntityType => EntityType.Item;
 
-        public EntityCreationData Create(LOPEntity lopEntity)
+        public EntityCreationData Create(LOPActor lopEntity)
         {
             var baseEntityCreationData = new BaseEntityCreationData
             {
@@ -37,12 +37,12 @@ namespace LOP
 
         public EntityCreationData Create(IEntity entity)
         {
-            if (entity is LOPEntity lopEntity)
+            if (entity is LOPActor lopEntity)
             {
                 return Create(lopEntity);
             }
 
-            throw new ArgumentException("Entity must be of type LOPEntity");
+            throw new ArgumentException("Entity must be of type LOPActor");
         }
     }
 }

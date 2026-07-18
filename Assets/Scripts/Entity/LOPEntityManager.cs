@@ -104,7 +104,7 @@ namespace LOP
         {
             foreach (var entityId in entitiesToDestroy)
             {
-                LOPEntity lopEntity = GetEntity<LOPEntity>(entityId);
+                LOPActor lopEntity = GetEntity<LOPActor>(entityId);
                 string ownerId = GetUserIdByEntityId(entityId);   // capture before registry.Remove (reads Ownership)
 
                 foreach (var cleanup in lopEntity.transform.parent.GetComponentsInChildren<ICleanup>(true))

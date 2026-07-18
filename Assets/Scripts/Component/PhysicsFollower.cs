@@ -61,7 +61,7 @@ namespace LOP
 
         private void OnTriggerEnter(Collider other)
         {
-            LOPEntity otherEntity = other.transform.parent?.parent?.GetComponentInChildren<LOPEntity>();
+            LOPActor otherEntity = other.transform.parent?.parent?.GetComponentInChildren<LOPActor>();
             if (otherEntity == null)
             {
                 Debug.LogWarning($"Trigger detected with non-entity object: {other.name}");

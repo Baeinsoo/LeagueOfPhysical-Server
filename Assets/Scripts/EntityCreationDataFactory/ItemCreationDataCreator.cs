@@ -1,5 +1,4 @@
 using GameFramework;
-using System;
 using VContainer;
 
 namespace LOP
@@ -13,15 +12,16 @@ namespace LOP
 
         public EntityCreationData Create(LOPActor lopEntity)
         {
+            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
+
             var baseEntityCreationData = new BaseEntityCreationData
             {
                 EntityId = lopEntity.entityId,
-                Position = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.position),
-                Rotation = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.rotation),
-                Velocity = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.velocity),
+                Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
+                Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
+                Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),
             };
 
-            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
             global::ItemCreationData itemCreationData = new global::ItemCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
@@ -33,16 +33,6 @@ namespace LOP
             {
                 ItemCreationData = itemCreationData
             };
-        }
-
-        public EntityCreationData Create(IEntity entity)
-        {
-            if (entity is LOPActor lopEntity)
-            {
-                return Create(lopEntity);
-            }
-
-            throw new ArgumentException("Entity must be of type LOPActor");
         }
     }
 }

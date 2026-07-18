@@ -22,7 +22,7 @@ namespace LOP
             }
         }
 
-        public EntityCreationData Create(IEntity entity)
+        public EntityCreationData Create(LOPActor entity)
         {
             GameFramework.World.Entity worldEntity = entityRegistry.Get(entity.entityId);
             EntityKind kind = worldEntity?.Get<EntityKind>();

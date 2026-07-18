@@ -79,17 +79,25 @@ namespace LOP
             asyncOperationHandle = Addressables.LoadAssetAsync<GameObject>(visualId);
             await asyncOperationHandle.Task;
 
+            // Addressables 로드는 여러 프레임 걸린다 — 그 사이 엔티티가 디스폰되면 registry에서 사라져 null.
+            var worldEntity = entityRegistry.Get(entity.entityId);
+            if (worldEntity == null)
+            {
+                return;
+            }
+
             visualGameObject = Instantiate(asyncOperationHandle.Task.Result, transform);
-            visualGameObject.transform.position = entity.position;
-            visualGameObject.transform.rotation = Quaternion.Euler(entity.rotation);
+            visualGameObject.transform.position = GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity);
+            visualGameObject.transform.rotation = Quaternion.Euler(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity));
         }
-        
+
         private void LateUpdate()
         {
             if (visualGameObject != null)
             {
-                visualGameObject.transform.position = entity.position;
-                visualGameObject.transform.rotation = Quaternion.Euler(entity.rotation);
+                var worldEntity = entityRegistry.Get(entity.entityId);
+                visualGameObject.transform.position = GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity);
+                visualGameObject.transform.rotation = Quaternion.Euler(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity));
             }
         }
     }

@@ -27,34 +27,37 @@ namespace LOP
         [Inject]
         private IPublisher<EntityCreated> entityCreatedPublisher;
 
-        private Dictionary<string, IEntity> entityMap = new Dictionary<string, IEntity>();
+        // id→뷰 앵커 인덱스. World EntityRegistry(id→데이터 진실원본)와 별개 축.
+        private Dictionary<string, LOPActor> entityMap = new Dictionary<string, LOPActor>();
         private Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
 
         private int entityIdCounter = 1;
 
         private HashSet<string> entitiesToDestroy = new HashSet<string>();
 
-        public IEntity GetEntity(string entityId)
+        public MonoBehaviour GetEntity(string entityId)
         {
             return entityMap[entityId];
         }
 
-        public T GetEntity<T>(string entityId) where T : IEntity
+        public T GetEntity<T>(string entityId) where T : MonoBehaviour
         {
-            return (T)entityMap[entityId];
+            return (T)(object)entityMap[entityId];
         }
 
-        public bool TryGetEntity(string entityId, out IEntity entity)
+        public bool TryGetEntity(string entityId, out MonoBehaviour entity)
         {
-            if (entityMap.TryGetValue(entityId, out entity) == false)
+            if (entityMap.TryGetValue(entityId, out var value) == false)
             {
+                entity = null;
                 return false;
             }
 
+            entity = value;
             return true;
         }
 
-        public bool TryGetEntity<T>(string entityId, out T entity) where T : IEntity
+        public bool TryGetEntity<T>(string entityId, out T entity) where T : MonoBehaviour
         {
             if (entityMap.TryGetValue(entityId, out var value) == false)
             {
@@ -62,34 +65,35 @@ namespace LOP
                 return false;
             }
 
-            entity = (T)value;
+            entity = (T)(object)value;
             return true;
         }
 
-        public IEnumerable<IEntity> GetEntities()
+        public IEnumerable<MonoBehaviour> GetEntities()
         {
-            return entityMap.Values.ToList();
+            return entityMap.Values.Cast<MonoBehaviour>().ToList();
         }
 
-        public IEnumerable<T> GetEntities<T>() where T : IEntity
+        public IEnumerable<T> GetEntities<T>() where T : MonoBehaviour
         {
             return entityMap.Values.Cast<T>().ToList();
         }
 
         public TEntity CreateEntity<TEntity, TCreationData>(TCreationData creationData)
-            where TEntity : IEntity
+            where TEntity : MonoBehaviour
             where TCreationData : struct, IEntityCreationData
         {
             var entity = entityFactory.CreateEntity<TEntity, TCreationData>(creationData);
 
-            entityMap[entity.entityId] = entity;
+            var actor = (LOPActor)(object)entity;
+            entityMap[actor.entityId] = actor;
 
-            entityCreatedPublisher.Publish(new EntityCreated(entity));
+            entityCreatedPublisher.Publish(new EntityCreated(actor));
 
             if (creationData is CharacterCreationData characterCreationData
                 && string.IsNullOrEmpty(characterCreationData.userId) == false)
             {
-                userEntityMap[characterCreationData.userId] = entity.entityId;
+                userEntityMap[characterCreationData.userId] = actor.entityId;
             }
 
             return entity;
@@ -150,7 +154,7 @@ namespace LOP
             return entityRegistry.Get(entityId)?.Get<GameFramework.World.Ownership>()?.OwnerId;
         }
 
-        public TEntity GetEntityByUserId<TEntity>(string userId) where TEntity : IEntity
+        public TEntity GetEntityByUserId<TEntity>(string userId) where TEntity : MonoBehaviour
         {
             string entityId = userEntityMap[userId];
 
@@ -166,16 +170,16 @@ namespace LOP
         {
             var entitySnapList = new List<EntitySnap>();
 
-            foreach (var entity in GetEntities().OrEmpty())
+            foreach (var entity in GetEntities<LOPActor>().OrEmpty())
             {
                 var worldEntity = entityRegistry.Get(entity.entityId);
                 GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
                 var snap = new EntitySnap
                 {
                     EntityId = entity.entityId,
-                    Position = MapperConfig.mapper.Map<ProtoVector3>(entity.position),
-                    Rotation = MapperConfig.mapper.Map<ProtoVector3>(entity.rotation),
-                    Velocity = MapperConfig.mapper.Map<ProtoVector3>(entity.velocity),
+                    Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
+                    Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
+                    Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),
                     MaxHP = health?.Max ?? 0,
                     CurrentHP = health?.Current ?? 0,
                 };
@@ -207,7 +211,7 @@ namespace LOP
         {
             var entityCreationDataList = new List<EntityCreationData>();
 
-            foreach (var entity in GetEntities().OrEmpty())
+            foreach (var entity in GetEntities<LOPActor>().OrEmpty())
             {
                 EntityCreationData entityCreationData = entityCreationDataFactory.Create(entity);
 

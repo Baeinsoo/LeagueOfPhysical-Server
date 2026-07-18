@@ -14,15 +14,18 @@ namespace LOP
         private readonly IEntityManager _entityManager;
         private readonly ISessionManager _sessionManager;
         private readonly IEntityCreationDataFactory _entityCreationDataFactory;
+        private readonly GameFramework.World.EntityRegistry _entityRegistry;
 
         public DeathCascadeSystem(
             IEntityManager entityManager,
             ISessionManager sessionManager,
-            IEntityCreationDataFactory entityCreationDataFactory)
+            IEntityCreationDataFactory entityCreationDataFactory,
+            GameFramework.World.EntityRegistry entityRegistry)
         {
             _entityManager = entityManager;
             _sessionManager = sessionManager;
             _entityCreationDataFactory = entityCreationDataFactory;
+            _entityRegistry = entityRegistry;
         }
 
         public void Resolve(IReadOnlyList<GameFramework.World.WorldEvent> events)
@@ -44,7 +47,7 @@ namespace LOP
                 Debug.LogWarning($"[World] DeathCascade: victim {death.victimId} not found");
                 return;
             }
-            Vector3 position = victim.position;
+            Vector3 position = GameFramework.World.EntityMotionExtensions.GetPosition(_entityRegistry.Get(victim.entityId));
 
             _entityManager.DeleteEntityById(death.victimId);
             SpawnExpMarble(position);

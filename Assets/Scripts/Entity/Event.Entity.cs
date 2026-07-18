@@ -2,8 +2,8 @@ namespace LOP.Event.Entity
 {
     public struct EntityCreated
     {
-        public GameFramework.IEntity entity;
-        public EntityCreated(GameFramework.IEntity entity)
+        public LOPActor entity;
+        public EntityCreated(LOPActor entity)
         {
             this.entity = entity;
         }

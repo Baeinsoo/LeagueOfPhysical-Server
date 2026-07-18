@@ -15,6 +15,9 @@ namespace LOP
         [Inject]
         private AbilitySystem abilitySystem;
 
+        [Inject]
+        private LOP.MasterData.LOPMasterData md;
+
         public LOPEntity Create(CharacterCreationData creationData)
         {
             GameObject root = new GameObject($"Character_{creationData.entityId}");
@@ -28,6 +31,9 @@ namespace LOP
                 Rotation = Quaternion.Euler(creationData.rotation).ToNumerics(),
             });
             worldEntity.Add(new GameFramework.World.Velocity { Linear = creationData.velocity.ToNumerics() });
+            worldEntity.Add(new EntityKind(EntityType.Character));
+            worldEntity.Add(new MasterDataRef(creationData.characterCode));
+            worldEntity.Add(new Appearance(creationData.visualId));
 
             LOPEntity entity = root.CreateChildWithComponent<LOPEntity>();
             objectResolver.Inject(entity);
@@ -35,18 +41,6 @@ namespace LOP
                 worldEntity.Get<GameFramework.World.Transform>(),
                 worldEntity.Get<GameFramework.World.Velocity>());
             entity.Initialize(creationData);
-
-            EntityTypeComponent entityTypeComponent = entity.AddEntityComponent<EntityTypeComponent>();
-            objectResolver.Inject(entityTypeComponent);
-            entityTypeComponent.Initialize(EntityType.Character);
-
-            CharacterComponent characterComponent = entity.AddEntityComponent<CharacterComponent>();
-            objectResolver.Inject(characterComponent);
-            characterComponent.Initialize(creationData.characterCode);
-
-            AppearanceComponent appearanceComponent = entity.AddEntityComponent<AppearanceComponent>();
-            objectResolver.Inject(appearanceComponent);
-            appearanceComponent.Initialize(creationData.visualId);
 
             PhysicsComponent physicsComponent = entity.AddEntityComponent<PhysicsComponent>();
             objectResolver.Inject(physicsComponent);
@@ -79,8 +73,9 @@ namespace LOP
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Dexterity] = creationData.dexterity;
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Intelligence] = creationData.intelligence;
             worldStats.BaseStats[(int)GameFramework.World.EntityStatType.Vitality] = creationData.vitality;
-            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.MoveSpeed] = characterComponent.masterData.Speed;
-            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.JumpPower] = characterComponent.masterData.JumpPower;
+            var characterMasterData = md.Tables.TbCharacter.Get(creationData.characterCode);
+            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.MoveSpeed] = characterMasterData.Speed;
+            worldStats.BaseStats[(int)GameFramework.World.EntityStatType.JumpPower] = characterMasterData.JumpPower;
             worldEntity.Add(worldStats);
             if (isPlayer)
             {

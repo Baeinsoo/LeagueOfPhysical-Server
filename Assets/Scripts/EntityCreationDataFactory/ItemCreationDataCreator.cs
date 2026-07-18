@@ -1,10 +1,14 @@
 using GameFramework;
 using System;
+using VContainer;
 
 namespace LOP
 {
     public class ItemCreationDataCreator : IEntityCreationDataCreator<LOPEntity>
     {
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
+
         public EntityType EntityType => EntityType.Item;
 
         public EntityCreationData Create(LOPEntity lopEntity)
@@ -17,11 +21,12 @@ namespace LOP
                 Velocity = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.velocity),
             };
 
+            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
             global::ItemCreationData itemCreationData = new global::ItemCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
-                ItemCode = lopEntity.GetEntityComponent<ItemComponent>().itemCode,
-                VisualId = lopEntity.GetEntityComponent<AppearanceComponent>().visualId,
+                ItemCode = worldEntity.Get<MasterDataRef>().Code,
+                VisualId = worldEntity.Get<Appearance>().VisualId,
             };
 
             return new EntityCreationData

@@ -1,51 +1,53 @@
 using GameFramework;
 using LOP.Event.Entity;
 using MessagePipe;
-using UniRx;
 using Unity.VisualScripting;
 using UnityEngine;
 using VContainer;
 
 namespace LOP
 {
-    public class PhysicsComponent : LOPComponent
+    /// <summary>
+    /// World.Transform을 따라가는 물리 바디(Rigidbody/캡슐 콜라이더)를 소유·구동하는 프레젠테이션 컴포넌트.
+    /// 엔티티-컴포넌트가 아닌 순수 MonoBehaviour — 시뮬(World.Transform)이 권위, Rigidbody는 팔로워.
+    /// 서버는 트리거로 아이템 접촉(ItemTouch)을 감지한다.
+    /// </summary>
+    public class PhysicsFollower : MonoBehaviour, ICleanup
     {
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
 
         [Inject]
         private IPublisher<ItemTouch> itemTouchPublisher;
-        private GameObject _physicsGameObject;
-        public GameObject physicsGameObject
-        {
-            get => _physicsGameObject;
-            set
-            {
-                this.SetProperty(ref _physicsGameObject, value, entity.RaisePropertyChanged);
-            }
-        }
+
+        private System.IDisposable propertyChangeSubscription;
+        private GameFramework.World.Entity worldEntity;
+
+        private GameObject physicsGameObject;
 
         public Rigidbody entityRigidbody { get; private set; }
         public Collider[] entityColliders { get; private set; }
 
-        private System.IDisposable propertyChangeSubscription;
-
-        public void Initialize(bool isKinematic, bool isTrigger)
+        public void Initialize(GameFramework.World.Entity worldEntity, bool isKinematic, bool isTrigger)
         {
-            propertyChangeSubscription = GlobalMessagePipe.GetSubscriber<string, PropertyChange>().Subscribe(entity.entityId, OnPropertyChange);
+            this.worldEntity = worldEntity;
+            var worldTransform = worldEntity.Get<GameFramework.World.Transform>();
+            var worldVelocity = worldEntity.Get<GameFramework.World.Velocity>();
 
-            GameObject physics = entity.transform.parent.Find("Physics").gameObject;
+            propertyChangeSubscription = GlobalMessagePipe.GetSubscriber<string, PropertyChange>().Subscribe(worldEntity.Id, OnPropertyChange);
+
+            GameObject physics = transform.parent.Find("Physics").gameObject;
             physicsGameObject = physics.CreateChild("PhysicsGameObject");
             physicsGameObject.layer = LayerMask.NameToLayer("Character");
 
             entityRigidbody = physicsGameObject.AddComponent<Rigidbody>();
-            entityRigidbody.linearDamping = 0f;   // 수평 정지는 이동 모터가 0으로 제동(아래). 수직=순수 중력.
+            entityRigidbody.linearDamping = 0f;   // 수평 정지는 이동 모터가 0으로 제동. 수직=순수 중력.
             entityRigidbody.angularDamping = 0.05f;
             entityRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
             entityRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-            entityRigidbody.position = entity.position;
-            entityRigidbody.rotation = Quaternion.Euler(entity.rotation);
-            entityRigidbody.linearVelocity = entity.velocity;
+            entityRigidbody.position = worldTransform.Position.ToUnity();
+            entityRigidbody.rotation = worldTransform.Rotation.ToUnity();
+            entityRigidbody.linearVelocity = worldVelocity.Linear.ToUnity();
             entityRigidbody.isKinematic = isKinematic;
 
             CapsuleCollider capsuleCollider = physicsGameObject.AddComponent<CapsuleCollider>();
@@ -61,36 +63,18 @@ namespace LOP
             triggerDetector.onTriggerExit += OnTriggerExit;
         }
 
-        public override void OnDetach()
+        public void Cleanup()
         {
             propertyChangeSubscription?.Dispose();
-
-            base.OnDetach();
-        }
-
-        /// <summary>
-        /// 겹친 지오메트리(스폰 시 지면과 붙음·끼임)에서 캡슐을 밖으로 밀어낸다.
-        /// sweep 이동은 "시작부터 겹친" 콜라이더를 무시하므로, 겹친 채로는 지면을 못 잡아 통과한다 —
-        /// 그래서 이동 전에 실제 콜라이더로 밀어내 겹침을 푼다(PhysX가 하던 일을 대신).
-        /// </summary>
-        public void Depenetrate(int layerMask)
-        {
-            Vector3 push = KinematicDepenetration.ComputePushOut((CapsuleCollider)entityColliders[0], layerMask);
-            if (push.sqrMagnitude > 0f)
-            {
-                entity.position += push;   // 파사드 → World.Transform + reactive rb.position
-            }
         }
 
         private void OnPropertyChange(PropertyChange propertyChange)
         {
             switch (propertyChange.propertyName)
             {
-                case nameof(entity.position):
-                    entityRigidbody.position = entity.position;
+                case nameof(LOPEntity.position):
+                    entityRigidbody.position = worldEntity.Get<GameFramework.World.Transform>().Position.ToUnity();
                     break;
-
-                // velocity·rotation은 BeforePhysicsSimulation 브릿지(LOPEntity.PushMotionToPhysics)가 담당.
             }
         }
 
@@ -105,7 +89,7 @@ namespace LOP
 
             if (entityRegistry.Get(otherEntity.entityId)?.Has<GameFramework.World.Ownership>() == true)
             {
-                itemTouchPublisher.Publish(new ItemTouch(entity.entityId, otherEntity.entityId));
+                itemTouchPublisher.Publish(new ItemTouch(worldEntity.Id, otherEntity.entityId));
             }
         }
 

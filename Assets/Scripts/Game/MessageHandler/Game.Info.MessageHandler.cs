@@ -59,13 +59,13 @@ namespace LOP
             foreach (var gameInfoToS in gameInfoToSList)
             {
                 var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
-                var entity = runner.entityManager.GetEntityByUserId<LOPActor>(gameInfoToS.UserId);
+                var actor = runner.entityManager.GetEntityByUserId<LOPActor>(gameInfoToS.UserId);
 
                 var gameInfoToC = new GameInfoToC
                 {
-                    EntityId = entity.entityId,
+                    EntityId = actor.entityId,
                     SessionId = session.sessionId,
-                    ExpectedNextSequence = entityRegistry.Get(entity.entityId).Get<InputBuffer>().ExpectedNextSequence,
+                    ExpectedNextSequence = entityRegistry.Get(actor.entityId).Get<InputBuffer>().ExpectedNextSequence,
                     GameInfo = new GameInfo
                     {
                         Tick = Runner.Time.tick,

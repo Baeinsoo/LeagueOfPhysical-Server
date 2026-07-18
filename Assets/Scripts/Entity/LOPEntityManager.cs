@@ -170,13 +170,13 @@ namespace LOP
         {
             var entitySnapList = new List<EntitySnap>();
 
-            foreach (var entity in GetEntities<LOPActor>().OrEmpty())
+            foreach (var actor in GetEntities<LOPActor>().OrEmpty())
             {
-                var worldEntity = entityRegistry.Get(entity.entityId);
+                var worldEntity = entityRegistry.Get(actor.entityId);
                 GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
                 var snap = new EntitySnap
                 {
-                    EntityId = entity.entityId,
+                    EntityId = actor.entityId,
                     Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
                     Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
                     Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),
@@ -211,9 +211,9 @@ namespace LOP
         {
             var entityCreationDataList = new List<EntityCreationData>();
 
-            foreach (var entity in GetEntities<LOPActor>().OrEmpty())
+            foreach (var actor in GetEntities<LOPActor>().OrEmpty())
             {
-                EntityCreationData entityCreationData = entityCreationDataFactory.Create(entity);
+                EntityCreationData entityCreationData = entityCreationDataFactory.Create(actor);
 
                 entityCreationDataList.Add(entityCreationData);
             }

@@ -10,11 +10,11 @@ namespace LOP
         [Inject]
         private IRunner runner;
 
-        public LOPActor entity { get; private set; }
+        public LOPActor actor { get; private set; }
 
-        public void SetEntity(LOPActor entity)
+        public void SetEntity(LOPActor actor)
         {
-            this.entity = entity;
+            this.actor = actor;
         }
 
         public IBrain<LOPActor> brain { get; private set; }
@@ -32,13 +32,13 @@ namespace LOP
         public void Cleanup()
         {
             runner.RemoveListener(this);
-            entity = null;
+            actor = null;
         }
 
         [RunnerListen(typeof(Begin))]
         private void OnUpdateBegin()
         {
-            brain.Think(entity, Runner.Time.deltaTime);
+            brain.Think(actor, Runner.Time.deltaTime);
         }
     }
 }

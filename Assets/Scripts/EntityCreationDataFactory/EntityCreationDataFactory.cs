@@ -22,14 +22,14 @@ namespace LOP
             }
         }
 
-        public EntityCreationData Create(LOPActor entity)
+        public EntityCreationData Create(LOPActor actor)
         {
-            GameFramework.World.Entity worldEntity = entityRegistry.Get(entity.entityId);
+            GameFramework.World.Entity worldEntity = entityRegistry.Get(actor.entityId);
             EntityKind kind = worldEntity?.Get<EntityKind>();
             if (kind == null)
             {
                 throw new InvalidOperationException(
-                    $"Entity '{entity.entityId}' does not have an EntityKind. Ensure the entity is properly initialized.");
+                    $"Entity '{actor.entityId}' does not have an EntityKind. Ensure the entity is properly initialized.");
             }
 
             if (creators.TryGetValue(kind.Kind, out var creator) == false)
@@ -38,7 +38,7 @@ namespace LOP
                     $"No registered creation-data creator found for entity kind '{kind.Kind}'.");
             }
 
-            return creator.Create(entity);
+            return creator.Create(actor);
         }
     }
 }

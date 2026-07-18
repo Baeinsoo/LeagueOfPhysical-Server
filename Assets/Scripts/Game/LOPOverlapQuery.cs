@@ -18,10 +18,10 @@ namespace LOP
             var ids = new HashSet<string>();   // 한 엔티티 다중 콜라이더 → 중복 제거(키 기반 RNG라 순서·중복 무관)
             foreach (var hit in hits)
             {
-                var entity = hit.GetComponentInParent<LOPActor>();
-                if (entity != null)
+                var actor = hit.GetComponentInParent<LOPActor>();
+                if (actor != null)
                 {
-                    ids.Add(entity.entityId);
+                    ids.Add(actor.entityId);
                 }
             }
             return ids.ToArray();

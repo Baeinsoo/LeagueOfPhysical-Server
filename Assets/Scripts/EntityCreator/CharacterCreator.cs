@@ -60,12 +60,12 @@ namespace LOP
 
             // 앵커: 뷰(물리/테스트렌더/AI)는 EntityViewSpawner가 EntityCreated 반응으로 붙인다.
             GameObject root = new GameObject($"Actor_{creationData.entityId}");
-            LOPActor entity = root.AddComponent<LOPActor>();
-            objectResolver.Inject(entity);
-            entity.Initialize(creationData);
+            LOPActor actor = root.AddComponent<LOPActor>();
+            objectResolver.Inject(actor);
+            actor.Initialize(creationData);
 
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");
-            return entity;
+            return actor;
         }
     }
 }

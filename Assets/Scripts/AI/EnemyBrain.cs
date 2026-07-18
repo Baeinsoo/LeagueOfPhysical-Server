@@ -19,14 +19,14 @@ namespace LOP
             this.statsSystem = statsSystem;
         }
 
-        public void Think(LOPActor entity, double deltaTime)
+        public void Think(LOPActor actor, double deltaTime)
         {
-            var worldEntity = entityRegistry.Get(entity.entityId);
+            var worldEntity = entityRegistry.Get(actor.entityId);
             Vector3 entityPosition = GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity);
 
             //  Find the player
-            var entities = Runner.current.entityManager.GetEntities<LOPActor>();
-            LOPActor target = entities
+            var actors = Runner.current.entityManager.GetEntities<LOPActor>();
+            LOPActor target = actors
                 .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() == true)
                 .Where(e => (GameFramework.World.EntityMotionExtensions.GetPosition(entityRegistry.Get(e.entityId)) - entityPosition).magnitude <= 10)
                 .OrderBy(e => (GameFramework.World.EntityMotionExtensions.GetPosition(entityRegistry.Get(e.entityId)) - entityPosition).sqrMagnitude)
@@ -49,7 +49,7 @@ namespace LOP
             if (direction.magnitude < 2)
             {
                 //  Attack the player — 공격 어빌리티(id=3) 발동. 플레이어와 동일 경로라 데미지·연출 cue 자동.
-                abilityActivator.TryActivate(entity.entityId, AttackAbilityId, Runner.Time.tick);
+                abilityActivator.TryActivate(actor.entityId, AttackAbilityId, Runner.Time.tick);
             }
             else
             {

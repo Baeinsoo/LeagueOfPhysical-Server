@@ -24,10 +24,10 @@ namespace LOP
             entityRegistry.Add(worldEntity);
 
             GameObject root = new GameObject($"Actor_{creationData.entityId}");
-            LOPActor entity = root.AddComponent<LOPActor>();
-            objectResolver.Inject(entity);
-            entity.Initialize(creationData);
-            return entity;
+            LOPActor actor = root.AddComponent<LOPActor>();
+            objectResolver.Inject(actor);
+            actor.Initialize(creationData);
+            return actor;
         }
     }
 }

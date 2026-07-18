@@ -2,10 +2,10 @@ namespace LOP.Event.Entity
 {
     public struct EntityCreated
     {
-        public LOPActor entity;
-        public EntityCreated(LOPActor entity)
+        public LOPActor actor;
+        public EntityCreated(LOPActor actor)
         {
-            this.entity = entity;
+            this.actor = actor;
         }
     }
 

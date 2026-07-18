@@ -32,12 +32,12 @@ namespace LOP
 
         private void OnEntityCreated(EntityCreated entityCreated)
         {
-            LOPActor entity = entityCreated.entity;
-            if (entity == null)
+            LOPActor actor = entityCreated.actor;
+            if (actor == null)
             {
                 return;
             }
-            GameFramework.World.Entity worldEntity = entityRegistry.Get(entity.entityId);
+            GameFramework.World.Entity worldEntity = entityRegistry.Get(actor.entityId);
             if (worldEntity == null)
             {
                 return;
@@ -48,7 +48,7 @@ namespace LOP
                 return;
             }
 
-            GameObject root = entity.gameObject;
+            GameObject root = actor.gameObject;
             bool isItem = kind.Kind == EntityType.Item;
 
             PhysicsFollower physicsFollower = root.AddComponent<PhysicsFollower>();
@@ -58,7 +58,7 @@ namespace LOP
 
             LOPEntityView view = root.AddComponent<LOPEntityView>();
             objectResolver.Inject(view);
-            view.SetEntity(entity);
+            view.SetEntity(actor);
 
             if (kind.Kind == EntityType.Character)
             {
@@ -67,7 +67,7 @@ namespace LOP
                 {
                     LOPAIController aiController = root.AddComponent<LOPAIController>();
                     objectResolver.Inject(aiController);
-                    aiController.SetEntity(entity);
+                    aiController.SetEntity(actor);
                     aiController.SetBrain(objectResolver.Resolve<EnemyBrain>());
                 }
             }

@@ -68,6 +68,7 @@ namespace LOP
             builder.RegisterEntryPoint<GameInfoMessageHandler>();
             builder.RegisterEntryPoint<GameEntityMessageHandler>();
             builder.RegisterEntryPoint<GameInputMessageHandler>();
+            builder.RegisterEntryPoint<EntityViewSpawner>();   // 서버 뷰 스포너(EntityCreated 반응)
 
             builder.Register<CombatConfigProvider>(Lifetime.Singleton);
             builder.Register<CombatConfig>(c => c.Resolve<CombatConfigProvider>().Get(), Lifetime.Singleton);

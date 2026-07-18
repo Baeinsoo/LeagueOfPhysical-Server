@@ -46,10 +46,6 @@ namespace LOP
             objectResolver.Inject(physicsFollower);
             physicsFollower.Initialize(worldEntity, true, false);   // kinematic, non-trigger — 우리가 직접 이동시킴
 
-            LOPEntityController controller = root.CreateChildWithComponent<LOPEntityController>();
-            objectResolver.Inject(controller);
-            controller.SetEntity(entity);
-
             LOPEntityView view = root.CreateChildWithComponent<LOPEntityView>();
             objectResolver.Inject(view);
             view.SetEntity(entity);

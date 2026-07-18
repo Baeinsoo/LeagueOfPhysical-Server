@@ -8,11 +8,11 @@ using VContainer;
 namespace LOP
 {
     /// <summary>
-    /// World.Transform을 따라가는 물리 바디(Rigidbody/캡슐 콜라이더)를 소유·구동하는 프레젠테이션 컴포넌트.
-    /// 엔티티-컴포넌트가 아닌 순수 MonoBehaviour — 시뮬(World.Transform)이 권위, Rigidbody는 팔로워.
+    /// World.Transform을 따라가는 물리 바디(Rigidbody/캡슐 콜라이더)를 소유하는 프레젠테이션 컴포넌트.
+    /// rb 팔로우는 호스트 단일 패스(LOPRunner)가 MotionBridge.PushMotion으로 구동한다.
     /// 서버는 트리거로 아이템 접촉(ItemTouch)을 감지한다.
     /// </summary>
-    public class PhysicsFollower : MonoBehaviour, ICleanup
+    public class PhysicsFollower : MonoBehaviour
     {
         [Inject]
         private GameFramework.World.EntityRegistry entityRegistry;
@@ -20,9 +20,7 @@ namespace LOP
         [Inject]
         private IPublisher<ItemTouch> itemTouchPublisher;
 
-        private System.IDisposable propertyChangeSubscription;
         private GameFramework.World.Entity worldEntity;
-
         private GameObject physicsGameObject;
 
         public Rigidbody entityRigidbody { get; private set; }
@@ -34,14 +32,12 @@ namespace LOP
             var worldTransform = worldEntity.Get<GameFramework.World.Transform>();
             var worldVelocity = worldEntity.Get<GameFramework.World.Velocity>();
 
-            propertyChangeSubscription = GlobalMessagePipe.GetSubscriber<string, PropertyChange>().Subscribe(worldEntity.Id, OnPropertyChange);
-
             GameObject physics = transform.parent.Find("Physics").gameObject;
             physicsGameObject = physics.CreateChild("PhysicsGameObject");
             physicsGameObject.layer = LayerMask.NameToLayer("Character");
 
             entityRigidbody = physicsGameObject.AddComponent<Rigidbody>();
-            entityRigidbody.linearDamping = 0f;   // 수평 정지는 이동 모터가 0으로 제동. 수직=순수 중력.
+            entityRigidbody.linearDamping = 0f;
             entityRigidbody.angularDamping = 0.05f;
             entityRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
             entityRigidbody.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
@@ -61,21 +57,6 @@ namespace LOP
             triggerDetector.onTriggerEnter += OnTriggerEnter;
             triggerDetector.onTriggerStay += OnTriggerStay;
             triggerDetector.onTriggerExit += OnTriggerExit;
-        }
-
-        public void Cleanup()
-        {
-            propertyChangeSubscription?.Dispose();
-        }
-
-        private void OnPropertyChange(PropertyChange propertyChange)
-        {
-            switch (propertyChange.propertyName)
-            {
-                case nameof(LOPEntity.position):
-                    entityRigidbody.position = worldEntity.Get<GameFramework.World.Transform>().Position.ToUnity();
-                    break;
-            }
         }
 
         private void OnTriggerEnter(Collider other)

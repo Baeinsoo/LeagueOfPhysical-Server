@@ -81,36 +81,36 @@ namespace LOP
 
         public void SyncPhysics()
         {
-            PhysicsComponent physicsComponent = this.GetEntityComponent<PhysicsComponent>();
+            PhysicsFollower physicsFollower = GetComponent<PhysicsFollower>();
 
-            if (physicsComponent == null)
+            if (physicsFollower == null)
             {
                 return;
             }
 
             // kinematic 바디(아이템 등)는 World가 권위 — rb→World 되읽기는 rb.linearVelocity(=0)를
             // entity.velocity에 덮어 유해하다. 스킵한다(rb는 World를 따르는 follower).
-            if (physicsComponent.entityRigidbody.isKinematic)
+            if (physicsFollower.entityRigidbody.isKinematic)
             {
                 return;
             }
 
-            position = physicsComponent.entityRigidbody.position;
-            rotation = physicsComponent.entityRigidbody.rotation.eulerAngles;
-            velocity = physicsComponent.entityRigidbody.linearVelocity;
+            position = physicsFollower.entityRigidbody.position;
+            rotation = physicsFollower.entityRigidbody.rotation.eulerAngles;
+            velocity = physicsFollower.entityRigidbody.linearVelocity;
         }
 
         /// <summary>World 모션(velocity·rotation)을 물리 바디에 밀어넣는다(Simulate 직전 호출). SyncPhysics(rb→World)의 역방향.</summary>
         public void PushMotionToPhysics()
         {
-            PhysicsComponent physicsComponent = this.GetEntityComponent<PhysicsComponent>();
+            PhysicsFollower physicsFollower = GetComponent<PhysicsFollower>();
 
-            if (physicsComponent == null)
+            if (physicsFollower == null)
             {
                 return;
             }
 
-            Rigidbody rigidbody = physicsComponent.entityRigidbody;
+            Rigidbody rigidbody = physicsFollower.entityRigidbody;
 
             // kinematic 바디(캐릭터·아이템)는 velocity를 못 받는다(Unity 경고). 우리가 이동시키므로
             // World 위치·회전을 rb에 직접 밀어넣는다.

@@ -126,7 +126,7 @@ namespace LOP
                     currentExp = 0,
                 };
 
-                LOPEntity entity = entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
+                LOPActor entity = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
             }
         }
 
@@ -136,7 +136,7 @@ namespace LOP
             {
                 DespawnEntity(itemTouch.itemId);
 
-                LOPEntity toucher = entityManager.GetEntity<LOPEntity>(itemTouch.toucherId);
+                LOPActor toucher = entityManager.GetEntity<LOPActor>(itemTouch.toucherId);
                 GameFramework.World.Level level = entityRegistry.Get(toucher.entityId)?.Get<GameFramework.World.Level>();
                 if (level == null)
                 {
@@ -200,7 +200,7 @@ namespace LOP
                 currentExp = 0,
             };
 
-            LOPEntity entity = entityManager.CreateEntity<LOPEntity, CharacterCreationData>(data);
+            LOPActor entity = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {

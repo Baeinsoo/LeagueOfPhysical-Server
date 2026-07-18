@@ -10,9 +10,9 @@ namespace LOP
         [Inject]
         private IRunner runner;
 
-        public LOPEntity entity { get; private set; }
+        public LOPActor entity { get; private set; }
 
-        public void SetEntity(LOPEntity entity)
+        public void SetEntity(LOPActor entity)
         {
             this.entity = entity;
         }

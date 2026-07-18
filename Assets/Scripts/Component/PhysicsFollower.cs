@@ -21,7 +21,6 @@ namespace LOP
         private IPublisher<ItemTouch> itemTouchPublisher;
 
         private GameFramework.World.Entity worldEntity;
-        private GameObject physicsGameObject;
 
         public Rigidbody entityRigidbody { get; private set; }
         public Collider[] entityColliders { get; private set; }
@@ -32,11 +31,13 @@ namespace LOP
             var worldTransform = worldEntity.Get<GameFramework.World.Transform>();
             var worldVelocity = worldEntity.Get<GameFramework.World.Velocity>();
 
-            GameObject physics = transform.parent.Find("Physics").gameObject;
-            physicsGameObject = physics.CreateChild("PhysicsGameObject");
-            physicsGameObject.layer = LayerMask.NameToLayer("Character");
+            gameObject.layer = LayerMask.NameToLayer("Character");
 
-            entityRigidbody = physicsGameObject.AddComponent<Rigidbody>();
+            // 루트(시뮬 바디)를 스폰 위치에 즉시 배치 — kinematic rb.position은 다음 물리 스텝에야 반영돼
+            // 루트가 한 틱 원점에 머물다 점프하면 자식 모델이 끌려가 첫 틱 순간이동한다(그 방지, 클라와 동일).
+            transform.SetPositionAndRotation(worldTransform.Position.ToUnity(), worldTransform.Rotation.ToUnity());
+
+            entityRigidbody = gameObject.AddComponent<Rigidbody>();
             entityRigidbody.linearDamping = 0f;
             entityRigidbody.angularDamping = 0.05f;
             entityRigidbody.constraints = RigidbodyConstraints.FreezeRotation;
@@ -46,14 +47,14 @@ namespace LOP
             entityRigidbody.linearVelocity = worldVelocity.Linear.ToUnity();
             entityRigidbody.isKinematic = isKinematic;
 
-            CapsuleCollider capsuleCollider = physicsGameObject.AddComponent<CapsuleCollider>();
+            CapsuleCollider capsuleCollider = gameObject.AddComponent<CapsuleCollider>();
             capsuleCollider.radius = 0.35f;
             capsuleCollider.height = 1.5f;
             capsuleCollider.center = new Vector3(0, capsuleCollider.height * 0.5f, 0);
             capsuleCollider.isTrigger = isTrigger;
             entityColliders = new Collider[] { capsuleCollider };
 
-            TriggerDetector triggerDetector = physicsGameObject.GetOrAddComponent<TriggerDetector>();
+            TriggerDetector triggerDetector = gameObject.GetOrAddComponent<TriggerDetector>();
             triggerDetector.onTriggerEnter += OnTriggerEnter;
             triggerDetector.onTriggerStay += OnTriggerStay;
             triggerDetector.onTriggerExit += OnTriggerExit;
@@ -61,7 +62,7 @@ namespace LOP
 
         private void OnTriggerEnter(Collider other)
         {
-            LOPEntity otherEntity = other.transform.parent?.parent?.GetComponentInChildren<LOPEntity>();
+            LOPActor otherEntity = other.GetComponentInParent<LOPActor>();
             if (otherEntity == null)
             {
                 Debug.LogWarning($"Trigger detected with non-entity object: {other.name}");

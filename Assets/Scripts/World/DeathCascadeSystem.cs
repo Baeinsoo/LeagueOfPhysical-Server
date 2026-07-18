@@ -38,7 +38,7 @@ namespace LOP
 
         private void ResolveDeath(GameFramework.World.DeathEvent death)
         {
-            LOPEntity victim = _entityManager.GetEntity<LOPEntity>(death.victimId);
+            LOPActor victim = _entityManager.GetEntity<LOPActor>(death.victimId);
             if (victim == null)
             {
                 Debug.LogWarning($"[World] DeathCascade: victim {death.victimId} not found");
@@ -65,7 +65,7 @@ namespace LOP
                 velocity = Vector3.zero,
             };
 
-            LOPEntity entity = _entityManager.CreateEntity<LOPEntity, ItemCreationData>(data);
+            LOPActor entity = _entityManager.CreateEntity<LOPActor, ItemCreationData>(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {

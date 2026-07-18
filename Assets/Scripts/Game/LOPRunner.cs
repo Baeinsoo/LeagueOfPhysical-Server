@@ -135,7 +135,7 @@ namespace LOP
 
         private void ProcessInput()
         {
-            IEnumerable<LOPEntity> LOPEntities = new List<LOPEntity>(entityManager.GetEntities<LOPEntity>());
+            IEnumerable<LOPActor> LOPEntities = new List<LOPActor>(entityManager.GetEntities<LOPActor>());
 
             foreach (var entity in LOPEntities)
             {
@@ -202,7 +202,7 @@ namespace LOP
                 return;
             }
 
-            foreach (var entity in new List<LOPEntity>(entityManager.GetEntities<LOPEntity>()))
+            foreach (var entity in new List<LOPActor>(entityManager.GetEntities<LOPActor>()))
             {
                 var buffer = entityRegistry.Get(entity.entityId).Get<InputBuffer>();
                 if (buffer == null)
@@ -323,7 +323,7 @@ namespace LOP
 
             foreach (var session in sessionManager.GetAllSessions())
             {
-                LOPEntity entity = entityManager.GetEntityByUserId<LOPEntity>(session.userId);
+                LOPActor entity = entityManager.GetEntityByUserId<LOPActor>(session.userId);
 
                 // HP/MP/Level/Exp/StatPoints 모두 World 코어에서 읽는다.
                 GameFramework.World.Entity worldEntity = entityRegistry.Get(entity.entityId);

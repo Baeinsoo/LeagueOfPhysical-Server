@@ -13,9 +13,9 @@ namespace LOP
     {
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
 
-        public LOPEntity entity { get; private set; }
+        public LOPActor entity { get; private set; }
 
-        public void SetEntity(LOPEntity entity)
+        public void SetEntity(LOPActor entity)
         {
             this.entity = entity;
         }
@@ -79,9 +79,7 @@ namespace LOP
             asyncOperationHandle = Addressables.LoadAssetAsync<GameObject>(visualId);
             await asyncOperationHandle.Task;
 
-            GameObject visual = transform.parent.Find("Visual").gameObject;
-
-            visualGameObject = Instantiate(asyncOperationHandle.Task.Result, visual.transform);
+            visualGameObject = Instantiate(asyncOperationHandle.Task.Result, transform);
             visualGameObject.transform.position = entity.position;
             visualGameObject.transform.rotation = Quaternion.Euler(entity.rotation);
         }

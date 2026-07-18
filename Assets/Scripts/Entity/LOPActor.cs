@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class LOPEntity : MonoBehaviour, IEntity
+    public class LOPActor : MonoBehaviour, IEntity
     {
         public string entityId { get; private set; }
 

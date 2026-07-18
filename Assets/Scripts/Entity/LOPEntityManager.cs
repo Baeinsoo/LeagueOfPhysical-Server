@@ -107,11 +107,6 @@ namespace LOP
                 LOPEntity lopEntity = GetEntity<LOPEntity>(entityId);
                 string ownerId = GetUserIdByEntityId(entityId);   // capture before registry.Remove (reads Ownership)
 
-                foreach (var component in lopEntity.components.ToArray())
-                {
-                    lopEntity.DetachEntityComponent(component);
-                }
-
                 foreach (var cleanup in lopEntity.transform.parent.GetComponentsInChildren<ICleanup>(true))
                 {
                     cleanup.Cleanup();
@@ -148,10 +143,6 @@ namespace LOP
 
         public void UpdateEntities()
         {
-            foreach (var entity in GetEntities())
-            {
-                entity.UpdateEntity();
-            }
         }
 
         public string GetUserIdByEntityId(string entityId)

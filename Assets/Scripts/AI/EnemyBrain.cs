@@ -22,12 +22,15 @@ namespace LOP
 
         public void Think(LOPActor entity, double deltaTime)
         {
+            var worldEntity = entityRegistry.Get(entity.entityId);
+            Vector3 entityPosition = GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity);
+
             //  Find the player
             var entities = Runner.current.entityManager.GetEntities<LOPActor>();
             LOPActor target = entities
                 .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() == true)
-                .Where(e => (e.position - entity.position).magnitude <= 10)
-                .OrderBy(e => (e.position - entity.position).sqrMagnitude)
+                .Where(e => (GameFramework.World.EntityMotionExtensions.GetPosition(entityRegistry.Get(e.entityId)) - entityPosition).magnitude <= 10)
+                .OrderBy(e => (GameFramework.World.EntityMotionExtensions.GetPosition(entityRegistry.Get(e.entityId)) - entityPosition).sqrMagnitude)
                 .FirstOrDefault();
 
             if (target == null)
@@ -35,13 +38,14 @@ namespace LOP
                 return;
             }
 
-            Vector3 direction = target.position - entity.position;
+            var targetWorldEntity = entityRegistry.Get(target.entityId);
+            Vector3 direction = GameFramework.World.EntityMotionExtensions.GetPosition(targetWorldEntity) - entityPosition;
 
             // Rotate
             float myFloat = 0;
             var angle = Mathf.Atan2(direction.x, direction.z) * Mathf.Rad2Deg;
-            var smooth = Mathf.SmoothDampAngle(entity.rotation.y, angle, ref myFloat, 0.01f);
-            entity.rotation = new Vector3(0, smooth, 0);
+            var smooth = Mathf.SmoothDampAngle(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity).y, angle, ref myFloat, 0.01f);
+            GameFramework.World.EntityMotionExtensions.SetRotation(worldEntity, new Vector3(0, smooth, 0));
 
             if (direction.magnitude < 2)
             {
@@ -51,10 +55,11 @@ namespace LOP
             else
             {
                 //  Move
-                var stats = entityRegistry.Get(entity.entityId).Get<GameFramework.World.Stats>();
+                var stats = worldEntity.Get<GameFramework.World.Stats>();
                 float speed = statsSystem.GetValue(stats, (int)GameFramework.World.EntityStatType.MoveSpeed);
                 var velocity = direction.normalized * speed;
-                entity.velocity = new Vector3(velocity.x, entity.velocity.y, velocity.z);
+                var currentVelocity = GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity);
+                GameFramework.World.EntityMotionExtensions.SetVelocity(worldEntity, new Vector3(velocity.x, currentVelocity.y, velocity.z));
             }
         }
 

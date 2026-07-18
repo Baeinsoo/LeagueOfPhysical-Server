@@ -166,16 +166,16 @@ namespace LOP
         {
             var entitySnapList = new List<EntitySnap>();
 
-            foreach (var entity in GetEntities().OrEmpty())
+            foreach (var entity in GetEntities<LOPActor>().OrEmpty())
             {
                 var worldEntity = entityRegistry.Get(entity.entityId);
                 GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
                 var snap = new EntitySnap
                 {
                     EntityId = entity.entityId,
-                    Position = MapperConfig.mapper.Map<ProtoVector3>(entity.position),
-                    Rotation = MapperConfig.mapper.Map<ProtoVector3>(entity.rotation),
-                    Velocity = MapperConfig.mapper.Map<ProtoVector3>(entity.velocity),
+                    Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
+                    Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
+                    Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),
                     MaxHP = health?.Max ?? 0,
                     CurrentHP = health?.Current ?? 0,
                 };

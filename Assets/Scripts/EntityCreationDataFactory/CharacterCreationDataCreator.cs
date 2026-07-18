@@ -13,16 +13,17 @@ namespace LOP
 
         public EntityCreationData Create(LOPActor lopEntity)
         {
+            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
+
             var baseEntityCreationData = new BaseEntityCreationData
             {
                 EntityId = lopEntity.entityId,
-                Position = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.position),
-                Rotation = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.rotation),
-                Velocity = MapperConfig.mapper.Map<ProtoVector3>(lopEntity.velocity),
+                Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
+                Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
+                Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),
             };
 
             // HP/MP/Level/Exp는 World 코어에서 읽는다.
-            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
             GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
             if (health == null)
             {

@@ -50,8 +50,8 @@ namespace LOP
             global::CharacterCreationData characterCreationData = new global::CharacterCreationData
             {
                 BaseEntityCreationData = baseEntityCreationData,
-                CharacterCode = lopEntity.GetEntityComponent<CharacterComponent>().characterCode,
-                VisualId = lopEntity.GetEntityComponent<AppearanceComponent>().visualId,
+                CharacterCode = worldEntity.Get<MasterDataRef>().Code,
+                VisualId = worldEntity.Get<Appearance>().VisualId,
 
                 MaxHP = health?.Max ?? 0,
                 CurrentHP = health?.Current ?? 0,

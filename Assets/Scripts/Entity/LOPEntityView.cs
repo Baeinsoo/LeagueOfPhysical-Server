@@ -5,11 +5,14 @@ using UniRx;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using VContainer;
 
 namespace LOP
 {
     public class LOPEntityView : MonoBehaviour, ICleanup
     {
+        [Inject] private GameFramework.World.EntityRegistry entityRegistry;
+
         public LOPEntity entity { get; private set; }
 
         public void SetEntity(LOPEntity entity)
@@ -34,22 +37,18 @@ namespace LOP
 
         private string visualId;
         private AsyncOperationHandle<GameObject> asyncOperationHandle;
-        private System.IDisposable propertyChangeSubscription;
 
         protected virtual void Start()
         {
-            propertyChangeSubscription = GlobalMessagePipe.GetSubscriber<string, PropertyChange>().Subscribe(entity.entityId, OnPropertyChange);
-
-            if (entity.TryGetEntityComponent<AppearanceComponent>(out var appearanceComponent))
+            var appearance = entityRegistry.Get(entity.entityId)?.Get<Appearance>();
+            if (appearance != null)
             {
-                UpdateVisual(appearanceComponent.visualId);
+                UpdateVisual(appearance.VisualId);
             }
         }
 
         public void Cleanup()
         {
-            propertyChangeSubscription?.Dispose();
-
             if (asyncOperationHandle.IsValid())
             {
                 Addressables.Release(asyncOperationHandle);
@@ -61,16 +60,6 @@ namespace LOP
             }
 
             entity = null;
-        }
-
-        private void OnPropertyChange(PropertyChange propertyChange)
-        {
-            switch (propertyChange.propertyName)
-            {
-                case nameof(AppearanceComponent.visualId):
-                    UpdateVisual(entity.GetEntityComponent<AppearanceComponent>().visualId);
-                    break;
-            }
         }
 
         private async void UpdateVisual(string visualId)

@@ -11,11 +11,13 @@ namespace LOP
 
         private AbilityActivator abilityActivator;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly GameFramework.World.StatsSystem statsSystem;
 
-        public EnemyBrain(AbilityActivator abilityActivator, GameFramework.World.EntityRegistry entityRegistry)
+        public EnemyBrain(AbilityActivator abilityActivator, GameFramework.World.EntityRegistry entityRegistry, GameFramework.World.StatsSystem statsSystem)
         {
             this.abilityActivator = abilityActivator;
             this.entityRegistry = entityRegistry;
+            this.statsSystem = statsSystem;
         }
 
         public void Think(LOPEntity entity, double deltaTime)
@@ -49,7 +51,9 @@ namespace LOP
             else
             {
                 //  Move
-                var velocity = direction.normalized * entity.GetEntityComponent<CharacterComponent>().masterData.Speed;
+                var stats = entityRegistry.Get(entity.entityId).Get<GameFramework.World.Stats>();
+                float speed = statsSystem.GetValue(stats, (int)GameFramework.World.EntityStatType.MoveSpeed);
+                var velocity = direction.normalized * speed;
                 entity.velocity = new Vector3(velocity.x, entity.velocity.y, velocity.z);
             }
         }

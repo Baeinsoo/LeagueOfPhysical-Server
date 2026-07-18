@@ -11,7 +11,13 @@ namespace LOP
 
         public CombatConfig Get()
         {
-            var r = md.Tables.TbCombatConfig.Get(1);
+            // 없으면 Luban의 애매한 KeyNotFoundException 대신 원인을 짚어 크게 실패
+            var r = md.Tables.TbCombatConfig.GetOrDefault(1);
+            if (r == null)
+            {
+                throw new System.InvalidOperationException(
+                    "TbCombatConfig id=1 행을 찾을 수 없음 — MasterData 미로드 또는 CombatConfig 데이터 누락");
+            }
             return new CombatConfig(
                 r.DodgeChanceMin, r.DodgeChanceMax,
                 r.CritChanceMin, r.CritChanceMax,

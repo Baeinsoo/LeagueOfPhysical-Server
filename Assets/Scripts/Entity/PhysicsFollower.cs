@@ -65,7 +65,7 @@ namespace LOP
             LOPActor otherEntity = other.GetComponentInParent<LOPActor>();
             if (otherEntity == null)
             {
-                Debug.LogWarning($"Trigger detected with non-entity object: {other.name}");
+                // 바닥 등 엔티티 아닌 콜라이더와의 접촉은 정상(아이템 줍기 대상이 아님) — 조용히 무시.
                 return;
             }
 

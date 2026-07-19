@@ -36,11 +36,11 @@ namespace LOP
         private void OnStatAllocationToS(StatAllocationToS statAllocationToS)
         {
             ISession session = sessionManager.GetSessionById(statAllocationToS.SessionId);
-            LOPActor actor = runner.entityManager.GetEntityByUserId<LOPActor>(session.userId);
-            GameFramework.World.Stats stats = entityRegistry.Get(actor.entityId)?.Get<GameFramework.World.Stats>();
+            string entityId = (runner as LOPRunner).entityManager.GetEntityIdByUserId(session.userId);
+            GameFramework.World.Stats stats = entityRegistry.Get(entityId)?.Get<GameFramework.World.Stats>();
             if (stats == null)
             {
-                UnityEngine.Debug.LogWarning($"[World] StatAllocation: Stats not found for entity {actor.entityId}");
+                UnityEngine.Debug.LogWarning($"[World] StatAllocation: Stats not found for entity {entityId}");
                 return;
             }
 

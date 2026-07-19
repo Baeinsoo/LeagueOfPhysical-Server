@@ -1,22 +1,16 @@
 using GameFramework;
-using VContainer;
 
 namespace LOP
 {
-    public class ItemCreationDataCreator : IEntityCreationDataCreator<LOPActor>
+    public class ItemCreationDataCreator : IEntityCreationDataCreator
     {
-        [Inject]
-        private GameFramework.World.EntityRegistry entityRegistry;
-
         public EntityType EntityType => EntityType.Item;
 
-        public EntityCreationData Create(LOPActor lopEntity)
+        public EntityCreationData Create(GameFramework.World.Entity worldEntity)
         {
-            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
-
             var baseEntityCreationData = new BaseEntityCreationData
             {
-                EntityId = lopEntity.entityId,
+                EntityId = worldEntity.Id,
                 Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
                 Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
                 Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),

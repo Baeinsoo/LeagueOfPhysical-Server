@@ -126,7 +126,7 @@ namespace LOP
                     currentExp = 0,
                 };
 
-                LOPActor entity = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
+                LOPActor actor = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
             }
         }
 
@@ -136,18 +136,18 @@ namespace LOP
             {
                 DespawnEntity(itemTouch.itemId);
 
-                LOPActor toucher = entityManager.GetEntity<LOPActor>(itemTouch.toucherId);
-                GameFramework.World.Level level = entityRegistry.Get(toucher.entityId)?.Get<GameFramework.World.Level>();
+                GameFramework.World.Entity toucher = entityRegistry.Get(itemTouch.toucherId);
+                GameFramework.World.Level level = toucher?.Get<GameFramework.World.Level>();
                 if (level == null)
                 {
-                    Debug.LogWarning($"[World] HandleItemTouch: Level not found for entity {toucher.entityId}");
+                    Debug.LogWarning($"[World] HandleItemTouch: Level not found for entity {itemTouch.toucherId}");
                     return;
                 }
 
                 int gained = levelSystem.AddExperience(level, 10);
                 if (gained > 0)
                 {
-                    GameFramework.World.Stats stats = entityRegistry.Get(toucher.entityId)?.Get<GameFramework.World.Stats>();
+                    GameFramework.World.Stats stats = toucher?.Get<GameFramework.World.Stats>();
                     if (stats != null)
                     {
                         statsSystem.AddUnspent(stats, gained);
@@ -200,11 +200,11 @@ namespace LOP
                 currentExp = 0,
             };
 
-            LOPActor entity = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
+            LOPActor actor = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
-                EntityCreationData = entityCreationDataFactory.Create(entity),
+                EntityCreationData = entityCreationDataFactory.Create(entityRegistry.Get(actor.entityId)),
             };
 
             foreach (var session in sessionManager.GetAllSessions().OrEmpty())

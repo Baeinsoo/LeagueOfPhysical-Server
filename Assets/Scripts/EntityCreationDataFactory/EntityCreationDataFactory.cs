@@ -9,27 +9,23 @@ namespace LOP
         private readonly Dictionary<EntityType, IEntityCreationDataCreator> creators
             = new Dictionary<EntityType, IEntityCreationDataCreator>();
 
-        private readonly GameFramework.World.EntityRegistry entityRegistry;
-
         // creator는 DI 컨테이너가 생성·주입해 IEnumerable로 전달한다. (정적 캐시/Activator 없음 →
         // 스코프와 함께 생성·해제되어 룸 재입장 시 stale 참조가 생기지 않는다.)
-        public EntityCreationDataFactory(IEnumerable<IEntityCreationDataCreator> creators, GameFramework.World.EntityRegistry entityRegistry)
+        public EntityCreationDataFactory(IEnumerable<IEntityCreationDataCreator> creators)
         {
-            this.entityRegistry = entityRegistry;
             foreach (var creator in creators.OrEmpty())
             {
                 this.creators[creator.EntityType] = creator;
             }
         }
 
-        public EntityCreationData Create(LOPActor actor)
+        public EntityCreationData Create(GameFramework.World.Entity worldEntity)
         {
-            GameFramework.World.Entity worldEntity = entityRegistry.Get(actor.entityId);
             EntityKind kind = worldEntity?.Get<EntityKind>();
             if (kind == null)
             {
                 throw new InvalidOperationException(
-                    $"Entity '{actor.entityId}' does not have an EntityKind. Ensure the entity is properly initialized.");
+                    $"Entity '{worldEntity?.Id}' does not have an EntityKind. Ensure the entity is properly initialized.");
             }
 
             if (creators.TryGetValue(kind.Kind, out var creator) == false)
@@ -38,7 +34,7 @@ namespace LOP
                     $"No registered creation-data creator found for entity kind '{kind.Kind}'.");
             }
 
-            return creator.Create(actor);
+            return creator.Create(worldEntity);
         }
     }
 }

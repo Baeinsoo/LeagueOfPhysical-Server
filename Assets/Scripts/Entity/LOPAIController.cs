@@ -10,6 +10,9 @@ namespace LOP
         [Inject]
         private IRunner runner;
 
+        [Inject]
+        private GameFramework.World.EntityRegistry entityRegistry;
+
         public LOPActor actor { get; private set; }
 
         public void SetEntity(LOPActor actor)
@@ -17,9 +20,9 @@ namespace LOP
             this.actor = actor;
         }
 
-        public IBrain<LOPActor> brain { get; private set; }
+        public IBrain brain { get; private set; }
 
-        public void SetBrain(IBrain<LOPActor> brain)
+        public void SetBrain(IBrain brain)
         {
             this.brain = brain;
         }
@@ -38,7 +41,11 @@ namespace LOP
         [RunnerListen(typeof(Begin))]
         private void OnUpdateBegin()
         {
-            brain.Think(actor, Runner.Time.deltaTime);
+            var worldEntity = entityRegistry.Get(actor.entityId);
+            if (worldEntity != null)
+            {
+                brain.Think(worldEntity, Runner.Time.deltaTime);
+            }
         }
     }
 }

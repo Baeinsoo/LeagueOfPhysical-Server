@@ -1,3 +1,4 @@
+using GameFramework;
 using LOP.Event.Entity;
 using MessagePipe;
 using System.Collections.Generic;

@@ -153,7 +153,6 @@ MonoBehaviour:
   autoRun: 1
   autoInjectGameObjects: []
   gameEngine: {fileID: 1325402485}
-  entityManager: {fileID: 1325402487}
 --- !u!4 &10645445
 Transform:
   m_ObjectHideFlags: 0
@@ -211,7 +210,6 @@ GameObject:
   m_Component:
   - component: {fileID: 1325402484}
   - component: {fileID: 1325402485}
-  - component: {fileID: 1325402487}
   - component: {fileID: 1325402488}
   m_Layer: 0
   m_Name: LOPGameEngine
@@ -245,18 +243,6 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 65c352ca03087594ebd4a7d03b2c382f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &1325402487
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1325402483}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 21112dd39defdcb44a6182ab2ae1786a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!114 &1325402488

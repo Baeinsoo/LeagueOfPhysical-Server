@@ -27,7 +27,7 @@ namespace LOP
         private readonly GameFramework.World.LevelSystem levelSystem;
         private readonly GameFramework.World.StatsSystem statsSystem;
         // 룰은 호스트(IRunner)를 역참조하지 않는다(Runner↔Rule 순환 방지). sim 서비스만 주입받는다.
-        private readonly IEntityManager entityManager;
+        private readonly EntitySpawner entitySpawner;
         private readonly ITickUpdater tickUpdater;
         private readonly ISubscriber<ItemTouch> itemTouchSubscriber;
 
@@ -42,7 +42,7 @@ namespace LOP
             IRandom rng,
             GameFramework.World.LevelSystem levelSystem,
             GameFramework.World.StatsSystem statsSystem,
-            IEntityManager entityManager,
+            EntitySpawner entitySpawner,
             ITickUpdater tickUpdater,
             ISubscriber<ItemTouch> itemTouchSubscriber)
         {
@@ -53,7 +53,7 @@ namespace LOP
             this.rng = rng;
             this.levelSystem = levelSystem;
             this.statsSystem = statsSystem;
-            this.entityManager = entityManager;
+            this.entitySpawner = entitySpawner;
             this.tickUpdater = tickUpdater;
             this.itemTouchSubscriber = itemTouchSubscriber;
         }
@@ -76,7 +76,7 @@ namespace LOP
         {
             if (tickUpdater.elapsedTime - lastEnemySpawnTime >= 10f)
             {
-                if (entityManager.GetEntities().Count() < 100)
+                if (entityRegistry.All.Count() < 100)
                 {
                     SpawnEnemies(10);
                     lastEnemySpawnTime = tickUpdater.elapsedTime;
@@ -112,7 +112,7 @@ namespace LOP
                 CharacterCreationData data = new CharacterCreationData
                 {
                     userId = playerId,
-                    entityId = entityManager.GenerateEntityId(),
+                    entityId = entitySpawner.GenerateEntityId(),
                     visualId = visualId,
                     characterCode = characterCode,
                     position = Vector3.right * i * 5,
@@ -126,13 +126,13 @@ namespace LOP
                     currentExp = 0,
                 };
 
-                LOPActor actor = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
+                entitySpawner.Spawn(data);
             }
         }
 
         private void HandleItemTouch(ItemTouch itemTouch)
         {
-            if (entityManager.GetEntity(itemTouch.itemId) != null)
+            if (entityRegistry.Get(itemTouch.itemId) != null)
             {
                 DespawnEntity(itemTouch.itemId);
 
@@ -186,7 +186,7 @@ namespace LOP
             CharacterCreationData data = new CharacterCreationData
             {
                 userId = "",
-                entityId = entityManager.GenerateEntityId(),
+                entityId = entitySpawner.GenerateEntityId(),
                 visualId = visualId,
                 characterCode = characterCode,
                 position = position,
@@ -200,11 +200,11 @@ namespace LOP
                 currentExp = 0,
             };
 
-            LOPActor actor = entityManager.CreateEntity<LOPActor, CharacterCreationData>(data);
+            entitySpawner.Spawn(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
-                EntityCreationData = entityCreationDataFactory.Create(entityRegistry.Get(actor.entityId)),
+                EntityCreationData = entityCreationDataFactory.Create(entityRegistry.Get(data.entityId)),
             };
 
             foreach (var session in sessionManager.GetAllSessions().OrEmpty())
@@ -220,7 +220,7 @@ namespace LOP
 
         private void DespawnEntity(string entityId)
         {
-            entityManager.DeleteEntityById(entityId);
+            entitySpawner.Despawn(entityId);
         }
         #endregion
     }

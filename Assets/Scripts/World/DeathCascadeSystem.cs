@@ -11,18 +11,18 @@ namespace LOP
     /// </summary>
     public class DeathCascadeSystem
     {
-        private readonly IEntityManager _entityManager;
+        private readonly EntitySpawner _entitySpawner;
         private readonly ISessionManager _sessionManager;
         private readonly IEntityCreationDataFactory _entityCreationDataFactory;
         private readonly GameFramework.World.EntityRegistry _entityRegistry;
 
         public DeathCascadeSystem(
-            IEntityManager entityManager,
+            EntitySpawner entitySpawner,
             ISessionManager sessionManager,
             IEntityCreationDataFactory entityCreationDataFactory,
             GameFramework.World.EntityRegistry entityRegistry)
         {
-            _entityManager = entityManager;
+            _entitySpawner = entitySpawner;
             _sessionManager = sessionManager;
             _entityCreationDataFactory = entityCreationDataFactory;
             _entityRegistry = entityRegistry;
@@ -49,7 +49,7 @@ namespace LOP
             }
             Vector3 position = GameFramework.World.EntityMotionExtensions.GetPosition(victim);
 
-            _entityManager.DeleteEntityById(death.victimId);
+            _entitySpawner.Despawn(death.victimId);
             SpawnExpMarble(position);
         }
 
@@ -60,7 +60,7 @@ namespace LOP
 
             ItemCreationData data = new ItemCreationData
             {
-                entityId = _entityManager.GenerateEntityId(),
+                entityId = _entitySpawner.GenerateEntityId(),
                 visualId = visualId,
                 itemCode = itemCode,
                 position = position,
@@ -68,11 +68,11 @@ namespace LOP
                 velocity = Vector3.zero,
             };
 
-            LOPActor actor = _entityManager.CreateEntity<LOPActor, ItemCreationData>(data);
+            _entitySpawner.Spawn(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
-                EntityCreationData = _entityCreationDataFactory.Create(_entityRegistry.Get(actor.entityId)),
+                EntityCreationData = _entityCreationDataFactory.Create(_entityRegistry.Get(data.entityId)),
             };
 
             foreach (var session in _sessionManager.GetAllSessions().OrEmpty())

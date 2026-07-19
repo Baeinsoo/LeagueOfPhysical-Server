@@ -13,11 +13,11 @@ namespace LOP
     {
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
 
-        public LOPActor entity { get; private set; }
+        public LOPActor actor { get; private set; }
 
-        public void SetEntity(LOPActor entity)
+        public void SetEntity(LOPActor actor)
         {
-            this.entity = entity;
+            this.actor = actor;
         }
 
         private GameObject _visualGameObject;
@@ -40,7 +40,7 @@ namespace LOP
 
         protected virtual void Start()
         {
-            var appearance = entityRegistry.Get(entity.entityId)?.Get<Appearance>();
+            var appearance = entityRegistry.Get(actor.entityId)?.Get<Appearance>();
             if (appearance != null)
             {
                 UpdateVisual(appearance.VisualId);
@@ -59,7 +59,7 @@ namespace LOP
                 Destroy(_visualGameObject);
             }
 
-            entity = null;
+            actor = null;
         }
 
         private async void UpdateVisual(string visualId)
@@ -80,7 +80,7 @@ namespace LOP
             await asyncOperationHandle.Task;
 
             // Addressables 로드는 여러 프레임 걸린다 — 그 사이 엔티티가 디스폰되면 registry에서 사라져 null.
-            var worldEntity = entityRegistry.Get(entity.entityId);
+            var worldEntity = entityRegistry.Get(actor.entityId);
             if (worldEntity == null)
             {
                 return;
@@ -95,7 +95,7 @@ namespace LOP
         {
             if (visualGameObject != null)
             {
-                var worldEntity = entityRegistry.Get(entity.entityId);
+                var worldEntity = entityRegistry.Get(actor.entityId);
                 visualGameObject.transform.position = GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity);
                 visualGameObject.transform.rotation = Quaternion.Euler(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity));
             }

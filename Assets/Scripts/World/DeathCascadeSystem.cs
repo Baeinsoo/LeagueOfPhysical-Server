@@ -68,11 +68,11 @@ namespace LOP
                 velocity = Vector3.zero,
             };
 
-            LOPActor entity = _entityManager.CreateEntity<LOPActor, ItemCreationData>(data);
+            LOPActor actor = _entityManager.CreateEntity<LOPActor, ItemCreationData>(data);
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
-                EntityCreationData = _entityCreationDataFactory.Create(entity),
+                EntityCreationData = _entityCreationDataFactory.Create(actor),
             };
 
             foreach (var session in _sessionManager.GetAllSessions().OrEmpty())

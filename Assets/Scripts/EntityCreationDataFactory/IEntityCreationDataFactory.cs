@@ -4,6 +4,6 @@ namespace LOP
 {
     public interface IEntityCreationDataFactory
     {
-        EntityCreationData Create(LOPActor entity);
+        EntityCreationData Create(LOPActor actor);
     }
 }

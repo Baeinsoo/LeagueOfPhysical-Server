@@ -36,8 +36,8 @@ namespace LOP
         private void OnInputCommandToS(InputCommandToS inputCommandToS)
         {
             ISession session = sessionManager.GetSessionById(inputCommandToS.SessionId);
-            LOPActor entity = runner.entityManager.GetEntityByUserId<LOPActor>(session.userId);
-            var buffer = entityRegistry.Get(entity.entityId).Get<InputBuffer>();
+            LOPActor actor = runner.entityManager.GetEntityByUserId<LOPActor>(session.userId);
+            var buffer = entityRegistry.Get(actor.entityId).Get<InputBuffer>();
             if (buffer == null)
             {
                 return;

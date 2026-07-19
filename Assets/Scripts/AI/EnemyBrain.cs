@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class EnemyBrain : IBrain<LOPActor>
+    public class EnemyBrain : IBrain
     {
         private const int AttackAbilityId = 3;   // TbAbility attack 행(grant-all로 모든 캐릭터 보유)
 
@@ -19,17 +19,15 @@ namespace LOP
             this.statsSystem = statsSystem;
         }
 
-        public void Think(LOPActor actor, double deltaTime)
+        public void Think(GameFramework.World.Entity worldEntity, double deltaTime)
         {
-            var worldEntity = entityRegistry.Get(actor.entityId);
             Vector3 entityPosition = GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity);
 
             //  Find the player
-            var actors = Runner.current.entityManager.GetEntities<LOPActor>();
-            LOPActor target = actors
-                .Where(e => entityRegistry.Get(e.entityId)?.Has<GameFramework.World.Ownership>() == true)
-                .Where(e => (GameFramework.World.EntityMotionExtensions.GetPosition(entityRegistry.Get(e.entityId)) - entityPosition).magnitude <= 10)
-                .OrderBy(e => (GameFramework.World.EntityMotionExtensions.GetPosition(entityRegistry.Get(e.entityId)) - entityPosition).sqrMagnitude)
+            GameFramework.World.Entity target = entityRegistry.All
+                .Where(e => e.Has<GameFramework.World.Ownership>())
+                .Where(e => (GameFramework.World.EntityMotionExtensions.GetPosition(e) - entityPosition).magnitude <= 10)
+                .OrderBy(e => (GameFramework.World.EntityMotionExtensions.GetPosition(e) - entityPosition).sqrMagnitude)
                 .FirstOrDefault();
 
             if (target == null)
@@ -37,8 +35,7 @@ namespace LOP
                 return;
             }
 
-            var targetWorldEntity = entityRegistry.Get(target.entityId);
-            Vector3 direction = GameFramework.World.EntityMotionExtensions.GetPosition(targetWorldEntity) - entityPosition;
+            Vector3 direction = GameFramework.World.EntityMotionExtensions.GetPosition(target) - entityPosition;
 
             // Rotate
             float myFloat = 0;
@@ -49,7 +46,7 @@ namespace LOP
             if (direction.magnitude < 2)
             {
                 //  Attack the player — 공격 어빌리티(id=3) 발동. 플레이어와 동일 경로라 데미지·연출 cue 자동.
-                abilityActivator.TryActivate(actor.entityId, AttackAbilityId, Runner.Time.tick);
+                abilityActivator.TryActivate(worldEntity.Id, AttackAbilityId, Runner.Time.tick);
             }
             else
             {

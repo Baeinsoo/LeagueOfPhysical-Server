@@ -161,6 +161,14 @@ namespace LOP
             return GetEntity<TEntity>(entityId);
         }
 
+        // 순수 로직 사이트(메시지핸들러/LOPRunner)가 LOPActor를 거치지 않고 userId→entityId만 얻기 위한
+        // 얇은 매핑 접근자. 뷰-매니저에 매핑을 유지하되(userEntityMap은 뷰 인덱스와 별개), 로직은 이 id로
+        // entityRegistry.Get(entityId)해 World.Entity를 얻는다.
+        public string GetEntityIdByUserId(string userId)
+        {
+            return userEntityMap[userId];
+        }
+
         public string GenerateEntityId()
         {
             return entityIdCounter++.ToString();
@@ -213,7 +221,8 @@ namespace LOP
 
             foreach (var actor in GetEntities<LOPActor>().OrEmpty())
             {
-                EntityCreationData entityCreationData = entityCreationDataFactory.Create(actor);
+                GameFramework.World.Entity worldEntity = entityRegistry.Get(actor.entityId);
+                EntityCreationData entityCreationData = entityCreationDataFactory.Create(worldEntity);
 
                 entityCreationDataList.Add(entityCreationData);
             }

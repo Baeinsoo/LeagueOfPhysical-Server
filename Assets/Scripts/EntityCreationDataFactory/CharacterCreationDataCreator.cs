@@ -1,22 +1,16 @@
 using GameFramework;
-using VContainer;
 
 namespace LOP
 {
-    public class CharacterCreationDataCreator : IEntityCreationDataCreator<LOPActor>
+    public class CharacterCreationDataCreator : IEntityCreationDataCreator
     {
-        [Inject]
-        private GameFramework.World.EntityRegistry entityRegistry;
-
         public EntityType EntityType => EntityType.Character;
 
-        public EntityCreationData Create(LOPActor lopEntity)
+        public EntityCreationData Create(GameFramework.World.Entity worldEntity)
         {
-            GameFramework.World.Entity worldEntity = entityRegistry.Get(lopEntity.entityId);
-
             var baseEntityCreationData = new BaseEntityCreationData
             {
-                EntityId = lopEntity.entityId,
+                EntityId = worldEntity.Id,
                 Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
                 Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
                 Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),
@@ -26,25 +20,25 @@ namespace LOP
             GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
             if (health == null)
             {
-                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Health not found for entity {lopEntity.entityId}");
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Health not found for entity {worldEntity.Id}");
             }
 
             GameFramework.World.Mana mana = worldEntity?.Get<GameFramework.World.Mana>();
             if (mana == null)
             {
-                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Mana not found for entity {lopEntity.entityId}");
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Mana not found for entity {worldEntity.Id}");
             }
 
             GameFramework.World.Level level = worldEntity?.Get<GameFramework.World.Level>();
             if (level == null)
             {
-                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Level not found for entity {lopEntity.entityId}");
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Level not found for entity {worldEntity.Id}");
             }
 
             GameFramework.World.Stats stats = worldEntity?.Get<GameFramework.World.Stats>();
             if (stats == null)
             {
-                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Stats not found for entity {lopEntity.entityId}");
+                UnityEngine.Debug.LogWarning($"[World] CharacterCreationData: Stats not found for entity {worldEntity.Id}");
             }
 
             global::CharacterCreationData characterCreationData = new global::CharacterCreationData

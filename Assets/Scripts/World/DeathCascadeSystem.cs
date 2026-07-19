@@ -41,13 +41,13 @@ namespace LOP
 
         private void ResolveDeath(GameFramework.World.DeathEvent death)
         {
-            LOPActor victim = _entityManager.GetEntity<LOPActor>(death.victimId);
+            GameFramework.World.Entity victim = _entityRegistry.Get(death.victimId);
             if (victim == null)
             {
                 Debug.LogWarning($"[World] DeathCascade: victim {death.victimId} not found");
                 return;
             }
-            Vector3 position = GameFramework.World.EntityMotionExtensions.GetPosition(_entityRegistry.Get(victim.entityId));
+            Vector3 position = GameFramework.World.EntityMotionExtensions.GetPosition(victim);
 
             _entityManager.DeleteEntityById(death.victimId);
             SpawnExpMarble(position);
@@ -72,7 +72,7 @@ namespace LOP
 
             EntitySpawnToC entitySpawnToC = new EntitySpawnToC
             {
-                EntityCreationData = _entityCreationDataFactory.Create(actor),
+                EntityCreationData = _entityCreationDataFactory.Create(_entityRegistry.Get(actor.entityId)),
             };
 
             foreach (var session in _sessionManager.GetAllSessions().OrEmpty())

@@ -54,18 +54,19 @@ namespace LOP
                 return;
             }
 
-            EntityCreationData[] allEntityCreationDatas = (runner as LOPRunner).entityManager.GetAllEntityCreationDatas();
+            LOPEntityManager lopEntityManager = (runner as LOPRunner).entityManager;
+            EntityCreationData[] allEntityCreationDatas = lopEntityManager.GetAllEntityCreationDatas();
 
             foreach (var gameInfoToS in gameInfoToSList)
             {
                 var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
-                var actor = runner.entityManager.GetEntityByUserId<LOPActor>(gameInfoToS.UserId);
+                string entityId = lopEntityManager.GetEntityIdByUserId(gameInfoToS.UserId);
 
                 var gameInfoToC = new GameInfoToC
                 {
-                    EntityId = actor.entityId,
+                    EntityId = entityId,
                     SessionId = session.sessionId,
-                    ExpectedNextSequence = entityRegistry.Get(actor.entityId).Get<InputBuffer>().ExpectedNextSequence,
+                    ExpectedNextSequence = entityRegistry.Get(entityId).Get<InputBuffer>().ExpectedNextSequence,
                     GameInfo = new GameInfo
                     {
                         Tick = Runner.Time.tick,

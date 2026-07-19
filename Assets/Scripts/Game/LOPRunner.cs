@@ -135,11 +135,11 @@ namespace LOP
 
         private void ProcessInput()
         {
-            IEnumerable<LOPActor> actors = new List<LOPActor>(entityManager.GetEntities<LOPActor>());
+            List<GameFramework.World.Entity> worldEntities = new List<GameFramework.World.Entity>(entityRegistry.All);
 
-            foreach (var actor in actors)
+            foreach (var worldEntity in worldEntities)
             {
-                var buffer = entityRegistry.Get(actor.entityId).Get<InputBuffer>();
+                var buffer = worldEntity.Get<InputBuffer>();
                 if (buffer == null)
                 {
                     continue;   // 입력 비조종(AI 등) — 버퍼 없음
@@ -175,18 +175,18 @@ namespace LOP
                 if (input.AbilityId != 0)
                 {
                     // 발동 연출 cue는 AbilityActivator가 내부에서 append한다(플레이어·AI 공용).
-                    abilityActivator.TryActivate(actor.entityId, input.AbilityId, Runner.Time.tick);
+                    abilityActivator.TryActivate(worldEntity.Id, input.AbilityId, Runner.Time.tick);
                 }
 
                 InputSequenceToC inputSequnceToC = new InputSequenceToC();
-                inputSequnceToC.EntityId = actor.entityId;
+                inputSequnceToC.EntityId = worldEntity.Id;
                 inputSequnceToC.InputSequence = new InputSequence
                 {
                     Tick = Runner.Time.tick,
                     Sequence = input.SequenceNumber,
                 };
 
-                string userId = entityManager.GetUserIdByEntityId(actor.entityId);
+                string userId = entityManager.GetUserIdByEntityId(worldEntity.Id);
                 ISession session = sessionManager.GetSessionByUserId(userId);
                 session.Send(inputSequnceToC);
             }
@@ -202,9 +202,9 @@ namespace LOP
                 return;
             }
 
-            foreach (var actor in new List<LOPActor>(entityManager.GetEntities<LOPActor>()))
+            foreach (var worldEntity in new List<GameFramework.World.Entity>(entityRegistry.All))
             {
-                var buffer = entityRegistry.Get(actor.entityId).Get<InputBuffer>();
+                var buffer = worldEntity.Get<InputBuffer>();
                 if (buffer == null)
                 {
                     continue;
@@ -216,7 +216,7 @@ namespace LOP
                     continue;
                 }
 
-                string userId = entityManager.GetUserIdByEntityId(actor.entityId);
+                string userId = entityManager.GetUserIdByEntityId(worldEntity.Id);
                 ISession session = sessionManager.GetSessionByUserId(userId);
                 if (session == null)
                 {
@@ -323,14 +323,14 @@ namespace LOP
 
             foreach (var session in sessionManager.GetAllSessions())
             {
-                LOPActor actor = entityManager.GetEntityByUserId<LOPActor>(session.userId);
+                string entityId = entityManager.GetEntityIdByUserId(session.userId);
 
                 // HP/MP/Level/Exp/StatPoints 모두 World 코어에서 읽는다.
-                GameFramework.World.Entity worldEntity = entityRegistry.Get(actor.entityId);
+                GameFramework.World.Entity worldEntity = entityRegistry.Get(entityId);
                 GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
                 if (health == null)
                 {
-                    Debug.LogWarning($"[World] UserEntitySnap: Health not found for entity {actor.entityId}");
+                    Debug.LogWarning($"[World] UserEntitySnap: Health not found for entity {entityId}");
                 }
 
                 UserEntitySnapToC entitySnapsToC = new UserEntitySnapToC();
@@ -339,21 +339,21 @@ namespace LOP
                 GameFramework.World.Mana mana = worldEntity?.Get<GameFramework.World.Mana>();
                 if (mana == null)
                 {
-                    Debug.LogWarning($"[World] UserEntitySnap: Mana not found for entity {actor.entityId}");
+                    Debug.LogWarning($"[World] UserEntitySnap: Mana not found for entity {entityId}");
                 }
                 entitySnapsToC.CurrentMP = mana?.Current ?? 0;
                 entitySnapsToC.MaxMP = mana?.Max ?? 0;
                 GameFramework.World.Level level = worldEntity?.Get<GameFramework.World.Level>();
                 if (level == null)
                 {
-                    Debug.LogWarning($"[World] UserEntitySnap: Level not found for entity {actor.entityId}");
+                    Debug.LogWarning($"[World] UserEntitySnap: Level not found for entity {entityId}");
                 }
                 entitySnapsToC.CurrentExp = level?.Exp ?? 0;
                 entitySnapsToC.Level = level?.Value ?? 0;
                 GameFramework.World.Stats stats = worldEntity?.Get<GameFramework.World.Stats>();
                 if (stats == null)
                 {
-                    Debug.LogWarning($"[World] UserEntitySnap: Stats not found for entity {actor.entityId}");
+                    Debug.LogWarning($"[World] UserEntitySnap: Stats not found for entity {entityId}");
                 }
                 entitySnapsToC.StatPoints = stats?.UnspentPoints ?? 0;
 

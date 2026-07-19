@@ -2,10 +2,19 @@ namespace LOP.Event.Entity
 {
     public struct EntityCreated
     {
-        public LOPActor actor;
-        public EntityCreated(LOPActor actor)
+        public string entityId;
+        public EntityCreated(string entityId)
         {
-            this.actor = actor;
+            this.entityId = entityId;
+        }
+    }
+
+    public struct EntityDestroyed
+    {
+        public string entityId;
+        public EntityDestroyed(string entityId)
+        {
+            this.entityId = entityId;
         }
     }
 

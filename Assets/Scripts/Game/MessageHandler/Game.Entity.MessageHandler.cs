@@ -7,9 +7,6 @@ namespace LOP
     public class GameEntityMessageHandler : IGameMessageHandler
     {
         [Inject]
-        private IRunner runner;
-
-        [Inject]
         private ISessionManager sessionManager;
 
         [Inject]
@@ -17,6 +14,9 @@ namespace LOP
 
         [Inject]
         private GameFramework.World.StatsSystem statsSystem;
+
+        [Inject]
+        private EntitySpawner entitySpawner;
 
         [Inject]
         private ISubscriber<StatAllocationToS> statAllocationSubscriber;
@@ -36,7 +36,7 @@ namespace LOP
         private void OnStatAllocationToS(StatAllocationToS statAllocationToS)
         {
             ISession session = sessionManager.GetSessionById(statAllocationToS.SessionId);
-            string entityId = (runner as LOPRunner).entityManager.GetEntityIdByUserId(session.userId);
+            string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
             GameFramework.World.Stats stats = entityRegistry.Get(entityId)?.Get<GameFramework.World.Stats>();
             if (stats == null)
             {

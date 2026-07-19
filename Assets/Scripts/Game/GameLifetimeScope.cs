@@ -13,7 +13,6 @@ namespace LOP
     public class GameLifetimeScope : LifetimeScope
     {
         [SerializeField, FormerlySerializedAs("gameEngine")] private LOPRunner runner;
-        [SerializeField] private LOPEntityManager entityManager;
 
         protected override void Configure(IContainerBuilder builder)
         {
@@ -34,7 +33,6 @@ namespace LOP
             builder.Register<MatchSeed>(Lifetime.Singleton).AsSelf().As<IMatchSeed>();
 
             // effect 실행 — executor가 타입별 핸들러로 디스패치. AbilitySystem이 Active 창에서 구동.
-            // (entity manager는 아래 RegisterComponent(entityManager).As<IEntityManager>()로 이미 등록 → 핸들러가 주입받음.)
             builder.Register<AbilityEffectExecutor>(Lifetime.Singleton);
             builder.Register<IAbilityEffectHandler>(c => new StatusEffectApplyEffectHandler(
                 c.Resolve<StatusEffectSystem>(),
@@ -60,7 +58,6 @@ namespace LOP
 
             // runner은 게임 서비스에 의존하므로 부모(Room)가 아닌 이 컨테이너에서 주입돼야 한다.
             builder.RegisterComponent(runner).As<IRunner>();
-            builder.RegisterComponent(entityManager).As<IEntityManager>();
             // GameRuleSystem이 sim 서비스로 쓰는 ITickUpdater (runner의 형제 컴포넌트). 호스트 역참조를 피하기 위해 직접 등록.
             builder.Register<ITickUpdater>(_ => runner.GetComponent<ITickUpdater>(), Lifetime.Singleton);
 
@@ -68,14 +65,15 @@ namespace LOP
             builder.RegisterEntryPoint<GameInfoMessageHandler>();
             builder.RegisterEntryPoint<GameEntityMessageHandler>();
             builder.RegisterEntryPoint<GameInputMessageHandler>();
-            builder.RegisterEntryPoint<EntityViewSpawner>();   // 서버 뷰 스포너(EntityCreated 반응)
+            builder.RegisterEntryPoint<EntityBinder>();   // 서버 뷰 스포너(EntityCreated/EntityDestroyed 반응)
 
             builder.Register<CombatConfigProvider>(Lifetime.Singleton);
             builder.Register<CombatConfig>(c => c.Resolve<CombatConfigProvider>().Get(), Lifetime.Singleton);
             builder.Register<LOPCombatSystem>(Lifetime.Singleton);
-            builder.Register<IEntityCreator, CharacterCreator>(Lifetime.Singleton);
-            builder.Register<IEntityCreator, ItemCreator>(Lifetime.Singleton);
-            builder.Register<IEntityFactory, EntityFactory>(Lifetime.Singleton);
+            builder.Register<CharacterCreator>(Lifetime.Singleton);
+            builder.Register<ItemCreator>(Lifetime.Singleton);
+            builder.Register<EntitySpawner>(Lifetime.Singleton);
+            builder.Register<ActorRegistry>(Lifetime.Singleton);
             builder.Register<IEntityCreationDataCreator, CharacterCreationDataCreator>(Lifetime.Singleton);
             builder.Register<IEntityCreationDataCreator, ItemCreationDataCreator>(Lifetime.Singleton);
             builder.Register<IEntityCreationDataFactory, EntityCreationDataFactory>(Lifetime.Singleton);

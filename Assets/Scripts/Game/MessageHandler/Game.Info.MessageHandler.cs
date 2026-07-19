@@ -22,6 +22,12 @@ namespace LOP
         private MatchSeed matchSeed;
 
         [Inject]
+        private IEntityCreationDataFactory entityCreationDataFactory;
+
+        [Inject]
+        private EntitySpawner entitySpawner;
+
+        [Inject]
         private ISubscriber<GameInfoToS> gameInfoSubscriber;
 
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
@@ -54,13 +60,12 @@ namespace LOP
                 return;
             }
 
-            LOPEntityManager lopEntityManager = (runner as LOPRunner).entityManager;
-            EntityCreationData[] allEntityCreationDatas = lopEntityManager.GetAllEntityCreationDatas();
+            EntityCreationData[] allEntityCreationDatas = BuildAllEntityCreationDatas();
 
             foreach (var gameInfoToS in gameInfoToSList)
             {
                 var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
-                string entityId = lopEntityManager.GetEntityIdByUserId(gameInfoToS.UserId);
+                string entityId = entitySpawner.GetEntityIdByUserId(gameInfoToS.UserId);
 
                 var gameInfoToC = new GameInfoToC
                 {
@@ -82,6 +87,16 @@ namespace LOP
             }
 
             gameInfoToSList.Clear();
+        }
+
+        private EntityCreationData[] BuildAllEntityCreationDatas()
+        {
+            var list = new List<EntityCreationData>();
+            foreach (var worldEntity in entityRegistry.All)
+            {
+                list.Add(entityCreationDataFactory.Create(worldEntity));
+            }
+            return list.ToArray();
         }
     }
 }

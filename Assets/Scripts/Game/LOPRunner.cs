@@ -28,12 +28,11 @@ namespace LOP
 
         [Inject] private IMapLoader mapLoader;
         [Inject] private GameRuleSystem gameRuleSystem;
+        [Inject] private EntitySpawner entitySpawner;
 
         private const string MapId = "Assets/Art/Scenes/FlapWangMap.unity";
 
         private readonly Restorer restorer = new Restorer();
-
-        public new LOPEntityManager entityManager => base.entityManager as LOPEntityManager;
 
         protected override INetworkTime CreateNetworkTime() => new MirrorNetworkTime();
 
@@ -186,7 +185,7 @@ namespace LOP
                     Sequence = input.SequenceNumber,
                 };
 
-                string userId = entityManager.GetUserIdByEntityId(worldEntity.Id);
+                string userId = worldEntity.Get<GameFramework.World.Ownership>()?.OwnerId;
                 ISession session = sessionManager.GetSessionByUserId(userId);
                 session.Send(inputSequnceToC);
             }
@@ -216,7 +215,7 @@ namespace LOP
                     continue;
                 }
 
-                string userId = entityManager.GetUserIdByEntityId(worldEntity.Id);
+                string userId = worldEntity.Get<GameFramework.World.Ownership>()?.OwnerId;
                 ISession session = sessionManager.GetSessionByUserId(userId);
                 if (session == null)
                 {
@@ -237,8 +236,6 @@ namespace LOP
         private void UpdateEntity()
         {
             DispatchEvent<BeforeEntityUpdate>();
-
-            entityManager.UpdateEntities();
 
             DispatchEvent<AfterEntityUpdate>();
         }
@@ -285,7 +282,7 @@ namespace LOP
         {
             DispatchEvent<End>();
 
-            EntitySnap[] allEntitySnaps = entityManager.GetAllEntitySnaps();
+            EntitySnap[] allEntitySnaps = BuildAllEntitySnaps();
 
             // durable 스냅샷 → unreliable(막 배송). 유실돼도 다음 스냅이 최신 전체를 덮음.
             // Mirror unreliable은 큰 메시지 조각내기(fragment) 불가 → 배치 한도(≈1184B) 초과 시 통째 드롭.
@@ -323,7 +320,7 @@ namespace LOP
 
             foreach (var session in sessionManager.GetAllSessions())
             {
-                string entityId = entityManager.GetEntityIdByUserId(session.userId);
+                string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
 
                 // HP/MP/Level/Exp/StatPoints 모두 World 코어에서 읽는다.
                 GameFramework.World.Entity worldEntity = entityRegistry.Get(entityId);
@@ -360,7 +357,47 @@ namespace LOP
                 session.Send(entitySnapsToC);
             }
 
-            entityManager.DestroyMarkedEntities();
+            entitySpawner.FlushDespawns();
+        }
+
+        private EntitySnap[] BuildAllEntitySnaps()
+        {
+            var entitySnapList = new List<EntitySnap>();
+
+            foreach (var worldEntity in entityRegistry.All)
+            {
+                GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
+                var snap = new EntitySnap
+                {
+                    EntityId = worldEntity.Id,
+                    Position = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetPosition(worldEntity)),
+                    Rotation = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetRotation(worldEntity)),
+                    Velocity = MapperConfig.mapper.Map<ProtoVector3>(GameFramework.World.EntityMotionExtensions.GetVelocity(worldEntity)),
+                    MaxHP = health?.Max ?? 0,
+                    CurrentHP = health?.Current ?? 0,
+                };
+
+                var contributions = worldEntity?.Get<MotionContributions>();
+                if (contributions != null)
+                {
+                    foreach (var c in contributions.Items)
+                    {
+                        snap.MotionContributions.Add(new ProtoMotionContribution
+                        {
+                            Horizontal = new ProtoVector3 { X = c.Horizontal.X, Y = c.Horizontal.Y, Z = c.Horizontal.Z },
+                            Mode = (int)c.Mode,
+                            Priority = c.Priority,
+                            StartTick = c.StartTick,
+                            EndTick = c.EndTick,
+                            DecayPerTick = c.DecayPerTick,
+                        });
+                    }
+                }
+
+                entitySnapList.Add(snap);
+            }
+
+            return entitySnapList.ToArray();
         }
     }
 }

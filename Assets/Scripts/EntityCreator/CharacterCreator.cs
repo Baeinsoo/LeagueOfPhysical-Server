@@ -4,14 +4,13 @@ using VContainer;
 
 namespace LOP
 {
-    public class CharacterCreator : IEntityCreator<LOPActor, CharacterCreationData>
+    public class CharacterCreator
     {
-        [Inject] private IObjectResolver objectResolver;
         [Inject] private GameFramework.World.EntityRegistry entityRegistry;
         [Inject] private AbilitySystem abilitySystem;
         [Inject] private LOP.MasterData.LOPMasterData md;
 
-        public LOPActor Create(CharacterCreationData creationData)
+        public void Create(CharacterCreationData creationData)
         {
             var worldEntity = new GameFramework.World.Entity(creationData.entityId);
             worldEntity.Add(new GameFramework.World.Transform
@@ -58,14 +57,7 @@ namespace LOP
                 abilitySystem.Grant(worldEntity, 4);
             }
 
-            // 앵커: 뷰(물리/테스트렌더/AI)는 EntityViewSpawner가 EntityCreated 반응으로 붙인다.
-            GameObject root = new GameObject($"Actor_{creationData.entityId}");
-            LOPActor actor = root.AddComponent<LOPActor>();
-            objectResolver.Inject(actor);
-            actor.Initialize(creationData);
-
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");
-            return actor;
         }
     }
 }

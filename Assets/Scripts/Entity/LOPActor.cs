@@ -1,4 +1,3 @@
-using GameFramework;
 using UnityEngine;
 
 namespace LOP
@@ -7,10 +6,9 @@ namespace LOP
     {
         public string entityId { get; private set; }
 
-        public virtual void Initialize<TEntityCreationData>(TEntityCreationData creationData)
-            where TEntityCreationData : struct, IEntityCreationData
+        public void SetEntityId(string entityId)
         {
-            entityId = creationData.entityId;
+            this.entityId = entityId;
         }
     }
 }

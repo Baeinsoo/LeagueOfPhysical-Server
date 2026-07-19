@@ -20,6 +20,7 @@ namespace LOP
 
             // 엔티티 라이프사이클 / 아이템 접촉
             builder.RegisterMessageBroker<Event.Entity.EntityCreated>(options);
+            builder.RegisterMessageBroker<Event.Entity.EntityDestroyed>(options);
             builder.RegisterMessageBroker<Event.Entity.ItemTouch>(options);
 
             // 네트워크 수신(NetworkMessageDispatcher가 발행 → MessageHandler가 구독)

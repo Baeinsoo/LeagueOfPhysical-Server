@@ -7,9 +7,6 @@ namespace LOP
     public class GameInputMessageHandler : IGameMessageHandler
     {
         [Inject]
-        private IRunner runner;
-
-        [Inject]
         private ISessionManager sessionManager;
 
         [Inject]
@@ -17,6 +14,9 @@ namespace LOP
 
         [Inject]
         private InputBufferSystem inputBufferSystem;
+
+        [Inject]
+        private EntitySpawner entitySpawner;
 
         [Inject]
         private ISubscriber<InputCommandToS> inputCommandSubscriber;
@@ -36,7 +36,7 @@ namespace LOP
         private void OnInputCommandToS(InputCommandToS inputCommandToS)
         {
             ISession session = sessionManager.GetSessionById(inputCommandToS.SessionId);
-            string entityId = (runner as LOPRunner).entityManager.GetEntityIdByUserId(session.userId);
+            string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
             var buffer = entityRegistry.Get(entityId).Get<InputBuffer>();
             if (buffer == null)
             {

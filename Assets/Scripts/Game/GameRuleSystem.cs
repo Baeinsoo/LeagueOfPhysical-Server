@@ -1,4 +1,5 @@
 using GameFramework;
+using GameFramework.Rng;
 using LOP.Event.Entity;
 using MessagePipe;
 using System;

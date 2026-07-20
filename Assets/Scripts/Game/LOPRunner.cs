@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using GameFramework;
+using GameFramework.Physics;
 using VContainer;
 using LOP.Event.LOPRunner.Update;
 using GameFramework.Netcode;

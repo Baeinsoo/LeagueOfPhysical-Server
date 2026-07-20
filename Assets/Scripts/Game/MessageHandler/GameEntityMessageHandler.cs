@@ -4,7 +4,7 @@ using VContainer;
 
 namespace LOP
 {
-    public class GameEntityMessageHandler : IGameMessageHandler
+    public class GameEntityMessageHandler : MessageHandlerBase
     {
         [Inject]
         private ISessionManager sessionManager;
@@ -21,17 +21,7 @@ namespace LOP
         [Inject]
         private ISubscriber<StatAllocationToS> statAllocationSubscriber;
 
-        private System.IDisposable subscription;
-
-        public void Initialize()
-        {
-            subscription = statAllocationSubscriber.Subscribe(OnStatAllocationToS);
-        }
-
-        public void Dispose()
-        {
-            subscription?.Dispose();
-        }
+        protected override void Subscribe() => Track(statAllocationSubscriber.Subscribe(OnStatAllocationToS));
 
         private void OnStatAllocationToS(StatAllocationToS statAllocationToS)
         {

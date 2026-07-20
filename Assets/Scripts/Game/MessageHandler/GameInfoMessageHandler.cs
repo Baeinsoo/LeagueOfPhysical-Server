@@ -7,7 +7,7 @@ using VContainer;
 
 namespace LOP
 {
-    public class GameInfoMessageHandler : IGameMessageHandler
+    public class GameInfoMessageHandler : MessageHandlerBase
     {
         [Inject]
         private IRunner runner;
@@ -31,20 +31,17 @@ namespace LOP
         private ISubscriber<GameInfoToS> gameInfoSubscriber;
 
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
-        private System.IDisposable subscription;
 
-        public void Initialize()
+        protected override void Subscribe()
         {
-            subscription = gameInfoSubscriber.Subscribe(OnGameInfoToS);
-
+            Track(gameInfoSubscriber.Subscribe(OnGameInfoToS));
             runner.AddListener(this);
         }
 
-        public void Dispose()
+        public override void Dispose()
         {
-            subscription?.Dispose();
-
-            runner.RemoveListener(this);
+            base.Dispose();               // 구독 일괄 해제
+            runner.RemoveListener(this);  // 추가 teardown
         }
 
         private void OnGameInfoToS(GameInfoToS gameInfoToS)

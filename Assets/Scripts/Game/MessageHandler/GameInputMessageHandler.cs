@@ -4,7 +4,7 @@ using VContainer;
 
 namespace LOP
 {
-    public class GameInputMessageHandler : IGameMessageHandler
+    public class GameInputMessageHandler : MessageHandlerBase
     {
         [Inject]
         private ISessionManager sessionManager;
@@ -21,17 +21,7 @@ namespace LOP
         [Inject]
         private ISubscriber<InputCommandToS> inputCommandSubscriber;
 
-        private System.IDisposable subscription;
-
-        public void Initialize()
-        {
-            subscription = inputCommandSubscriber.Subscribe(OnInputCommandToS);
-        }
-
-        public void Dispose()
-        {
-            subscription?.Dispose();
-        }
+        protected override void Subscribe() => Track(inputCommandSubscriber.Subscribe(OnInputCommandToS));
 
         private void OnInputCommandToS(InputCommandToS inputCommandToS)
         {

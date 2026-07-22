@@ -4,7 +4,6 @@ using MessagePipe;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
-using VContainer;
 
 namespace LOP
 {
@@ -14,16 +13,32 @@ namespace LOP
     /// </summary>
     public class EntitySpawner
     {
-        [Inject] private ISessionManager sessionManager;
-        [Inject] private GameFramework.World.EntityRegistry entityRegistry;
-        [Inject] private CharacterCreator characterCreator;
-        [Inject] private ItemCreator itemCreator;
-        [Inject] private IPublisher<EntityCreated> entityCreatedPublisher;
-        [Inject] private IPublisher<EntityDestroyed> entityDestroyedPublisher;
+        private readonly ISessionManager sessionManager;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly CharacterCreator characterCreator;
+        private readonly ItemCreator itemCreator;
+        private readonly IPublisher<EntityCreated> entityCreatedPublisher;
+        private readonly IPublisher<EntityDestroyed> entityDestroyedPublisher;
 
         private readonly Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
         private readonly HashSet<string> entitiesToDestroy = new HashSet<string>();
         private int entityIdCounter = 1;
+
+        public EntitySpawner(
+            ISessionManager sessionManager,
+            GameFramework.World.EntityRegistry entityRegistry,
+            CharacterCreator characterCreator,
+            ItemCreator itemCreator,
+            IPublisher<EntityCreated> entityCreatedPublisher,
+            IPublisher<EntityDestroyed> entityDestroyedPublisher)
+        {
+            this.sessionManager = sessionManager;
+            this.entityRegistry = entityRegistry;
+            this.characterCreator = characterCreator;
+            this.itemCreator = itemCreator;
+            this.entityCreatedPublisher = entityCreatedPublisher;
+            this.entityDestroyedPublisher = entityDestroyedPublisher;
+        }
 
         public string GenerateEntityId()
         {

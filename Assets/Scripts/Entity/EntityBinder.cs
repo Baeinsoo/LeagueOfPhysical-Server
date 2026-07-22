@@ -16,11 +16,25 @@ namespace LOP
     /// </summary>
     public class EntityBinder : MessageHandlerBase
     {
-        [Inject] private IObjectResolver objectResolver;
-        [Inject] private ISubscriber<EntityCreated> entityCreatedSubscriber;
-        [Inject] private ISubscriber<EntityDestroyed> entityDestroyedSubscriber;
-        [Inject] private GameFramework.World.EntityRegistry entityRegistry;
-        [Inject] private ActorRegistry actorRegistry;
+        private readonly IObjectResolver objectResolver;
+        private readonly ISubscriber<EntityCreated> entityCreatedSubscriber;
+        private readonly ISubscriber<EntityDestroyed> entityDestroyedSubscriber;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly ActorRegistry actorRegistry;
+
+        public EntityBinder(
+            IObjectResolver objectResolver,
+            ISubscriber<EntityCreated> entityCreatedSubscriber,
+            ISubscriber<EntityDestroyed> entityDestroyedSubscriber,
+            GameFramework.World.EntityRegistry entityRegistry,
+            ActorRegistry actorRegistry)
+        {
+            this.objectResolver = objectResolver;
+            this.entityCreatedSubscriber = entityCreatedSubscriber;
+            this.entityDestroyedSubscriber = entityDestroyedSubscriber;
+            this.entityRegistry = entityRegistry;
+            this.actorRegistry = actorRegistry;
+        }
 
         protected override void Subscribe()
         {

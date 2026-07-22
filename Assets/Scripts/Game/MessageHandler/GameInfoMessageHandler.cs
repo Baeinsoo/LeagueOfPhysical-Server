@@ -3,34 +3,38 @@ using LOP.Event.LOPRunner.Update;
 using MessagePipe;
 using System.Collections.Generic;
 using UnityEngine;
-using VContainer;
 
 namespace LOP
 {
     public class GameInfoMessageHandler : MessageHandlerBase
     {
-        [Inject]
-        private IRunner runner;
-
-        [Inject]
-        private ISessionManager sessionManager;
-
-        [Inject]
-        private GameFramework.World.EntityRegistry entityRegistry;
-
-        [Inject]
-        private MatchSeed matchSeed;
-
-        [Inject]
-        private IEntityCreationDataFactory entityCreationDataFactory;
-
-        [Inject]
-        private EntitySpawner entitySpawner;
-
-        [Inject]
-        private ISubscriber<GameInfoToS> gameInfoSubscriber;
+        private readonly IRunner runner;
+        private readonly ISessionManager sessionManager;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly MatchSeed matchSeed;
+        private readonly IEntityCreationDataFactory entityCreationDataFactory;
+        private readonly EntitySpawner entitySpawner;
+        private readonly ISubscriber<GameInfoToS> gameInfoSubscriber;
 
         private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
+
+        public GameInfoMessageHandler(
+            IRunner runner,
+            ISessionManager sessionManager,
+            GameFramework.World.EntityRegistry entityRegistry,
+            MatchSeed matchSeed,
+            IEntityCreationDataFactory entityCreationDataFactory,
+            EntitySpawner entitySpawner,
+            ISubscriber<GameInfoToS> gameInfoSubscriber)
+        {
+            this.runner = runner;
+            this.sessionManager = sessionManager;
+            this.entityRegistry = entityRegistry;
+            this.matchSeed = matchSeed;
+            this.entityCreationDataFactory = entityCreationDataFactory;
+            this.entitySpawner = entitySpawner;
+            this.gameInfoSubscriber = gameInfoSubscriber;
+        }
 
         protected override void Subscribe()
         {

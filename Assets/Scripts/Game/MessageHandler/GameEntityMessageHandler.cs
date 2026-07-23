@@ -1,25 +1,29 @@
 using GameFramework;
 using MessagePipe;
-using VContainer;
 
 namespace LOP
 {
     public class GameEntityMessageHandler : MessageHandlerBase
     {
-        [Inject]
-        private ISessionManager sessionManager;
+        private readonly ISessionManager sessionManager;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly GameFramework.World.StatsSystem statsSystem;
+        private readonly EntitySpawner entitySpawner;
+        private readonly ISubscriber<StatAllocationToS> statAllocationSubscriber;
 
-        [Inject]
-        private GameFramework.World.EntityRegistry entityRegistry;
-
-        [Inject]
-        private GameFramework.World.StatsSystem statsSystem;
-
-        [Inject]
-        private EntitySpawner entitySpawner;
-
-        [Inject]
-        private ISubscriber<StatAllocationToS> statAllocationSubscriber;
+        public GameEntityMessageHandler(
+            ISessionManager sessionManager,
+            GameFramework.World.EntityRegistry entityRegistry,
+            GameFramework.World.StatsSystem statsSystem,
+            EntitySpawner entitySpawner,
+            ISubscriber<StatAllocationToS> statAllocationSubscriber)
+        {
+            this.sessionManager = sessionManager;
+            this.entityRegistry = entityRegistry;
+            this.statsSystem = statsSystem;
+            this.entitySpawner = entitySpawner;
+            this.statAllocationSubscriber = statAllocationSubscriber;
+        }
 
         protected override void Subscribe() => Track(statAllocationSubscriber.Subscribe(OnStatAllocationToS));
 

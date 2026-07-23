@@ -9,7 +9,7 @@ using VContainer;
 
 namespace LOP
 {
-    [DIMonoBehaviour]
+    [SceneInjectMonoBehaviour]
     public class LOPNetworkAuthenticator : NetworkAuthenticator
     {
         [Inject]

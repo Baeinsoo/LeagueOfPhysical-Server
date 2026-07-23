@@ -1,14 +1,23 @@
 using GameFramework;
 using UnityEngine;
-using VContainer;
 
 namespace LOP
 {
     public class CharacterCreator
     {
-        [Inject] private GameFramework.World.EntityRegistry entityRegistry;
-        [Inject] private AbilitySystem abilitySystem;
-        [Inject] private LOP.MasterData.LOPMasterData md;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly AbilitySystem abilitySystem;
+        private readonly LOP.MasterData.LOPMasterData md;
+
+        public CharacterCreator(
+            GameFramework.World.EntityRegistry entityRegistry,
+            AbilitySystem abilitySystem,
+            LOP.MasterData.LOPMasterData md)
+        {
+            this.entityRegistry = entityRegistry;
+            this.abilitySystem = abilitySystem;
+            this.md = md;
+        }
 
         public void Create(CharacterCreationData creationData)
         {

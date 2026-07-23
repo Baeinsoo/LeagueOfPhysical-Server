@@ -1,25 +1,29 @@
 using GameFramework;
 using MessagePipe;
-using VContainer;
 
 namespace LOP
 {
     public class GameInputMessageHandler : MessageHandlerBase
     {
-        [Inject]
-        private ISessionManager sessionManager;
+        private readonly ISessionManager sessionManager;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly InputBufferSystem inputBufferSystem;
+        private readonly EntitySpawner entitySpawner;
+        private readonly ISubscriber<InputCommandToS> inputCommandSubscriber;
 
-        [Inject]
-        private GameFramework.World.EntityRegistry entityRegistry;
-
-        [Inject]
-        private InputBufferSystem inputBufferSystem;
-
-        [Inject]
-        private EntitySpawner entitySpawner;
-
-        [Inject]
-        private ISubscriber<InputCommandToS> inputCommandSubscriber;
+        public GameInputMessageHandler(
+            ISessionManager sessionManager,
+            GameFramework.World.EntityRegistry entityRegistry,
+            InputBufferSystem inputBufferSystem,
+            EntitySpawner entitySpawner,
+            ISubscriber<InputCommandToS> inputCommandSubscriber)
+        {
+            this.sessionManager = sessionManager;
+            this.entityRegistry = entityRegistry;
+            this.inputBufferSystem = inputBufferSystem;
+            this.entitySpawner = entitySpawner;
+            this.inputCommandSubscriber = inputCommandSubscriber;
+        }
 
         protected override void Subscribe() => Track(inputCommandSubscriber.Subscribe(OnInputCommandToS));
 

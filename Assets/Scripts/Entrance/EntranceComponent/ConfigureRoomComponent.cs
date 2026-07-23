@@ -4,14 +4,17 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading.Tasks;
-using VContainer;
 
 namespace LOP
 {
     public class ConfigureRoomComponent : IEntranceComponent
     {
-        [Inject]
-        private IRoomDataStore roomDataStore;
+        private readonly IRoomDataStore roomDataStore;
+
+        public ConfigureRoomComponent(IRoomDataStore roomDataStore)
+        {
+            this.roomDataStore = roomDataStore;
+        }
 
         public async Task Execute()
         {

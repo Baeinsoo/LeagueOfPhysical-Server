@@ -40,7 +40,7 @@ namespace LOP
 
         public override async Task InitializeAsync()
         {
-            gameState = Initializing.State;
+            gameState = RunnerState.Initializing;
 
             var oldSimulationMode = Physics.simulationMode;
             var oldAutoSyncTransforms = Physics.autoSyncTransforms;
@@ -64,7 +64,7 @@ namespace LOP
 
             gameRuleSystem.Initialize();
 
-            gameState = Initialized.State;
+            gameState = RunnerState.Initialized;
         }
 
         public override async Task DeinitializeAsync()
@@ -82,14 +82,14 @@ namespace LOP
         {
             base.Run(tick, interval, elapsedTime);
 
-            gameState = Playing.State;
+            gameState = RunnerState.Playing;
         }
 
         public override void Stop()
         {
             base.Stop();
 
-            gameState = Paused.State;
+            gameState = RunnerState.Paused;
         }
 
         private void LateUpdate()
@@ -103,7 +103,7 @@ namespace LOP
         /// <summary>매치 종료 진입점. 종료 판정은 서버 권위이고, 클라는 통보를 받아 같은 이름의 메서드로 들어온다.</summary>
         public void EndMatch()
         {
-            gameState = GameOver.State;
+            gameState = RunnerState.GameOver;
         }
 
         public override void UpdateRunner()

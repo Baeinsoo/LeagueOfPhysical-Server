@@ -16,7 +16,9 @@ namespace LOP.UI
             this.runner = runner;
         }
 
-        public bool IsRunning => runner.gameState >= RunnerState.Playing;
+        // tickUpdater 체크가 결합의 핵심: Deinitialize가 tickUpdater를 null로 만들 때 gameState는
+        // 그대로라(GameOver 등) 종료 창에서 getter가 null 역참조하는 걸 막는다.
+        public bool IsRunning => runner.tickUpdater != null && runner.gameState >= RunnerState.Playing;
 
         public long Tick => runner.tickUpdater.tick;
 

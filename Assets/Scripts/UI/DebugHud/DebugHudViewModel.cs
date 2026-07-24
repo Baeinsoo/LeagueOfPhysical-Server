@@ -9,10 +9,19 @@ namespace LOP.UI
     /// </summary>
     public class DebugHudViewModel
     {
-        public bool IsRunning => Runner.current != null;
+        private readonly IRunner runner;
 
-        public long Tick => Runner.Time.tick;
+        public DebugHudViewModel(IRunner runner)
+        {
+            this.runner = runner;
+        }
 
-        public double ElapsedTime => Runner.Time.elapsedTime;
+        // tickUpdater 체크가 결합의 핵심: Deinitialize가 tickUpdater를 null로 만들 때 gameState는
+        // 그대로라(GameOver 등) 종료 창에서 getter가 null 역참조하는 걸 막는다.
+        public bool IsRunning => runner.tickUpdater != null && runner.gameState >= RunnerState.Playing;
+
+        public long Tick => runner.tickUpdater.tick;
+
+        public double ElapsedTime => runner.tickUpdater.elapsedTime;
     }
 }

@@ -5,9 +5,11 @@ namespace LOP
 {
     public class LOPTickUpdater : TickUpdaterBase
     {
+        public GameFramework.Netcode.INetworkTime networkTime;
+
         protected override void OnElapsedTimeUpdate()
         {
-            elapsedTime = Runner.NetworkTime.serverNow;
+            elapsedTime = networkTime.ServerNow;
         }
     }
 }

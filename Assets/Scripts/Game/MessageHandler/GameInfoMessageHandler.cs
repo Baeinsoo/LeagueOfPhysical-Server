@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class GameInfoMessageHandler : MessageHandlerBase
+    public class GameInfoMessageHandler : MessageHandlerBase, ITickSystem
     {
         private readonly IRunner runner;
         private readonly ISessionManager sessionManager;
@@ -39,13 +39,13 @@ namespace LOP
         protected override void Subscribe()
         {
             Track(gameInfoSubscriber.Subscribe(OnGameInfoToS));
-            runner.AddListener(this);
+            runner.RegisterSystem<End>(this);
         }
 
         public override void Dispose()
         {
-            base.Dispose();               // 구독 일괄 해제
-            runner.RemoveListener(this);  // 추가 teardown
+            base.Dispose();                  // 구독 일괄 해제
+            runner.UnregisterSystem(this);   // 추가 teardown
         }
 
         private void OnGameInfoToS(GameInfoToS gameInfoToS)
@@ -53,8 +53,7 @@ namespace LOP
             gameInfoToSList.Add(gameInfoToS);
         }
 
-        [RunnerListen(typeof(End))]
-        private void OnEnd()
+        public void Tick(long tick, float deltaTime)
         {
             if (gameInfoToSList.Count == 0)
             {

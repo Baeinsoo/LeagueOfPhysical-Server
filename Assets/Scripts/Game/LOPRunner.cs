@@ -135,7 +135,7 @@ namespace LOP
 
         private void BeginUpdate()
         {
-            DispatchEvent<Begin>();
+            RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.interval);
         }
 
         private void ProcessNetworkMessage()
@@ -245,9 +245,6 @@ namespace LOP
 
         private void UpdateEntity()
         {
-            DispatchEvent<BeforeEntityUpdate>();
-
-            DispatchEvent<AfterEntityUpdate>();
         }
 
         private void UpdateAI()
@@ -256,8 +253,6 @@ namespace LOP
 
         private void SimulatePhysics()
         {
-            DispatchEvent<BeforePhysicsSimulation>();
-
             // World.Transform → rb 팔로우: PhysicsBody 가진 모든 엔티티(내 캐릭=예측, 남·아이템=보간).
             // Simulated는 world.Tick서 이미 밀렸으나 idempotent. per-entity LOPEntityController 대체.
             foreach (var entity in entityRegistry.All)
@@ -266,8 +261,6 @@ namespace LOP
             }
 
             physicsSimulator.Simulate((float)tickUpdater.interval);
-
-            DispatchEvent<AfterPhysicsSimulation>();
         }
 
         private void ProcessDeaths()
@@ -290,7 +283,7 @@ namespace LOP
 
         private void EndUpdate()
         {
-            DispatchEvent<End>();
+            RunPhase<End>(tickUpdater.tick, (float)tickUpdater.interval);
 
             EntitySnap[] allEntitySnaps = BuildAllEntitySnaps();
 

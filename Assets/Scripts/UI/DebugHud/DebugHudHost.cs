@@ -1,5 +1,7 @@
+using GameFramework;
 using UnityEngine;
 using UnityEngine.UIElements;
+using VContainer;
 
 namespace LOP.UI
 {
@@ -9,9 +11,12 @@ namespace LOP.UI
     /// 밴드/스택 없이 이 호스트가 단일 View를 직접 띄운다. UXML/USS는 UIDocument.sourceAsset이 소유.
     /// </summary>
     [RequireComponent(typeof(UIDocument))]
+    [SceneInjectMonoBehaviour]
     public class DebugHudHost : MonoBehaviour
     {
         [SerializeField] private UIDocument document;
+
+        [Inject] private IRunner runner;
 
         private DebugHudView _view;
 
@@ -19,7 +24,7 @@ namespace LOP.UI
         {
             if (document == null) document = GetComponent<UIDocument>();
 
-            _view = new DebugHudView(new DebugHudViewModel());
+            _view = new DebugHudView(new DebugHudViewModel(runner));
             _view.Initialize(document.rootVisualElement);
             _view.OnOpen();
         }

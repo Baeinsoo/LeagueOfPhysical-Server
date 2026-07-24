@@ -31,12 +31,11 @@ namespace LOP
         [Inject] private IMapLoader mapLoader;
         [Inject] private GameRuleSystem gameRuleSystem;
         [Inject] private EntitySpawner entitySpawner;
+        [Inject] private INetworkTime networkTimeSource;
 
         private const string MapId = "Assets/Art/Scenes/FlapWangMap.unity";
 
         private readonly Restorer restorer = new Restorer();
-
-        protected override INetworkTime CreateNetworkTime() => new MirrorNetworkTime();
 
         public override async Task InitializeAsync()
         {
@@ -59,6 +58,9 @@ namespace LOP
             var mapLoadTask = mapLoader.LoadAsync(MapId);
 
             await base.InitializeAsync();
+
+            networkTime = networkTimeSource;
+            ((LOPTickUpdater)tickUpdater).networkTime = networkTimeSource;
 
             await mapLoadTask;
 

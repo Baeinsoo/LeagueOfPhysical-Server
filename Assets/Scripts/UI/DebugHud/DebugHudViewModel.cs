@@ -9,10 +9,17 @@ namespace LOP.UI
     /// </summary>
     public class DebugHudViewModel
     {
-        public bool IsRunning => Runner.current != null;
+        private readonly IRunner runner;
 
-        public long Tick => Runner.Time.tick;
+        public DebugHudViewModel(IRunner runner)
+        {
+            this.runner = runner;
+        }
 
-        public double ElapsedTime => Runner.Time.elapsedTime;
+        public bool IsRunning => runner.gameState >= RunnerState.Playing;
+
+        public long Tick => runner.tickUpdater.tick;
+
+        public double ElapsedTime => runner.tickUpdater.elapsedTime;
     }
 }

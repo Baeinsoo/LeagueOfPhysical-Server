@@ -7,8 +7,6 @@ namespace LOP
     {
         protected override void OnElapsedTimeUpdate()
         {
-            base.OnElapsedTimeUpdate();
-
             elapsedTime = Runner.NetworkTime.serverNow;
         }
     }

@@ -5,7 +5,7 @@ using VContainer;
 
 namespace LOP
 {
-    public class LOPAIController : MonoBehaviour, ICleanup
+    public class LOPAIController : MonoBehaviour, ICleanup, ITickSystem
     {
         [Inject]
         private IRunner runner;
@@ -29,22 +29,21 @@ namespace LOP
 
         protected virtual void Start()
         {
-            runner.AddListener(this);
+            runner.RegisterSystem<Begin>(this);
         }
 
         public void Cleanup()
         {
-            runner.RemoveListener(this);
+            runner.UnregisterSystem(this);
             actor = null;
         }
 
-        [RunnerListen(typeof(Begin))]
-        private void OnUpdateBegin()
+        public void Tick(long tick, float deltaTime)
         {
             var worldEntity = entityRegistry.Get(actor.entityId);
             if (worldEntity != null)
             {
-                brain.Think(worldEntity, runner.tickUpdater.deltaTime);
+                brain.Think(worldEntity, deltaTime);
             }
         }
     }

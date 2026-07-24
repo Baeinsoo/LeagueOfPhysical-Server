@@ -44,7 +44,7 @@ namespace LOP
             var worldEntity = entityRegistry.Get(actor.entityId);
             if (worldEntity != null)
             {
-                brain.Think(worldEntity, Runner.Time.deltaTime);
+                brain.Think(worldEntity, runner.tickUpdater.deltaTime);
             }
         }
     }

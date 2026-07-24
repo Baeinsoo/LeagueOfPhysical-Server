@@ -118,7 +118,7 @@ namespace LOP
 
             UpdateAI();
 
-            world.Tick(Runner.Time.tick, (float)tickUpdater.interval);
+            world.Tick(tickUpdater.tick, (float)tickUpdater.interval);
 
             SimulatePhysics();
 
@@ -156,7 +156,7 @@ namespace LOP
                 // 서버를 늦추면(입력을 과거 틱에 소비) 클라 예측과 항상 어긋나 낙하·충돌에서 발산한다. 늦추지 말 것.
                 // 지터로 입력이 늦게 도착할 여유가 더 필요하면 서버가 아니라 클라 lead(AheadMargin)를 키운다(표준).
                 // command-frame 정렬 + 지각 prune → 이번 틱 커맨드 확정(Current). 소비는 LOPWorld.Tick(MovementSystem).
-                long targetTick = Runner.Time.tick;
+                long targetTick = tickUpdater.tick;
                 int pruned = inputBufferSystem.PruneBefore(buffer, targetTick);
                 for (int i = 0; i < pruned; i++)
                 {
@@ -182,14 +182,14 @@ namespace LOP
                 if (input.AbilityId != 0)
                 {
                     // 발동 연출 cue는 AbilityActivator가 내부에서 append한다(플레이어·AI 공용).
-                    abilityActivator.TryActivate(worldEntity.Id, input.AbilityId, Runner.Time.tick);
+                    abilityActivator.TryActivate(worldEntity.Id, input.AbilityId, tickUpdater.tick);
                 }
 
                 InputSequenceToC inputSequnceToC = new InputSequenceToC();
                 inputSequnceToC.EntityId = worldEntity.Id;
                 inputSequnceToC.InputSequence = new InputSequence
                 {
-                    Tick = Runner.Time.tick,
+                    Tick = tickUpdater.tick,
                     Sequence = input.SequenceNumber,
                 };
 
@@ -204,7 +204,7 @@ namespace LOP
 
         private void SendInputTimingFeedback()
         {
-            if (Runner.Time.tick % InputTimingFeedbackIntervalTicks != 0)
+            if (tickUpdater.tick % InputTimingFeedbackIntervalTicks != 0)
             {
                 return;
             }

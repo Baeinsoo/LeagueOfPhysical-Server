@@ -75,9 +75,9 @@ namespace LOP
                     ExpectedNextSequence = entityRegistry.Get(entityId).Get<InputBuffer>().ExpectedNextSequence,
                     GameInfo = new GameInfo
                     {
-                        Tick = Runner.Time.tick,
-                        Interval = Runner.Time.tickInterval,
-                        ElapsedTime = Runner.Time.elapsedTime,
+                        Tick = runner.tickUpdater.tick,
+                        Interval = runner.tickUpdater.interval,
+                        ElapsedTime = runner.tickUpdater.elapsedTime,
                         MatchSeed = matchSeed.Value,
                     },
                 };

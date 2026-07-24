@@ -11,15 +11,17 @@ namespace LOP
     public class WorldEventSink : GameFramework.World.IEventSink
     {
         private readonly ISessionManager _sessionManager;
+        private readonly ITickUpdater tickUpdater;
 
-        public WorldEventSink(ISessionManager sessionManager)
+        public WorldEventSink(ISessionManager sessionManager, ITickUpdater tickUpdater)
         {
             _sessionManager = sessionManager;
+            this.tickUpdater = tickUpdater;
         }
 
         public void Emit(IReadOnlyList<GameFramework.World.WorldEvent> events)
         {
-            var batch = new WorldEventBatchToC { Tick = Runner.Time.tick };
+            var batch = new WorldEventBatchToC { Tick = tickUpdater.tick };
             foreach (var e in events)
             {
                 var rec = WorldEventWire.ToWire(e);   // 매핑 없는 타입은 null → 무시

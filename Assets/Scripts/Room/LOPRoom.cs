@@ -141,11 +141,11 @@ namespace LOP
             }
         }
 
-        private void OnGameStateChanged(IGameState gameState)
+        private void OnGameStateChanged(RunnerState gameState)
         {
             switch (gameState)
             {
-                case GameOver:
+                case RunnerState.GameOver:
                     Debug.Log("Game Over");
 
                     // 룸을 닫으면 클라 연결이 끊겨 못 받는다 — 상태 갱신보다 반드시 먼저 보낸다.

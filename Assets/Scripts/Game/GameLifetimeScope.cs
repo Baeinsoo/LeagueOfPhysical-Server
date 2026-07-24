@@ -82,6 +82,16 @@ namespace LOP
             // 서버 게임 룰(스폰/exp/초기플레이어). ⚠️ 임시 위치 — 목적지는 World 시스템(별도 슬라이스).
             builder.Register<GameRuleSystem>(Lifetime.Singleton);
 
+            // Slice 5-B: LOPRunner.UpdateRunner 인라인 파이프라인 스텝 → ITickSystem 추출(god-object 해체).
+            builder.Register<ServerInputSystem>(Lifetime.Singleton);
+            builder.Register<PhysicsSimulationSystem>(Lifetime.Singleton);
+            builder.Register<DeathResolveSystem>(Lifetime.Singleton);
+            builder.Register<WorldEventDrainSystem>(Lifetime.Singleton);
+            builder.Register<InputTimingFeedbackSystem>(Lifetime.Singleton);
+            builder.Register<EntitySnapshotBroadcastSystem>(Lifetime.Singleton);
+            builder.Register<UserEntitySnapshotSystem>(Lifetime.Singleton);
+            builder.Register<DespawnFlushSystem>(Lifetime.Singleton);
+
             builder.RegisterBuildCallback(container =>
             {
                 container.InjectSceneObjects(gameObject.scene);

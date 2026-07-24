@@ -11,12 +11,14 @@ namespace LOP
         private AbilityActivator abilityActivator;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.World.StatsSystem statsSystem;
+        private readonly ITickUpdater tickUpdater;
 
-        public EnemyBrain(AbilityActivator abilityActivator, GameFramework.World.EntityRegistry entityRegistry, GameFramework.World.StatsSystem statsSystem)
+        public EnemyBrain(AbilityActivator abilityActivator, GameFramework.World.EntityRegistry entityRegistry, GameFramework.World.StatsSystem statsSystem, ITickUpdater tickUpdater)
         {
             this.abilityActivator = abilityActivator;
             this.entityRegistry = entityRegistry;
             this.statsSystem = statsSystem;
+            this.tickUpdater = tickUpdater;
         }
 
         public void Think(GameFramework.World.Entity worldEntity, double deltaTime)
@@ -46,7 +48,7 @@ namespace LOP
             if (direction.magnitude < 2)
             {
                 //  Attack the player — 공격 어빌리티(id=3) 발동. 플레이어와 동일 경로라 데미지·연출 cue 자동.
-                abilityActivator.TryActivate(worldEntity.Id, AttackAbilityId, Runner.Time.tick);
+                abilityActivator.TryActivate(worldEntity.Id, AttackAbilityId, tickUpdater.tick);
             }
             else
             {

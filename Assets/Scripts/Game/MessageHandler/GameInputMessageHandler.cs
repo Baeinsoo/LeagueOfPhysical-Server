@@ -10,19 +10,22 @@ namespace LOP
         private readonly InputBufferSystem inputBufferSystem;
         private readonly EntitySpawner entitySpawner;
         private readonly ISubscriber<InputCommandToS> inputCommandSubscriber;
+        private readonly ITickUpdater tickUpdater;
 
         public GameInputMessageHandler(
             ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry,
             InputBufferSystem inputBufferSystem,
             EntitySpawner entitySpawner,
-            ISubscriber<InputCommandToS> inputCommandSubscriber)
+            ISubscriber<InputCommandToS> inputCommandSubscriber,
+            ITickUpdater tickUpdater)
         {
             this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
             this.inputBufferSystem = inputBufferSystem;
             this.entitySpawner = entitySpawner;
             this.inputCommandSubscriber = inputCommandSubscriber;
+            this.tickUpdater = tickUpdater;
         }
 
         protected override void Subscribe() => Track(inputCommandSubscriber.Subscribe(OnInputCommandToS));
@@ -44,7 +47,7 @@ namespace LOP
             {
                 if (inputBufferSystem.Enqueue(buffer, entry.Tick, ToInputCommand(entry.InputCommand)))
                 {
-                    buffer.TimingTracker.RecordArrival((int)(Runner.Time.tick - entry.Tick));
+                    buffer.TimingTracker.RecordArrival((int)(tickUpdater.tick - entry.Tick));
                 }
             }
         }

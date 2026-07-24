@@ -135,7 +135,7 @@ namespace LOP
 
         private void BeginUpdate()
         {
-            RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.interval);
+            RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.deltaTime);
         }
 
         private void ProcessNetworkMessage()
@@ -283,7 +283,7 @@ namespace LOP
 
         private void EndUpdate()
         {
-            RunPhase<End>(tickUpdater.tick, (float)tickUpdater.interval);
+            RunPhase<End>(tickUpdater.tick, (float)tickUpdater.deltaTime);
 
             EntitySnap[] allEntitySnaps = BuildAllEntitySnaps();
 

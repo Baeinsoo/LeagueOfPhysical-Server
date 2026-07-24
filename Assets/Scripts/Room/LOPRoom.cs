@@ -147,6 +147,13 @@ namespace LOP
             {
                 case GameOver:
                     Debug.Log("Game Over");
+
+                    // 룸을 닫으면 클라 연결이 끊겨 못 받는다 — 상태 갱신보다 반드시 먼저 보낸다.
+                    foreach (var session in sessionManager.GetAllSessions())
+                    {
+                        session.Send(new MatchEndedToC());
+                    }
+
                     if (!EnvironmentSettings.active.Standalone)
                     {
                         WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest

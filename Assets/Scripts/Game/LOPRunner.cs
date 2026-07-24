@@ -96,8 +96,14 @@ namespace LOP
         {
             if (initialized && tickUpdater.elapsedTime > 60 * 5)
             {
-                gameState = GameOver.State;
+                EndMatch();
             }
+        }
+
+        /// <summary>매치 종료 진입점. 종료 판정은 서버 권위이고, 클라는 통보를 받아 같은 이름의 메서드로 들어온다.</summary>
+        public void EndMatch()
+        {
+            gameState = GameOver.State;
         }
 
         public override void UpdateRunner()

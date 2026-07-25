@@ -4,7 +4,7 @@ using GameFramework;
 namespace LOP
 {
     /// <summary>구 LOPRunner.EndUpdate(엔티티 스냅샷 청킹·브로드캐스트 부분) + BuildAllEntitySnaps 이동.</summary>
-    public class EntitySnapshotBroadcastSystem : GameFramework.ITickSystem
+    public class EntitySnapshotBroadcastSystem : GameFramework.Runner.ITickSystem
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly ISessionManager sessionManager;

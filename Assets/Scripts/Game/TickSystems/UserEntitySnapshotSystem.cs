@@ -4,7 +4,7 @@ using GameFramework;
 namespace LOP
 {
     /// <summary>구 LOPRunner.EndUpdate(세션별 UserEntitySnap 전송 부분) 이동. HP/MP/Level/Exp/StatPoints를 World 코어에서 읽어 세션별로 보낸다.</summary>
-    public class UserEntitySnapshotSystem : GameFramework.ITickSystem
+    public class UserEntitySnapshotSystem : GameFramework.Runner.ITickSystem
     {
         private readonly ISessionManager sessionManager;
         private readonly EntitySpawner entitySpawner;

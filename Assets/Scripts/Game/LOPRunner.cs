@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 using GameFramework;
+using GameFramework.Runner;
 using GameFramework.Physics;
 using VContainer;
 using LOP.Event.LOPRunner.Update;
@@ -104,7 +105,7 @@ namespace LOP
             gameState = RunnerState.GameOver;
         }
 
-        public override void UpdateRunner()
+        protected override void UpdateRunner()
         {
             RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.deltaTime);
             serverInputSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);

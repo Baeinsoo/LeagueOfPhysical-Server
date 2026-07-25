@@ -4,7 +4,7 @@ using GameFramework;
 namespace LOP
 {
     /// <summary>구 LOPRunner.ProcessInput 이동. 조종 엔티티별 입력을 소비해 이동/어빌리티에 반영하고, 처리 시퀀스를 클라에 통보한다.</summary>
-    public class ServerInputSystem : GameFramework.ITickSystem
+    public class ServerInputSystem : GameFramework.Runner.ITickSystem
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly InputBufferSystem inputBufferSystem;

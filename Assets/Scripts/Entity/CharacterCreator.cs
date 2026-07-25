@@ -53,6 +53,7 @@ namespace LOP
                 worldEntity.Add(new InputBuffer());
             }
             worldEntity.Add(new Abilities());
+            worldEntity.Add(new GameFramework.World.GroundState());
             worldEntity.Add(new StatusEffects());
             worldEntity.Add(new MotionContributions());
             worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 캐릭터를 시뮬

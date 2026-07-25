@@ -104,7 +104,7 @@ namespace LOP
             gameState = RunnerState.GameOver;
         }
 
-        public override void UpdateRunner()
+        protected override void UpdateRunner()
         {
             RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.deltaTime);
             serverInputSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);

@@ -71,6 +71,8 @@ namespace LOP
                     CurrentHP = health?.Current ?? 0,
                 };
 
+                snap.Grounded = worldEntity.Get<GameFramework.World.GroundState>()?.IsGrounded ?? false;
+
                 var contributions = worldEntity?.Get<MotionContributions>();
                 if (contributions != null)
                 {

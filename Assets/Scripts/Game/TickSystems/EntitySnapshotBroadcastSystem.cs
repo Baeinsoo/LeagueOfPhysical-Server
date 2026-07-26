@@ -73,7 +73,7 @@ namespace LOP
 
                 snap.Grounded = worldEntity.Get<GameFramework.World.GroundState>()?.IsGrounded ?? false;
 
-                var activation = worldEntity.Get<Abilities>()?.Current;
+                var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)
                 {
                     snap.ActiveAbilityId = activation.Value.AbilityId;

@@ -73,11 +73,11 @@ namespace LOP
 
                 snap.Grounded = worldEntity.Get<GameFramework.World.GroundState>()?.IsGrounded ?? false;
 
-                var activeAbility = worldEntity.Get<Abilities>()?.Current;
-                if (activeAbility != null)
+                var activation = worldEntity.Get<Abilities>()?.Current;
+                if (activation != null)
                 {
-                    snap.ActiveAbilityId = activeAbility.Value.AbilityId;
-                    snap.AbilityEndTick = activeAbility.Value.RecoveryEndTick;
+                    snap.ActiveAbilityId = activation.Value.AbilityId;
+                    snap.AbilityEndTick = activation.Value.RecoveryEndTick;
                 }
 
                 var contributions = worldEntity?.Get<MotionContributions>();

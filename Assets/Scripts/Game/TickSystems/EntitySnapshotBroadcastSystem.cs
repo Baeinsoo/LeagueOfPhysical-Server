@@ -80,6 +80,20 @@ namespace LOP
                     snap.AbilityEndTick = activation.Value.RecoveryEndTick;
                 }
 
+                var statusEffects = worldEntity.Get<StatusEffects>();
+                if (statusEffects != null)
+                {
+                    foreach (var e in statusEffects.Effects)
+                    {
+                        snap.StatusEffects.Add(new ProtoActiveEffect
+                        {
+                            EffectId = e.EffectId,
+                            ExpireTick = e.ExpireTick,
+                            StackCount = e.StackCount,
+                        });
+                    }
+                }
+
                 var contributions = worldEntity?.Get<MotionContributions>();
                 if (contributions != null)
                 {

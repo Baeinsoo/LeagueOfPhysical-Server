@@ -10,14 +10,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe8ac9dae13e64e4d9b4884ec89dab9a, type: 3}
-  m_Name: EnvironmentSettings.Dev
-  m_EditorClassIdentifier: 
-  lobbyServerSetting:
-    scheme: http
-    host: lobby-server-service
-  matchmakingServerSetting:
-    scheme: http
-    host: matchmaking-server-service
-  roomServerSetting:
-    scheme: http
-    host: room-server-service
+  m_Name: EnvironmentSettings.dev
+  m_EditorClassIdentifier:
+  lobbyServerBaseUrl: http://lobby-server-service
+  matchmakingServerBaseUrl: http://matchmaking-server-service
+  roomServerBaseUrl: http://room-server-service

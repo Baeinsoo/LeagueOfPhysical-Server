@@ -59,12 +59,12 @@ namespace LOP
             worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 캐릭터를 시뮬
             entityRegistry.Add(worldEntity);
 
-            abilitySystem.Grant(worldEntity, 1);
-            abilitySystem.Grant(worldEntity, 2);   // dash
-            abilitySystem.Grant(worldEntity, 3);   // attack
+            abilitySystem.Grant(worldEntity, 1, slot: 3);   // haste
+            abilitySystem.Grant(worldEntity, 2, slot: 2);   // dash
+            abilitySystem.Grant(worldEntity, 3, slot: 1);   // attack
             if (isPlayer)
             {
-                abilitySystem.Grant(worldEntity, 4);
+                abilitySystem.Grant(worldEntity, 4, slot: 4);
             }
 
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");

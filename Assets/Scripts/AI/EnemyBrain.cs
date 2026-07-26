@@ -7,7 +7,7 @@ namespace LOP
 {
     public class EnemyBrain : IBrain
     {
-        private const int AttackAbilityId = 3;   // TbAbility attack 행(grant-all로 모든 캐릭터 보유)
+        private const int AttackSlot = 1;   // 기본 공격 자리 — 캐릭터마다 실제 어빌리티가 다르다
 
         private AbilityActivator abilityActivator;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
@@ -48,8 +48,8 @@ namespace LOP
 
             if (direction.magnitude < 2)
             {
-                //  Attack the player — 공격 어빌리티(id=3) 발동. 플레이어와 동일 경로라 데미지·연출 cue 자동.
-                abilityActivator.TryActivate(worldEntity.Id, AttackAbilityId, tickUpdater.tick);
+                //  Attack the player — 기본 공격 자리(슬롯 1) 발동. 플레이어와 동일 경로.
+                abilityActivator.TryActivateSlot(worldEntity.Id, AttackSlot, tickUpdater.tick);
             }
             else
             {

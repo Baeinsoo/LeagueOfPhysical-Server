@@ -38,7 +38,8 @@ namespace LOP
             builder.Register<AbilityEffectExecutor>(Lifetime.Singleton);
             builder.Register<IAbilityEffectHandler>(c => new StatusEffectApplyEffectHandler(
                 c.Resolve<StatusEffectSystem>(),
-                id => c.Resolve<StatusEffectDataProvider>().Get(id)), Lifetime.Singleton);
+                id => c.Resolve<StatusEffectDataProvider>().Get(id),
+                c.Resolve<GameFramework.World.EntityRegistry>()), Lifetime.Singleton);
             // DamageEffectHandler = 서버 전용 등록. 클라엔 미등록이라 executor가 DamageEffect를 무시 → 데미지 서버권위.
             // 구체 타입으로 등록(.As) — Func 등록은 ImplementationType이 IAbilityEffectHandler라 다른 Func 핸들러와 충돌.
             builder.Register<DamageEffectHandler>(Lifetime.Singleton).As<IAbilityEffectHandler>();

@@ -8,15 +8,18 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly AbilitySystem abilitySystem;
         private readonly LOP.MasterData.LOPMasterData md;
+        private readonly CharacterLoadoutProvider characterLoadoutProvider;
 
         public CharacterCreator(
             GameFramework.World.EntityRegistry entityRegistry,
             AbilitySystem abilitySystem,
-            LOP.MasterData.LOPMasterData md)
+            LOP.MasterData.LOPMasterData md,
+            CharacterLoadoutProvider characterLoadoutProvider)
         {
             this.entityRegistry = entityRegistry;
             this.abilitySystem = abilitySystem;
             this.md = md;
+            this.characterLoadoutProvider = characterLoadoutProvider;
         }
 
         public void Create(CharacterCreationData creationData)
@@ -59,12 +62,14 @@ namespace LOP
             worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 캐릭터를 시뮬
             entityRegistry.Add(worldEntity);
 
-            abilitySystem.Grant(worldEntity, 1, slot: 3);   // haste
-            abilitySystem.Grant(worldEntity, 2, slot: 2);   // dash
-            abilitySystem.Grant(worldEntity, 3, slot: 1);   // attack
-            if (isPlayer)
+            var loadout = characterLoadoutProvider.Get(creationData.characterCode);
+            if (loadout.Count == 0)
             {
-                abilitySystem.Grant(worldEntity, 4, slot: 4);
+                Debug.LogWarning($"[Ability] 로드아웃이 비었다 — characterCode={creationData.characterCode}. TbCharacterLoadout에 행이 있는지 확인.");
+            }
+            foreach (var (slot, abilityId) in loadout)
+            {
+                abilitySystem.Grant(worldEntity, abilityId, slot);
             }
 
             Debug.Log($"[World] Registered entity {worldEntity.Id} Health={worldHealth.Current}/{worldHealth.Max}");

@@ -30,6 +30,7 @@ namespace LOP
             builder.Register<AbilitySystem>(Lifetime.Singleton);
             builder.Register<StatusEffectDataProvider>(Lifetime.Singleton);
             builder.Register<AbilityDataProvider>(Lifetime.Singleton);
+            builder.Register<CharacterLoadoutProvider>(Lifetime.Singleton);
             builder.Register<AbilityActivator>(Lifetime.Singleton);
             builder.Register<MatchSeed>(Lifetime.Singleton).AsSelf().As<IMatchSeed>();
 

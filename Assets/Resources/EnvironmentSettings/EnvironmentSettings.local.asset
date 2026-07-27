@@ -10,15 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe8ac9dae13e64e4d9b4884ec89dab9a, type: 3}
-  m_Name: EnvironmentSettings.Local
-  m_EditorClassIdentifier: 
-  lobbyServerSetting:
-    scheme: http
-    host: localhost:1340
-  matchmakingServerSetting:
-    scheme: http
-    host: localhost:1555
-  roomServerSetting:
-    scheme: http
-    host: localhost:2000
+  m_Name: EnvironmentSettings.local
+  m_EditorClassIdentifier:
+  lobbyServerBaseUrl: http://localhost:1340
+  matchmakingServerBaseUrl: http://localhost:1555
+  roomServerBaseUrl: http://localhost:2000
   standalone: 1

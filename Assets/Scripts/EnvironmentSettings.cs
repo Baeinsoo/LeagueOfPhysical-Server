@@ -9,7 +9,7 @@ namespace LOP
     public class EnvironmentSettings : ScriptableObject
     {
         public const string DefaultEnvironment = "local-k8s";
-        public const string EditorDefaultEnvironment = "Local";
+        public const string EditorDefaultEnvironment = "local";
         public const string EditorPrefsKey = "LOP.Environment";
 
         public static EnvironmentSettings _active;
@@ -39,24 +39,15 @@ namespace LOP
 #endif
         }
 
-        [Serializable]
-        public class BaseURLSetting
-        {
-            public string scheme;
-            public string host;
-
-            public string baseUrl => $"{scheme}://{host}";
-        }
-
-        [SerializeField] private BaseURLSetting lobbyServerSetting;
-        [SerializeField] private BaseURLSetting matchmakingServerSetting;
-        [SerializeField] private BaseURLSetting roomServerSetting;
+        [SerializeField] private string lobbyServerBaseUrl;
+        [SerializeField] private string matchmakingServerBaseUrl;
+        [SerializeField] private string roomServerBaseUrl;
 
         [SerializeField] private bool standalone;
 
-        public string lobbyBaseURL => lobbyServerSetting.baseUrl;
-        public string matchmakingBaseURL => matchmakingServerSetting.baseUrl;
-        public string roomBaseURL => roomServerSetting.baseUrl;
+        public string lobbyBaseURL => lobbyServerBaseUrl;
+        public string matchmakingBaseURL => matchmakingServerBaseUrl;
+        public string roomBaseURL => roomServerBaseUrl;
 
         public bool Standalone => standalone;
     }

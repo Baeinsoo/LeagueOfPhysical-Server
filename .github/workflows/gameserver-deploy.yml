@@ -97,11 +97,17 @@ jobs:
           printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
           SHA="${{ steps.tag.outputs.sha }}"
           BASE="re5nardo/game-server"
-          # 아치별 산출이 서로 달라 buildx 단일 컨텍스트 불가 → 아치별 이미지 push 후 manifest로 합침
-          docker build --platform linux/amd64 --build-arg BUILD_DIR=Build-x86_64 -t "$BASE:$SHA-amd64" .
-          docker push "$BASE:$SHA-amd64"
-          docker build --platform linux/arm64 --build-arg BUILD_DIR=Build-arm64 -t "$BASE:$SHA-arm64" .
-          docker push "$BASE:$SHA-arm64"
+          # 레거시 빌더는 --platform을 무시하고 호스트(arm64) 베이스를 당겨, amd64 빌드가
+          # "does not provide the specified platform (linux/amd64)"로 죽는다. buildx로 빌드한다.
+          # docker-container 드라이버 + --push = 외래 아치 이미지를 로컬 데몬에 load할 필요가 없다.
+          # (Dockerfile의 apt-get 단계 때문에 비네이티브 아치는 QEMU 에뮬레이션으로 돌아 느리다.)
+          docker buildx create --name lop-builder --driver docker-container --bootstrap --use 2>/dev/null \
+            || docker buildx use lop-builder
+          # 아치별 산출 디렉토리가 달라 단일 컨텍스트 불가 → 아치별로 push 후 manifest로 합침
+          docker buildx build --platform linux/amd64 --build-arg BUILD_DIR=Build-x86_64 \
+            -t "$BASE:$SHA-amd64" --push .
+          docker buildx build --platform linux/arm64 --build-arg BUILD_DIR=Build-arm64 \
+            -t "$BASE:$SHA-arm64" --push .
           # 멀티아치 매니페스트 — buildx imagetools가 아치별 이미지(OCI index 포함)를 견고하게 합침
           # (docker manifest create --amend는 per-arch가 index면 실패).
           docker buildx imagetools create -t "$BASE:$SHA" "$BASE:$SHA-amd64" "$BASE:$SHA-arm64"

@@ -41,9 +41,11 @@ namespace LOP
                 Match match = new Match
                 {
                     id = "EditorTestMatch",
-                    matchType = GameMode.Normal,
-                    subGameId = "FlapWang",
-                    mapId = "FlapWangMap",
+                    queueId = 1,
+                    rounds = new MatchRound[]
+                    {
+                        new MatchRound { index = 0, gameModeId = 1, mapId = 1 },
+                    },
                     targetRating = 1500,
                     playerList = new string[]
                     {

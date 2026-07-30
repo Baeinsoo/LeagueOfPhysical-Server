@@ -93,15 +93,25 @@ jobs:
           # inline auth(base64 user:token)를 직접 써넣어 keychain/credsStore를 완전히 우회.
           export DOCKER_CONFIG="$(mktemp -d)"
           trap 'rm -rf "$DOCKER_CONFIG"' EXIT   # 셀프호스트 맥 — 토큰이 담긴 config를 잡 종료 시 제거
+          # 도커 CLI 플러그인(buildx/imagetools)은 $DOCKER_CONFIG/cli-plugins에서 찾는다.
+          # 임시 config로 갈아타면 ~/.docker/cli-plugins의 buildx가 안 보여 "unknown command: docker buildx"가 난다.
+          if [ -d "$HOME/.docker/cli-plugins" ]; then ln -s "$HOME/.docker/cli-plugins" "$DOCKER_CONFIG/cli-plugins"; fi
+          docker buildx version   # 플러그인이 보이는지 먼저 확인 — 안 보이면 여기서 명확히 실패
           AUTH="$(printf '%s:%s' "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN" | base64)"
           printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
           SHA="${{ steps.tag.outputs.sha }}"
           BASE="re5nardo/game-server"
-          # 아치별 산출이 서로 달라 buildx 단일 컨텍스트 불가 → 아치별 이미지 push 후 manifest로 합침
-          docker build --platform linux/amd64 --build-arg BUILD_DIR=Build-x86_64 -t "$BASE:$SHA-amd64" .
-          docker push "$BASE:$SHA-amd64"
-          docker build --platform linux/arm64 --build-arg BUILD_DIR=Build-arm64 -t "$BASE:$SHA-arm64" .
-          docker push "$BASE:$SHA-arm64"
+          # 레거시 빌더는 --platform을 무시하고 호스트(arm64) 베이스를 당겨, amd64 빌드가
+          # "does not provide the specified platform (linux/amd64)"로 죽는다. buildx로 빌드한다.
+          # docker-container 드라이버 + --push = 외래 아치 이미지를 로컬 데몬에 load할 필요가 없다.
+          # (Dockerfile의 apt-get 단계 때문에 비네이티브 아치는 QEMU 에뮬레이션으로 돌아 느리다.)
+          docker buildx create --name lop-builder --driver docker-container --bootstrap --use 2>/dev/null \
+            || docker buildx use lop-builder
+          # 아치별 산출 디렉토리가 달라 단일 컨텍스트 불가 → 아치별로 push 후 manifest로 합침
+          docker buildx build --platform linux/amd64 --build-arg BUILD_DIR=Build-x86_64 \
+            -t "$BASE:$SHA-amd64" --push .
+          docker buildx build --platform linux/arm64 --build-arg BUILD_DIR=Build-arm64 \
+            -t "$BASE:$SHA-arm64" --push .
           # 멀티아치 매니페스트 — buildx imagetools가 아치별 이미지(OCI index 포함)를 견고하게 합침
           # (docker manifest create --amend는 per-arch가 index면 실패).
           docker buildx imagetools create -t "$BASE:$SHA" "$BASE:$SHA-amd64" "$BASE:$SHA-arm64"

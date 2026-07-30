@@ -44,12 +44,32 @@ jobs:
             echo "::group::Unity build $ARCH"
             if ! LOP_BUILD_ARCH=$ARCH "$UNITY" -batchmode -quit -nographics -projectPath . \
                   -executeMethod BuildScript.BuildLinuxServer -logFile - > unity-$ARCH.log 2>&1; then
-              echo "::error::Unity build $ARCH failed"; tail -80 unity-$ARCH.log; exit 1
+              echo "::error::Unity build $ARCH failed"
+              # tail만 찍으면 Unity가 요약을 마지막에 쓰기 때문에 *원인* 줄이 잘려 나간다.
+              # 실제 에러는 로그 중간에 있으므로 따로 골라 찍고, 전문은 아티팩트로 올린다.
+              echo "::group::error/exception lines"
+              grep -inE "error CS[0-9]+|BuildFailedException|^Error|Exception:|Failed to|not found|missing" \
+                   unity-$ARCH.log | tail -60 || echo "(매칭 없음)"
+              echo "::endgroup::"
+              echo "::group::last 150 lines"
+              tail -150 unity-$ARCH.log
+              echo "::endgroup::"
+              exit 1
             fi
             tail -5 unity-$ARCH.log
             test -f GameServer/Build-$ARCH/lop-server.x86_64
             echo "::endgroup::"
           done
+
+      # 성공/실패 무관하게 올린다 — 성공한 빌드의 로그도 다음 실패와 비교할 기준선이 된다.
+      - name: Unity 빌드 로그 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unity-build-logs
+          path: unity-*.log
+          if-no-files-found: warn
+          retention-days: 14
 
       - name: 도커 멀티아치 빌드·푸시 (amd64+arm64 manifest)
         working-directory: GameServer

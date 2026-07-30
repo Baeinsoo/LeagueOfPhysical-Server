@@ -93,6 +93,10 @@ jobs:
           # inline auth(base64 user:token)를 직접 써넣어 keychain/credsStore를 완전히 우회.
           export DOCKER_CONFIG="$(mktemp -d)"
           trap 'rm -rf "$DOCKER_CONFIG"' EXIT   # 셀프호스트 맥 — 토큰이 담긴 config를 잡 종료 시 제거
+          # 도커 CLI 플러그인(buildx/imagetools)은 $DOCKER_CONFIG/cli-plugins에서 찾는다.
+          # 임시 config로 갈아타면 ~/.docker/cli-plugins의 buildx가 안 보여 "unknown command: docker buildx"가 난다.
+          if [ -d "$HOME/.docker/cli-plugins" ]; then ln -s "$HOME/.docker/cli-plugins" "$DOCKER_CONFIG/cli-plugins"; fi
+          docker buildx version   # 플러그인이 보이는지 먼저 확인 — 안 보이면 여기서 명확히 실패
           AUTH="$(printf '%s:%s' "$DOCKERHUB_USERNAME" "$DOCKERHUB_TOKEN" | base64)"
           printf '{"auths":{"https://index.docker.io/v1/":{"auth":"%s"}}}' "$AUTH" > "$DOCKER_CONFIG/config.json"
           SHA="${{ steps.tag.outputs.sha }}"

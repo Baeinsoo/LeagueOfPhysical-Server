@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -19,6 +20,8 @@ namespace LOP
         [Inject] private IMapLoader mapLoader;
         [Inject] private GameRuleSystem gameRuleSystem;
         [Inject] private INetworkTime networkTimeSource;
+        [Inject] private IRoomDataStore roomDataStore;
+        [Inject] private LOP.MasterData.LOPMasterData masterData;
 
         // Slice 5-B: 파이프라인 스텝 — 순서대로 직접 호출(넷코드 순서 불변식이 코드에 명시).
         [Inject] private ServerInputSystem serverInputSystem;
@@ -29,8 +32,6 @@ namespace LOP
         [Inject] private EntitySnapshotBroadcastSystem entitySnapshotBroadcastSystem;
         [Inject] private UserEntitySnapshotSystem userEntitySnapshotSystem;
         [Inject] private DespawnFlushSystem despawnFlushSystem;
-
-        private const string MapId = "Assets/Art/Scenes/FlapWangMap.unity";
 
         private readonly Restorer restorer = new Restorer();
 
@@ -52,7 +53,7 @@ namespace LOP
             Physics.gravity = new Vector3(0, -9.81f * 2, 0);
 
             // 맵 로딩과 베이스 초기화를 병렬로 — 둘 다 끝나길 기다린다.
-            var mapLoadTask = mapLoader.LoadAsync(MapId);
+            var mapLoadTask = mapLoader.LoadAsync(ResolveScenePath());
 
             await base.InitializeAsync();
 
@@ -64,6 +65,25 @@ namespace LOP
             gameRuleSystem.Initialize();
 
             gameState = RunnerState.Initialized;
+        }
+
+        /// <summary>이 판에서 로드할 씬. 매치의 첫 라운드가 가리키는 맵에서 온다.</summary>
+        private string ResolveScenePath()
+        {
+            var rounds = roomDataStore.match?.rounds;
+            if (rounds == null || rounds.Length == 0)
+            {
+                throw new Exception("매치에 라운드가 없어 맵을 정할 수 없습니다.");
+            }
+
+            var mapId = rounds[0].mapId;
+            var map = masterData.Tables.TbMap.GetOrDefault(mapId);
+            if (map == null)
+            {
+                throw new Exception($"TbMap에 없는 mapId입니다. mapId: {mapId}");
+            }
+
+            return map.ScenePath;
         }
 
         public override async Task DeinitializeAsync()

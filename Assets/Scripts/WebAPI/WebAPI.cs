@@ -17,16 +17,6 @@ namespace LOP
                 .Build();
         }
 
-        public static WebRequest<string> NotifyStartServer(NotifyStartServerRequest request)
-        {
-            return new WebRequestBuilder<string>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room")
-                .SetMethod(HttpMethod.PUT)
-                .SetRequestBody(request)
-                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
-                .Build();
-        }
-
         public static WebRequest<string> NotifyStopServer(string roomId)
         {
             return new WebRequestBuilder<string>()

@@ -47,6 +47,22 @@ jobs:
           dotnet tool run nugetforunity restore .
           test -f Assets/NuGetForUnity/Packages/AutoMapper.11.0.0/lib/netstandard2.1/AutoMapper.dll
 
+      # Linux IL2CPP의 sysroot·툴체인은 스텁 패키지(com.unity.sdk.linux-*, com.unity.toolchain.*)의
+      # 임포트·설치가 끝나야 빌드 파이프라인에 등록된다. 그런데 그 임포트가 *빌드를 실행하는 같은*
+      # 배치 세션에서는 제때 끝나지 않아, Library/가 없는 콜드 실행의 첫 빌드가
+      # "Unable to find an Linux Sysroot"로 죽는다(2026-07-30 실측: 실패 로그엔 그 패키지의 첫 임포트
+      # 흔적이 있고 성공 로그엔 없다). clean:false로 Library를 보존하면 두 번째 실행부터 성공하지만,
+      # 러너를 새로 깔거나 워크스페이스가 지워지면 첫 실행이 또 실패한다.
+      # 그래서 임포트만 하는 세션을 빌드 앞에 한 번 둔다. Library가 따뜻하면 수십 초로 끝난다.
+      - name: Unity 프로젝트 워밍업 (sysroot 패키지 임포트)
+        run: |
+          set -eo pipefail
+          UNITY="/Applications/Unity/Hub/Editor/6000.3.16f1/Unity.app/Contents/MacOS/Unity"
+          if ! "$UNITY" -batchmode -quit -nographics -projectPath . -logFile - > unity-warmup.log 2>&1; then
+            echo "::error::Unity 워밍업 실패"; tail -80 unity-warmup.log; exit 1
+          fi
+          tail -3 unity-warmup.log
+
       - name: Unity IL2CPP 빌드 (amd64 + arm64)
         run: |
           set -eo pipefail
@@ -78,7 +94,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: unity-build-logs
-          path: unity-*.log
+          path: |
+            unity-*.log
           if-no-files-found: warn
           retention-days: 14
 

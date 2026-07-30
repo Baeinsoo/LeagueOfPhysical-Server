@@ -10,7 +10,18 @@ jobs:
   build-deploy:
     runs-on: self-hosted      # 맥 러너 (Unity 라이선스·docker·git 자격증명 ambient)
     steps:
+      # clean: false = Library/를 보존한다. 기본값(clean)은 무시 파일까지 지워 Library/가 사라지는데,
+      # Linux IL2CPP의 sysroot·툴체인은 스텁 패키지의 에디터 코드가 내려받아 등록하는 구조라
+      # 콜드 프로젝트의 첫 Unity 실행에서는 "Unable to find an Linux Sysroot"로 반드시 실패한다.
+      # (셀프호스트 Unity CI에서 Library를 보존·캐시하는 것은 표준 practice이며 임포트 시간도 줄인다.)
       - uses: actions/checkout@v4
+        with:
+          clean: false
+
+      # clean:false의 대가 — 직전 실행의 산출물이 남는다. 빌드가 실패해도 옛 실행 파일이 남아 있으면
+      # 뒤의 `test -f`가 통과해 실패를 성공으로 오인하고 낡은 바이너리를 이미지에 싣게 된다.
+      - name: 직전 빌드 산출물 제거
+        run: rm -rf GameServer/Build-x86_64 GameServer/Build-arm64 unity-x86_64.log unity-arm64.log
 
       - name: sha 산출
         id: tag

@@ -55,12 +55,6 @@ public static class BuildScript
         PlayerSettings.SetScriptingBackend(NamedBuildTarget.Server, ScriptingImplementation.IL2CPP);
         SetLinuxArchitecture(arch); // Server 서브타겟 설정 뒤에 호출(setter가 서브타겟을 봄)
 
-        // 게임서버는 클러스터 안 형제 서비스를 평문 http로 부른다(http://room-server-service 등).
-        // Unity는 플레이어 빌드에서 평문 http를 막고(기본값 DevelopmentOnly = 개발빌드만 허용)
-        // 이 빌드는 릴리스라, 룸 정보 조회가 "Insecure connection not allowed"로 죽는다.
-        // 에디터에서는 허용되므로 이 문제는 빌드에서만 드러난다.
-        PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
-
         var options = new BuildPlayerOptions
         {
             scenes = scenes,

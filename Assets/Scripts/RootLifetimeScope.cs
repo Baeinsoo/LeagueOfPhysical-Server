@@ -13,10 +13,11 @@ namespace LOP
             // RegisterMessageBroker<T>로 명시 등록한다(IL2CPP open-generic 미지원 대비).
             var options = builder.RegisterMessagePipe();
 
-            // WebResponse — 정적 인터셉터(LOPWebRequestInterceptor)가 GlobalMessagePipe로 발행하므로 SetProvider 필요.
+            // WebResponse — WebAPI가 GlobalMessagePipe로 발행하므로 SetProvider 필요.
             builder.RegisterMessageBroker<GetMatchResponse>(options);
             builder.RegisterMessageBroker<GetRoomResponse>(options);
             builder.RegisterMessageBroker<UpdateRoomStatusResponse>(options);
+            builder.RegisterMessageBroker<HttpResponse>(options);
 
             // 엔티티 라이프사이클 / 아이템 접촉
             builder.RegisterMessageBroker<Event.Entity.EntityCreated>(options);

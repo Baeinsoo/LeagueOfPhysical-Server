@@ -1,60 +1,41 @@
-using GameFramework;
-using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
+using Cysharp.Threading.Tasks;
+using GameFramework.Http;
+using MessagePipe;
+using System.Threading;
 
 namespace LOP
 {
     public class WebAPI
     {
+        private static readonly HttpClient httpClient = new HttpClient(new UnityWebRequestHandler());
+
+        //  응답을 역직렬화한 뒤 전역 발행까지 한다 — 데이터 스토어가 이걸 구독해 상태를 채운다.
+        private static async UniTask<T> SendAsync<T>(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            T response = await httpClient.SendAsync<T>(request, cancellationToken);
+            GlobalMessagePipe.GetPublisher<T>().Publish(response);
+            return response;
+        }
+
         #region Room
-        public static WebRequest<HttpResponse> Heartbeat(string roomId)
-        {
-            return new WebRequestBuilder<HttpResponse>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/heartbeat/{roomId}")
-                .SetMethod(HttpMethod.PUT)
-                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
-                .Build();
-        }
+        public static UniTask<HttpResponse> Heartbeat(string roomId, CancellationToken cancellationToken = default)
+            => SendAsync<HttpResponse>(
+                HttpRequestMessage.Put($"{EnvironmentSettings.active.roomBaseURL}/room/heartbeat/{roomId}"), cancellationToken);
 
-        public static WebRequest<string> NotifyStopServer(string roomId)
-        {
-            return new WebRequestBuilder<string>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/{roomId}")
-                .SetMethod(HttpMethod.DELETE)
-                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
-                .Build();
-        }
 
-        public static WebRequest<UpdateRoomStatusResponse> UpdateRoomStatus(UpdateRoomStatusRequest request)
-        {
-            return new WebRequestBuilder<UpdateRoomStatusResponse>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/status")
-                .SetMethod(HttpMethod.PUT)
-                .SetRequestBody(request)
-                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
-                .Build();
-        }
+        public static UniTask<UpdateRoomStatusResponse> UpdateRoomStatus(UpdateRoomStatusRequest request, CancellationToken cancellationToken = default)
+            => SendAsync<UpdateRoomStatusResponse>(
+                HttpRequestMessage.Put($"{EnvironmentSettings.active.roomBaseURL}/room/status", request), cancellationToken);
 
-        public static WebRequest<GetRoomResponse> GetRoom(string roomId)
-        {
-            return new WebRequestBuilder<GetRoomResponse>()
-                .SetUri($"{EnvironmentSettings.active.roomBaseURL}/room/{roomId}")
-                .SetMethod(HttpMethod.GET)
-                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
-                .Build();
-        }
+        public static UniTask<GetRoomResponse> GetRoom(string roomId, CancellationToken cancellationToken = default)
+            => SendAsync<GetRoomResponse>(
+                HttpRequestMessage.Get($"{EnvironmentSettings.active.roomBaseURL}/room/{roomId}"), cancellationToken);
         #endregion
 
         #region Match
-        public static WebRequest<GetMatchResponse> GetMatch(string matchId)
-        {
-            return new WebRequestBuilder<GetMatchResponse>()
-                .SetUri($"{EnvironmentSettings.active.matchmakingBaseURL}/match/{matchId}")
-                .SetMethod(HttpMethod.GET)
-                .SetWebRequestInterceptor(LOPWebRequestInterceptor.Default)
-                .Build();
-        }
+        public static UniTask<GetMatchResponse> GetMatch(string matchId, CancellationToken cancellationToken = default)
+            => SendAsync<GetMatchResponse>(
+                HttpRequestMessage.Get($"{EnvironmentSettings.active.matchmakingBaseURL}/match/{matchId}"), cancellationToken);
         #endregion
     }
 }

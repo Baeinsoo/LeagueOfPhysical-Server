@@ -159,11 +159,31 @@ namespace LOP
         }
 
         #region Spawn
-        private void SpawnEnemies(int count)
+        // 진단(부하 실험)에서도 부른다 — 자동 스폰의 100마리 상한은 OnTick에만 있어 여기엔 안 걸린다.
+        public void SpawnEnemies(int count)
         {
             for (int i = 0; i < count; i++)
             {
                 SpawnEnemy(GetRandomSpawnPosition());
+            }
+        }
+
+        /// <summary>진단용: 플레이어가 아닌 캐릭터를 전부 디스폰 큐에 넣는다.</summary>
+        public void DespawnAllEnemies()
+        {
+            // Despawn은 큐에 넣기만 하고 실제 제거·클라 통보는 틱 끝의 FlushDespawns가 한다 →
+            // 여기서 registry를 순회하며 불러도 순회 중 컬렉션이 바뀌지 않는다.
+            foreach (var entity in entityRegistry.All)
+            {
+                if (entity.Get<EntityKind>()?.Kind != EntityType.Character)
+                {
+                    continue;
+                }
+                if (entity.Has<GameFramework.World.Ownership>())
+                {
+                    continue;   // Ownership이 있으면 플레이어다
+                }
+                entitySpawner.Despawn(entity.Id);
             }
         }
 

@@ -138,7 +138,8 @@ namespace LOP
         {
             if (!EnvironmentSettings.active.Standalone)
             {
-                WebAPI.Heartbeat(roomDataStore.room.id);
+                //  결과를 기다리지 않는다 — 하트비트는 실패해도 다음 주기가 이어서 보낸다.
+                WebAPI.Heartbeat(roomDataStore.room.id).Forget();
             }
         }
 
@@ -157,11 +158,12 @@ namespace LOP
 
                     if (!EnvironmentSettings.active.Standalone)
                     {
+                        //  이벤트 핸들러라 await 할 수 없다 — 보내기만 하고 넘어간다.
                         WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
                         {
                             roomId = roomDataStore.room.id,
                             status = RoomStatus.Closed,
-                        });
+                        }).Forget();
                     }
                     break;
             }

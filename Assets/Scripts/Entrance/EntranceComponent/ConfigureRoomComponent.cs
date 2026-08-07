@@ -66,7 +66,7 @@ namespace LOP
                 Blackboard.Write("port", port);
                 
                 var getRoom = await WebAPI.GetRoom(roomId);
-                var getMatch = await WebAPI.GetMatch(getRoom.response.room.matchId);
+                var getMatch = await WebAPI.GetMatch(getRoom.room.matchId);
 #endif
             }
             catch (Exception e)

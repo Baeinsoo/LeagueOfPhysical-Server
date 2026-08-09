@@ -6,6 +6,10 @@ namespace LOP
     /// <summary>구 LOPRunner.ProcessInput 이동. 조종 엔티티별 입력을 소비해 이동/어빌리티에 반영한다.</summary>
     public class ServerInputSystem : GameFramework.Runner.ITickSystem
     {
+        // 유실 틱을 마지막 입력으로 몇 틱까지 메울지. 8틱 = 160ms — 그보다 길게 비면 순간적인
+        // 패킷 유실이 아니라 연결 문제이고, 낡은 입력으로 계속 달리는 게 눈에 보이기 시작한다.
+        private const int MaxPredictedTicks = 8;
+
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly InputBufferSystem inputBufferSystem;
         private readonly AbilityActivator abilityActivator;
@@ -45,10 +49,9 @@ namespace LOP
 
                 if (input == null)
                 {
-                    // 커맨드가 없다 = 유실/지각. 클라는 무입력 틱에도 0 커맨드를 보내므로 이 자리는
-                    // 더 이상 "안 눌렀다"를 뜻하지 않는다. 지금은 0 커맨드로 제동하지만, 마지막 입력을
-                    // 이어 쓰는 게 표준이다(미스는 대개 계속 누르고 있는 중에 난다) — 다음 슬라이스.
-                    inputBufferSystem.SetCurrent(buffer, new InputCommand());
+                    // 커맨드가 없다 = 유실/지각. 클라가 무입력 틱에도 0 커맨드를 보내므로 이 자리는
+                    // "안 눌렀다"를 뜻하지 않는다 — 마지막으로 받은 이동을 이어 쓴다.
+                    inputBufferSystem.PredictMissing(buffer, MaxPredictedTicks);
                     continue;
                 }
 

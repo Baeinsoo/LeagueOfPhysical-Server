@@ -10,7 +10,7 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly InputBufferSystem inputBufferSystem;
         private readonly EntitySpawner entitySpawner;
-        private readonly ISubscriber<InputCommandToS> inputCommandSubscriber;
+        private readonly ISubscriber<ClientMessage<InputCommandToS>> inputCommandSubscriber;
         private readonly ITickUpdater tickUpdater;
 
         public GameInputMessageHandler(
@@ -18,7 +18,7 @@ namespace LOP
             GameFramework.World.EntityRegistry entityRegistry,
             InputBufferSystem inputBufferSystem,
             EntitySpawner entitySpawner,
-            ISubscriber<InputCommandToS> inputCommandSubscriber,
+            ISubscriber<ClientMessage<InputCommandToS>> inputCommandSubscriber,
             ITickUpdater tickUpdater)
         {
             this.sessionManager = sessionManager;
@@ -31,9 +31,10 @@ namespace LOP
 
         protected override void Subscribe() => Track(inputCommandSubscriber.Subscribe(OnInputCommandToS));
 
-        private void OnInputCommandToS(InputCommandToS inputCommandToS)
+        private void OnInputCommandToS(ClientMessage<InputCommandToS> received)
         {
-            ISession session = sessionManager.GetSessionById(inputCommandToS.SessionId);
+            //  세션은 메시지에 적힌 값이 아니라 연결에서 확인된 신원으로 찾는다.
+            ISession session = sessionManager.GetSessionByUserId(received.UserId);
             string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
             var buffer = entityRegistry.Get(entityId).Get<InputBuffer>();
             if (buffer == null)
@@ -44,7 +45,7 @@ namespace LOP
             // sliding-window redundancy: recent_inputs의 각 틱을 투입(이미 있는 tick/처리된 seq는 Enqueue가 dedup).
             // 유실된 틱이 다음 패킷의 redundancy로 채워진다.
             // 와이어(proto) → 도메인(InputCommand) 변환은 여기(수신 어댑터)까지 — 버퍼부터는 도메인 타입만.
-            foreach (var entry in inputCommandToS.RecentInputs)
+            foreach (var entry in received.Message.RecentInputs)
             {
                 if (inputBufferSystem.Enqueue(buffer, entry.Tick, ToInputCommand(entry.InputCommand)))
                 {

@@ -6,6 +6,8 @@ using UnityEngine;
 using System.Linq;
 using GameFramework;
 using VContainer;
+using Cysharp.Threading.Tasks;
+using System.Threading;
 
 namespace LOP
 {
@@ -47,6 +49,8 @@ namespace LOP
         {
             // unregister the handler for the authentication request
             NetworkServer.UnregisterHandler<AuthRequestMessage>();
+
+            handledConnections.Clear();
         }
 
         /// <summary>
@@ -55,48 +59,122 @@ namespace LOP
         /// <param name="conn">Connection to client.</param>
         public override void OnServerAuthenticate(NetworkConnectionToClient conn) { }
 
-        /// <summary>
-        /// Called on server when the client's AuthRequestMessage arrives
-        /// </summary>
-        /// <param name="conn">Connection to client.</param>
-        /// <param name="msg">The message payload</param>
+        //  로비가 죽었을 때 30초(HttpClient 기본 타임아웃)를 기다리지 않는다 — 접속은 사람이 기다리는 경로다.
+        private const int IntrospectTimeoutSeconds = 3;
+
+        //  같은 연결이 인증 요청을 반복해 보내면 그때마다 로비를 부르게 된다(소켓 1회 → HTTP N회 증폭).
+        //  첫 요청만 처리한다. 키는 connectionId(int)가 아니라 연결 객체 자체다 — kcp2k는 connectionId를
+        //  클라 주소 해시로 만들어 재접속 시 같은 id가 재사용될 수 있는데, 그때도 Mirror는 매번 새
+        //  NetworkConnectionToClient 인스턴스를 만들므로(참조 동일성) 객체 키는 재접속과 단순 재전송을
+        //  오탐 없이 구분한다. 방 수명이 짧고 연결 수는 참가자 수로 묶이므로 OnStopServer에서 통째로 비운다.
+        private readonly HashSet<NetworkConnectionToClient> handledConnections = new HashSet<NetworkConnectionToClient>();
+
         public void OnAuthRequestMessage(NetworkConnectionToClient conn, AuthRequestMessage msg)
         {
-            bool authenticated = IsAuthenticated(conn, msg);
-
-            if (authenticated)
+            if (handledConnections.Add(conn) == false)
             {
-                // Store the customProperties for later reference, e.g. when spawning the player
-                conn.authenticationData = msg.customProperties;
-
-                // Send a response to client telling it to proceed as authenticated
-                conn.Send(new AuthResponseMessage { code = 200, message = "success" });
-
-                // Accept the successful authentication
-                ServerAccept(conn);
+                return;
             }
-            else
+
+            AuthenticateAsync(conn, msg).Forget();
+        }
+
+        private async UniTaskVoid AuthenticateAsync(NetworkConnectionToClient conn, AuthRequestMessage msg)
+        {
+            try
             {
-                // create and send msg to client so it knows to disconnect
-                conn.Send(new AuthResponseMessage { code = 401, message = "Invalid Credentials" });
-
-                // must set NetworkConnection isAuthenticated = false
-                conn.isAuthenticated = false;
-
-                ServerReject(conn);
+                await DecideAsync(conn, msg);
+            }
+            catch (Exception exception)
+            {
+                //  UniTaskVoid 밖으로 예외가 새면 UniTaskScheduler가 로그만 남기고 삼킨다 — 그러면
+                //  이 연결은 accept도 reject도 못 받은 채 영원히 멈춘다. 판정 도중 무엇이 터지든
+                //  (널참조 포함) 반드시 여기서 거부 응답까지 보낸다.
+                Reject(conn, $"인증 처리 실패: {exception.Message}");
             }
         }
 
-        private bool IsAuthenticated(NetworkConnectionToClient conn, AuthRequestMessage msg)
+        private async UniTask DecideAsync(NetworkConnectionToClient conn, AuthRequestMessage msg)
         {
-            bool authenticated = true;
+            string claimedUserId = msg.customProperties?.userId;
 
-            if (roomDataStore.match.playerList.Contains(msg.customProperties.userId) == false)
+            if (roomDataStore.match.playerList.Contains(claimedUserId) == false)
             {
-                authenticated = false;
+                Reject(conn, $"명단에 없는 userId: {claimedUserId}");
+                return;
             }
 
-            return authenticated;
+#if UNITY_EDITOR
+            //  에디터의 게임서버는 가짜 방·가짜 명단으로 돈다(ConfigureRoomComponent). 조회 키를 git에
+            //  커밋하지 않으려고 introspect도 같은 경계 안에 둔다. 실환경에서는 아래 경로를 반드시 탄다.
+            Debug.LogWarning("[Auth] 에디터라 introspect를 건너뜁니다. 신원은 클라가 주장한 값을 씁니다.");
+            Accept(conn, msg.customProperties, claimedUserId);
+            return;
+#else
+            if (string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("INTERNAL_API_KEY")))
+            {
+                Debug.LogError("[Auth] INTERNAL_API_KEY가 없습니다. 접속을 허용할 수 없습니다.");
+                Reject(conn, "server misconfigured");
+                return;
+            }
+
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(IntrospectTimeoutSeconds));
+            IntrospectResponse introspect = await WebAPI.Introspect(msg.customProperties.accessToken, timeout.Token);
+
+            if (introspect == null || introspect.active == false)
+            {
+                //  응답 본문이 비어 있으면(게이트웨이 이상 등) 역직렬화 결과가 null이다 — 토큰이
+                //  유효하지 않은 경우와 동일하게 거부한다(fail closed).
+                Reject(conn, "토큰이 유효하지 않음");
+                return;
+            }
+
+            if (introspect.sub != claimedUserId)
+            {
+                //  명단은 A로 통과했는데 토큰 주인은 B인 경우 — 사칭이다.
+                Reject(conn, $"토큰 주인과 주장한 userId가 다름: {introspect.sub} != {claimedUserId}");
+                return;
+            }
+
+            Accept(conn, msg.customProperties, introspect.sub);
+#endif
+        }
+
+        private void Accept(NetworkConnectionToClient conn, CustomProperties customProperties, string authenticatedUserId)
+        {
+            //  connectionId만 보고 "살아있다"고 판단하면 안 된다 — kcp2k는 connectionId를 클라 주소로
+            //  만들어 재접속 시 재사용한다. 로비에 물어보는 ≤3초 사이 같은 클라가 끊겼다 재접속하면,
+            //  같은 connectionId를 가진 *다른* 연결 객체가 딕셔너리에 들어와 있을 수 있다. 그러면 이
+            //  presence-only 검사는 통과하지만 우리가 들고 있는 conn은 이미 죽은 객체라, 그 연결을
+            //  accept해도 아무것도 받지 못하는 좀비 세션이 된다. 그래서 존재 여부가 아니라 "지금
+            //  등록된 연결이 바로 이 conn 객체인가"(참조 동일성)까지 확인한다.
+            if (NetworkServer.connections.TryGetValue(conn.connectionId, out var current) == false || ReferenceEquals(current, conn) == false)
+            {
+                //  로비에 물어보는 동안 끊겼거나(그리고 재접속으로 자리가 바뀌었거나) 한 연결이다. 아무것도 하지 않는다.
+                //  (isReady는 씬 준비 여부라 여기서 볼 값이 아니다 — 미인증 연결은 늘 false다.)
+                return;
+            }
+
+            //  클라가 주장한 값이 아니라 확인된 신원을 저장한다 — 이후 모든 서버 로직이 이 값을 신원으로 쓴다.
+            customProperties.userId = authenticatedUserId;
+            //  접근 토큰은 이미 검증에 다 썼다 — 이 밑으로 아무도 안 읽는다. conn.authenticationData에
+            //  그대로 남겨두면 연결이 살아있는 내내 유효한 베어러 토큰이 그 객체 안에 있다는 뜻이라,
+            //  나중에 이 객체를 덤프하거나 로그로 찍기만 해도 토큰이 새어나간다. 지워서 없앤다.
+            customProperties.accessToken = null;
+            conn.authenticationData = customProperties;
+
+            conn.Send(new AuthResponseMessage { code = 200, message = "success" });
+            ServerAccept(conn);
+        }
+
+        private void Reject(NetworkConnectionToClient conn, string reason)
+        {
+            //  클라에는 사유를 나누지 않는다 — 왜 거부됐는지 알려주면 밖에서 상태를 떠볼 수 있다.
+            Debug.LogWarning($"[Auth] 접속 거부: {reason}");
+
+            conn.Send(new AuthResponseMessage { code = 401, message = "Invalid Credentials" });
+            conn.isAuthenticated = false;
+            ServerReject(conn);
         }
         #endregion
     }

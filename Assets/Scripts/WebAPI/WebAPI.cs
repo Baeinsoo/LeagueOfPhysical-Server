@@ -37,5 +37,20 @@ namespace LOP
             => SendAsync<GetMatchResponse>(
                 HttpRequestMessage.Get($"{EnvironmentSettings.active.matchmakingBaseURL}/match/{matchId}"), cancellationToken);
         #endregion
+
+        #region Auth
+        //  전역 발행(SendAsync<T>)을 쓰지 않는다 — 구독자가 없는데 GlobalMessagePipe.GetPublisher<T>를
+        //  도는 것은 IL2CPP에서 open generic 미지원으로 터질 수 있고, 브로커를 등록할 이유도 없다.
+        public static UniTask<IntrospectResponse> Introspect(string accessToken, CancellationToken cancellationToken = default)
+        {
+            var request = HttpRequestMessage.Post(
+                $"{EnvironmentSettings.active.lobbyBaseURL}/auth/introspect",
+                new IntrospectRequest { token = accessToken });
+
+            request.Headers["X-Internal-Api-Key"] = System.Environment.GetEnvironmentVariable("INTERNAL_API_KEY");
+
+            return httpClient.SendAsync<IntrospectResponse>(request, cancellationToken);
+        }
+        #endregion
     }
 }

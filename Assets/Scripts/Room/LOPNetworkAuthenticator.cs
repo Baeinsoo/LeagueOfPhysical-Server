@@ -142,15 +142,25 @@ namespace LOP
 
         private void Accept(NetworkConnectionToClient conn, CustomProperties customProperties, string authenticatedUserId)
         {
-            if (NetworkServer.connections.ContainsKey(conn.connectionId) == false)
+            //  connectionId만 보고 "살아있다"고 판단하면 안 된다 — kcp2k는 connectionId를 클라 주소로
+            //  만들어 재접속 시 재사용한다. 로비에 물어보는 ≤3초 사이 같은 클라가 끊겼다 재접속하면,
+            //  같은 connectionId를 가진 *다른* 연결 객체가 딕셔너리에 들어와 있을 수 있다. 그러면 이
+            //  presence-only 검사는 통과하지만 우리가 들고 있는 conn은 이미 죽은 객체라, 그 연결을
+            //  accept해도 아무것도 받지 못하는 좀비 세션이 된다. 그래서 존재 여부가 아니라 "지금
+            //  등록된 연결이 바로 이 conn 객체인가"(참조 동일성)까지 확인한다.
+            if (NetworkServer.connections.TryGetValue(conn.connectionId, out var current) == false || ReferenceEquals(current, conn) == false)
             {
-                //  로비에 물어보는 동안 끊긴 연결이다. 아무것도 하지 않는다.
+                //  로비에 물어보는 동안 끊겼거나(그리고 재접속으로 자리가 바뀌었거나) 한 연결이다. 아무것도 하지 않는다.
                 //  (isReady는 씬 준비 여부라 여기서 볼 값이 아니다 — 미인증 연결은 늘 false다.)
                 return;
             }
 
             //  클라가 주장한 값이 아니라 확인된 신원을 저장한다 — 이후 모든 서버 로직이 이 값을 신원으로 쓴다.
             customProperties.userId = authenticatedUserId;
+            //  접근 토큰은 이미 검증에 다 썼다 — 이 밑으로 아무도 안 읽는다. conn.authenticationData에
+            //  그대로 남겨두면 연결이 살아있는 내내 유효한 베어러 토큰이 그 객체 안에 있다는 뜻이라,
+            //  나중에 이 객체를 덤프하거나 로그로 찍기만 해도 토큰이 새어나간다. 지워서 없앤다.
+            customProperties.accessToken = null;
             conn.authenticationData = customProperties;
 
             conn.Send(new AuthResponseMessage { code = 200, message = "success" });

@@ -51,6 +51,10 @@ namespace LOP
             NetworkServer.UnregisterHandler<AuthRequestMessage>();
 
             handledConnections.Clear();
+
+            //  방이 닫힌 뒤에도 살아있는 타임아웃 코루틴이 60초까지 남아 있다가 깨어나면, 그사이 같은
+            //  connectionId를 재사용한 엉뚱한 연결을 건드릴 수 있다 — 방과 함께 코루틴도 정리한다.
+            StopAllCoroutines();
         }
 
         //  접속만 하고 인증 요청을 보내지 않는 연결은 그대로 두면 영원히 남아 maxConnections를 갉아먹는다.
@@ -71,11 +75,21 @@ namespace LOP
         {
             yield return new WaitForSecondsRealtime(AuthenticationTimeoutSeconds);
 
-            if (conn.isAuthenticated == false)
+            if (conn.isAuthenticated)
             {
-                Debug.LogWarning($"[Auth] 제한 시간 안에 인증하지 않아 연결을 끊습니다. connectionId: {conn.connectionId}");
-                conn.Disconnect();
+                yield break;
             }
+
+            //  kcp2k는 connectionId를 클라 주소 해시로 만들어 재접속 시 재사용한다. 이 conn이 인증
+            //  안 된 채 끊기고, 60초 안에 같은 id로 다른 클라가 접속해 들어오면, 이 코루틴이 깨어났을 때
+            //  그 다른 연결을 잘못 끊을 수 있다. Accept와 같은 참조 동일성 검사로 그걸 막는다.
+            if (NetworkServer.connections.TryGetValue(conn.connectionId, out var current) == false || ReferenceEquals(current, conn) == false)
+            {
+                yield break;
+            }
+
+            Debug.LogWarning($"[Auth] 제한 시간 안에 인증하지 않아 연결을 끊습니다. connectionId: {conn.connectionId}");
+            conn.Disconnect();
         }
 
         //  로비가 죽었을 때 30초(HttpClient 기본 타임아웃)를 기다리지 않는다 — 접속은 사람이 기다리는 경로다.

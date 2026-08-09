@@ -125,7 +125,20 @@ namespace LOP
                 return false;
             }
 
-            return sessionManager.TryGetSessionById(identity.SessionId, out session);
+            if (sessionManager.TryGetSessionById(identity.SessionId, out session) == false || session is not LOPSession found)
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(found.networkConnection, conn) == false)
+            {
+                //  이 세션은 이미 다른(더 새) 연결의 것이다. 해제 경로와 같은 규율 — 옛 연결이 산 플레이어를
+                //  조종하거나 그쪽으로 응답이 가게 만들지 못한다.
+                session = null;
+                return false;
+            }
+
+            return true;
         }
 
         private async Task ShutdownRoomServerAsync()

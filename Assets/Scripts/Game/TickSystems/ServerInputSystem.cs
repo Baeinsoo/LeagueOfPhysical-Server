@@ -3,20 +3,18 @@ using GameFramework;
 
 namespace LOP
 {
-    /// <summary>구 LOPRunner.ProcessInput 이동. 조종 엔티티별 입력을 소비해 이동/어빌리티에 반영하고, 처리 시퀀스를 클라에 통보한다.</summary>
+    /// <summary>구 LOPRunner.ProcessInput 이동. 조종 엔티티별 입력을 소비해 이동/어빌리티에 반영한다.</summary>
     public class ServerInputSystem : GameFramework.Runner.ITickSystem
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly InputBufferSystem inputBufferSystem;
         private readonly AbilityActivator abilityActivator;
-        private readonly ISessionManager sessionManager;
 
-        public ServerInputSystem(GameFramework.World.EntityRegistry entityRegistry, InputBufferSystem inputBufferSystem, AbilityActivator abilityActivator, ISessionManager sessionManager)
+        public ServerInputSystem(GameFramework.World.EntityRegistry entityRegistry, InputBufferSystem inputBufferSystem, AbilityActivator abilityActivator)
         {
             this.entityRegistry = entityRegistry;
             this.inputBufferSystem = inputBufferSystem;
             this.abilityActivator = abilityActivator;
-            this.sessionManager = sessionManager;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -47,7 +45,9 @@ namespace LOP
 
                 if (input == null)
                 {
-                    // 미스 → 0 커맨드 확정(수평 제동). 어빌리티/시퀀스 송신은 입력 있을 때만.
+                    // 커맨드가 없다 = 유실/지각. 클라는 무입력 틱에도 0 커맨드를 보내므로 이 자리는
+                    // 더 이상 "안 눌렀다"를 뜻하지 않는다. 지금은 0 커맨드로 제동하지만, 마지막 입력을
+                    // 이어 쓰는 게 표준이다(미스는 대개 계속 누르고 있는 중에 난다) — 다음 슬라이스.
                     inputBufferSystem.SetCurrent(buffer, new InputCommand());
                     continue;
                 }
@@ -63,18 +63,6 @@ namespace LOP
                     // 발동 연출 cue는 AbilityActivator가 내부에서 append한다(플레이어·AI 공용).
                     abilityActivator.TryActivate(worldEntity.Id, input.AbilityId, tick);
                 }
-
-                InputSequenceToC inputSequnceToC = new InputSequenceToC();
-                inputSequnceToC.EntityId = worldEntity.Id;
-                inputSequnceToC.InputSequence = new InputSequence
-                {
-                    Tick = tick,
-                    Sequence = input.SequenceNumber,
-                };
-
-                string userId = worldEntity.Get<GameFramework.World.Ownership>()?.OwnerId;
-                ISession session = sessionManager.GetSessionByUserId(userId);
-                session.Send(inputSequnceToC);
             }
         }
     }

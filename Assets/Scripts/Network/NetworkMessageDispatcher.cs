@@ -13,29 +13,29 @@ namespace LOP
     /// </summary>
     public class NetworkMessageDispatcher
     {
-        private readonly Dictionary<Type, Action<IMessage>> routes = new();
+        private readonly Dictionary<Type, Action<string, IMessage>> routes = new();
 
         [Inject]
         public NetworkMessageDispatcher(
-            IPublisher<GameInfoToS> gameInfo,
-            IPublisher<InputCommandToS> inputCommand,
-            IPublisher<StatAllocationToS> statAllocation)
+            IPublisher<ClientMessage<GameInfoToS>> gameInfo,
+            IPublisher<ClientMessage<InputCommandToS>> inputCommand,
+            IPublisher<ClientMessage<StatAllocationToS>> statAllocation)
         {
             Register(gameInfo);
             Register(inputCommand);
             Register(statAllocation);
         }
 
-        private void Register<T>(IPublisher<T> publisher) where T : IMessage
+        private void Register<T>(IPublisher<ClientMessage<T>> publisher) where T : IMessage
         {
-            routes[typeof(T)] = message => publisher.Publish((T)message);
+            routes[typeof(T)] = (userId, message) => publisher.Publish(new ClientMessage<T>(userId, (T)message));
         }
 
-        public void Dispatch(IMessage message)
+        public void Dispatch(string userId, IMessage message)
         {
             if (routes.TryGetValue(message.GetType(), out var route))
             {
-                route(message);
+                route(userId, message);
             }
             else
             {

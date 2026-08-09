@@ -96,9 +96,12 @@ namespace LOP
 
         public async Task StartRoomServerAsync()
         {
-            NetworkServer.RegisterHandler<CustomMirrorMessage>((id, message) =>
+            NetworkServer.RegisterHandler<CustomMirrorMessage>((conn, message) =>
             {
-                dispatcher.Dispatch(message.payload);
+                //  RegisterHandler의 requireAuthentication 기본값이 true라 미인증 연결은 여기 오지 않는다.
+                //  즉 authenticationData는 인증기가 채워 둔 값이 반드시 들어 있다.
+                var customProperties = (CustomProperties)conn.authenticationData;
+                dispatcher.Dispatch(customProperties.userId, message.payload);
             });
 
             networkManager.onServerConnect += OnPlayerConnect;

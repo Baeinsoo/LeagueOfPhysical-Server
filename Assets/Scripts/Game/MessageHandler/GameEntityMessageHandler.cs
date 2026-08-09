@@ -9,14 +9,14 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.World.StatsSystem statsSystem;
         private readonly EntitySpawner entitySpawner;
-        private readonly ISubscriber<StatAllocationToS> statAllocationSubscriber;
+        private readonly ISubscriber<ClientMessage<StatAllocationToS>> statAllocationSubscriber;
 
         public GameEntityMessageHandler(
             ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry,
             GameFramework.World.StatsSystem statsSystem,
             EntitySpawner entitySpawner,
-            ISubscriber<StatAllocationToS> statAllocationSubscriber)
+            ISubscriber<ClientMessage<StatAllocationToS>> statAllocationSubscriber)
         {
             this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
@@ -27,9 +27,9 @@ namespace LOP
 
         protected override void Subscribe() => Track(statAllocationSubscriber.Subscribe(OnStatAllocationToS));
 
-        private void OnStatAllocationToS(StatAllocationToS statAllocationToS)
+        private void OnStatAllocationToS(ClientMessage<StatAllocationToS> received)
         {
-            ISession session = sessionManager.GetSessionById(statAllocationToS.SessionId);
+            ISession session = sessionManager.GetSessionByUserId(received.UserId);
             string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
             GameFramework.World.Stats stats = entityRegistry.Get(entityId)?.Get<GameFramework.World.Stats>();
             if (stats == null)
@@ -40,7 +40,7 @@ namespace LOP
 
             int statType;
             // wire stat 문자열은 소문자 필드명("strength" 등) — 클라가 보내는 기존 계약 유지.
-            switch (statAllocationToS.Stat)
+            switch (received.Message.Stat)
             {
                 case "strength": statType = (int)GameFramework.World.EntityStatType.Strength; break;
                 case "dexterity": statType = (int)GameFramework.World.EntityStatType.Dexterity; break;
@@ -53,7 +53,7 @@ namespace LOP
 
             StatAllocationToC statAllocationToC = new StatAllocationToC
             {
-                Stat = statAllocationToS.Stat,
+                Stat = received.Message.Stat,
                 StatValue = statValue,
             };
 

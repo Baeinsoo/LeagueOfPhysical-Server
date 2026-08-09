@@ -75,6 +75,9 @@ namespace LOP
                     ExpectedNextSequence = entityRegistry.Get(entityId).Get<InputBuffer>().ExpectedNextSequence,
                     GameInfo = new GameInfo
                     {
+                        // Tick·ElapsedTime은 클라가 더 이상 시드로 쓰지 않는다(자기 시계에서 유도).
+                        // 진단용으로만 남긴다 — 보낸 순간의 값이라 시작 시점을 이걸로 정하면 어긋난다.
+                        // Interval·MatchSeed는 계속 필요하다(스냅샷으로 대체 불가) — 지우지 말 것.
                         Tick = runner.tickUpdater.tick,
                         Interval = runner.tickUpdater.interval,
                         ElapsedTime = runner.tickUpdater.elapsedTime,

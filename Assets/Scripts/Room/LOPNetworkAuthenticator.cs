@@ -51,13 +51,46 @@ namespace LOP
             NetworkServer.UnregisterHandler<AuthRequestMessage>();
 
             handledConnections.Clear();
+
+            //  방이 닫힌 뒤에도 살아있는 타임아웃 코루틴이 60초까지 남아 있다가 깨어나면, 그사이 같은
+            //  connectionId를 재사용한 엉뚱한 연결을 건드릴 수 있다 — 방과 함께 코루틴도 정리한다.
+            StopAllCoroutines();
         }
+
+        //  접속만 하고 인증 요청을 보내지 않는 연결은 그대로 두면 영원히 남아 maxConnections를 갉아먹는다.
+        //  Mirror의 TimeoutAuthenticator와 같은 동작이되, 그 컴포넌트는 다른 인증기를 감싸는 데코레이터라
+        //  씬에서 NetworkManager의 authenticator를 갈아끼워야 한다 — 여기서 직접 처리한다.
+        private const float AuthenticationTimeoutSeconds = 60f;
 
         /// <summary>
         /// Called on server from OnServerAuthenticateInternal when a client needs to authenticate
         /// </summary>
         /// <param name="conn">Connection to client.</param>
-        public override void OnServerAuthenticate(NetworkConnectionToClient conn) { }
+        public override void OnServerAuthenticate(NetworkConnectionToClient conn)
+        {
+            StartCoroutine(DisconnectIfNotAuthenticated(conn));
+        }
+
+        private IEnumerator DisconnectIfNotAuthenticated(NetworkConnectionToClient conn)
+        {
+            yield return new WaitForSecondsRealtime(AuthenticationTimeoutSeconds);
+
+            if (conn.isAuthenticated)
+            {
+                yield break;
+            }
+
+            //  kcp2k는 connectionId를 클라 주소 해시로 만들어 재접속 시 재사용한다. 이 conn이 인증
+            //  안 된 채 끊기고, 60초 안에 같은 id로 다른 클라가 접속해 들어오면, 이 코루틴이 깨어났을 때
+            //  그 다른 연결을 잘못 끊을 수 있다. Accept와 같은 참조 동일성 검사로 그걸 막는다.
+            if (NetworkServer.connections.TryGetValue(conn.connectionId, out var current) == false || ReferenceEquals(current, conn) == false)
+            {
+                yield break;
+            }
+
+            Debug.LogWarning($"[Auth] 제한 시간 안에 인증하지 않아 연결을 끊습니다. connectionId: {conn.connectionId}");
+            conn.Disconnect();
+        }
 
         //  로비가 죽었을 때 30초(HttpClient 기본 타임아웃)를 기다리지 않는다 — 접속은 사람이 기다리는 경로다.
         private const int IntrospectTimeoutSeconds = 3;
@@ -96,20 +129,20 @@ namespace LOP
 
         private async UniTask DecideAsync(NetworkConnectionToClient conn, AuthRequestMessage msg)
         {
-            string claimedUserId = msg.customProperties?.userId;
-
-            if (roomDataStore.match.playerList.Contains(claimedUserId) == false)
-            {
-                Reject(conn, $"명단에 없는 userId: {claimedUserId}");
-                return;
-            }
+            string accessToken = msg.customProperties?.accessToken;
 
 #if UNITY_EDITOR
             //  에디터의 게임서버는 가짜 방·가짜 명단으로 돈다(ConfigureRoomComponent). 조회 키를 git에
-            //  커밋하지 않으려고 introspect도 같은 경계 안에 둔다. 실환경에서는 아래 경로를 반드시 탄다.
-            Debug.LogWarning("[Auth] 에디터라 introspect를 건너뜁니다. 신원은 클라가 주장한 값을 씁니다.");
-            Accept(conn, msg.customProperties, claimedUserId);
-            return;
+            //  커밋하지 않으려고 introspect도 같은 경계 안에 둔다. 실환경에서는 아래 #else를 반드시 탄다.
+            Debug.LogWarning("[Auth] 에디터라 introspect를 건너뜁니다. 서명을 검증하지 않고 sub만 읽습니다.");
+
+            if (EditorAccessTokenClaims.TryReadSubject(accessToken, out string editorUserId) == false)
+            {
+                Reject(conn, "토큰에서 sub를 읽지 못했습니다");
+                return;
+            }
+
+            AcceptIfOnRoster(conn, editorUserId);
 #else
             if (string.IsNullOrEmpty(System.Environment.GetEnvironmentVariable("INTERNAL_API_KEY")))
             {
@@ -119,7 +152,7 @@ namespace LOP
             }
 
             using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(IntrospectTimeoutSeconds));
-            IntrospectResponse introspect = await WebAPI.Introspect(msg.customProperties.accessToken, timeout.Token);
+            IntrospectResponse introspect = await WebAPI.Introspect(accessToken, timeout.Token);
 
             if (introspect == null || introspect.active == false)
             {
@@ -129,18 +162,24 @@ namespace LOP
                 return;
             }
 
-            if (introspect.sub != claimedUserId)
-            {
-                //  명단은 A로 통과했는데 토큰 주인은 B인 경우 — 사칭이다.
-                Reject(conn, $"토큰 주인과 주장한 userId가 다름: {introspect.sub} != {claimedUserId}");
-                return;
-            }
-
-            Accept(conn, msg.customProperties, introspect.sub);
+            AcceptIfOnRoster(conn, introspect.sub);
 #endif
         }
 
-        private void Accept(NetworkConnectionToClient conn, CustomProperties customProperties, string authenticatedUserId)
+        //  명단 대조가 토큰 확인 *뒤에* 온다. 클라가 이름을 주장하지 않으므로 확인 전에는 대조할
+        //  값 자체가 없다 — 신원은 토큰에서만 나온다.
+        private void AcceptIfOnRoster(NetworkConnectionToClient conn, string userId)
+        {
+            if (roomDataStore.match.playerList.Contains(userId) == false)
+            {
+                Reject(conn, $"명단에 없는 참가자: {userId}");
+                return;
+            }
+
+            Accept(conn, userId);
+        }
+
+        private void Accept(NetworkConnectionToClient conn, string authenticatedUserId)
         {
             //  connectionId만 보고 "살아있다"고 판단하면 안 된다 — kcp2k는 connectionId를 클라 주소로
             //  만들어 재접속 시 재사용한다. 로비에 물어보는 ≤3초 사이 같은 클라가 끊겼다 재접속하면,
@@ -155,13 +194,9 @@ namespace LOP
                 return;
             }
 
-            //  클라가 주장한 값이 아니라 확인된 신원을 저장한다 — 이후 모든 서버 로직이 이 값을 신원으로 쓴다.
-            customProperties.userId = authenticatedUserId;
-            //  접근 토큰은 이미 검증에 다 썼다 — 이 밑으로 아무도 안 읽는다. conn.authenticationData에
-            //  그대로 남겨두면 연결이 살아있는 내내 유효한 베어러 토큰이 그 객체 안에 있다는 뜻이라,
-            //  나중에 이 객체를 덤프하거나 로그로 찍기만 해도 토큰이 새어나간다. 지워서 없앤다.
-            customProperties.accessToken = null;
-            conn.authenticationData = customProperties;
+            //  클라가 보낸 객체를 그대로 얹지 않는다 — 서버가 확정한 신원만 담은 타입을 새로 만든다.
+            //  덤으로 접근 토큰이 연결 수명 내내 남는 문제도 사라진다(이 객체엔 토큰이 없다).
+            conn.authenticationData = new ConnectionIdentity(authenticatedUserId);
 
             conn.Send(new AuthResponseMessage { code = 200, message = "success" });
             ServerAccept(conn);

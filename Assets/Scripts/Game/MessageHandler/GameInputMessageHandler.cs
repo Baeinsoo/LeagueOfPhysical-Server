@@ -6,7 +6,6 @@ namespace LOP
 {
     public class GameInputMessageHandler : MessageHandlerBase
     {
-        private readonly ISessionManager sessionManager;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly InputBufferSystem inputBufferSystem;
         private readonly EntitySpawner entitySpawner;
@@ -14,14 +13,12 @@ namespace LOP
         private readonly ITickUpdater tickUpdater;
 
         public GameInputMessageHandler(
-            ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry,
             InputBufferSystem inputBufferSystem,
             EntitySpawner entitySpawner,
             ISubscriber<ClientMessage<InputCommandToS>> inputCommandSubscriber,
             ITickUpdater tickUpdater)
         {
-            this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
             this.inputBufferSystem = inputBufferSystem;
             this.entitySpawner = entitySpawner;
@@ -33,8 +30,8 @@ namespace LOP
 
         private void OnInputCommandToS(ClientMessage<InputCommandToS> received)
         {
-            //  세션은 메시지에 적힌 값이 아니라 연결에서 확인된 신원으로 찾는다.
-            ISession session = sessionManager.GetSessionByUserId(received.UserId);
+            //  세션은 연결에서 이미 찾아 왔다 — 여기서 계정으로 다시 조회하지 않는다.
+            ISession session = received.Session;
             string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
             var buffer = entityRegistry.Get(entityId).Get<InputBuffer>();
             if (buffer == null)

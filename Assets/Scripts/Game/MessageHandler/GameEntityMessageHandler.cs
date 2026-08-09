@@ -5,20 +5,17 @@ namespace LOP
 {
     public class GameEntityMessageHandler : MessageHandlerBase
     {
-        private readonly ISessionManager sessionManager;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.World.StatsSystem statsSystem;
         private readonly EntitySpawner entitySpawner;
         private readonly ISubscriber<ClientMessage<StatAllocationToS>> statAllocationSubscriber;
 
         public GameEntityMessageHandler(
-            ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry,
             GameFramework.World.StatsSystem statsSystem,
             EntitySpawner entitySpawner,
             ISubscriber<ClientMessage<StatAllocationToS>> statAllocationSubscriber)
         {
-            this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
             this.statsSystem = statsSystem;
             this.entitySpawner = entitySpawner;
@@ -29,7 +26,7 @@ namespace LOP
 
         private void OnStatAllocationToS(ClientMessage<StatAllocationToS> received)
         {
-            ISession session = sessionManager.GetSessionByUserId(received.UserId);
+            ISession session = received.Session;
             string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
             GameFramework.World.Stats stats = entityRegistry.Get(entityId)?.Get<GameFramework.World.Stats>();
             if (stats == null)

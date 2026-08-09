@@ -98,10 +98,12 @@ namespace LOP
         {
             NetworkServer.RegisterHandler<CustomMirrorMessage>((conn, message) =>
             {
-                //  RegisterHandler의 requireAuthentication 기본값이 true라 미인증 연결은 여기 오지 않는다.
-                //  즉 authenticationData는 인증기가 채워 둔 값이 반드시 들어 있다.
-                var customProperties = (CustomProperties)conn.authenticationData;
-                dispatcher.Dispatch(customProperties.userId, message.payload);
+                if (TryGetSession(conn, out ISession session) == false)
+                {
+                    return;
+                }
+
+                dispatcher.Dispatch(session, message.payload);
             });
 
             networkManager.onServerConnect += OnPlayerConnect;
@@ -110,6 +112,20 @@ namespace LOP
             networkManager.StartServer();
 
             await UniTask.WaitUntil(() => NetworkServer.active);
+        }
+
+        //  연결 → 세션. 계정 id를 거치지 않는다 — 같은 계정이 여러 연결을 가질 수 있어서,
+        //  계정으로 찾으면 "어느 연결이 보냈나"에 답하지 못한다.
+        private bool TryGetSession(NetworkConnectionToClient conn, out ISession session)
+        {
+            session = null;
+
+            if (conn.authenticationData is not ConnectionIdentity identity || string.IsNullOrEmpty(identity.SessionId))
+            {
+                return false;
+            }
+
+            return sessionManager.TryGetSessionById(identity.SessionId, out session);
         }
 
         private async Task ShutdownRoomServerAsync()
@@ -181,23 +197,27 @@ namespace LOP
 
             var conn = data.networkConnection;
 
-            if (conn.authenticationData is not CustomProperties customProperties)
+            if (conn.authenticationData is not ConnectionIdentity identity)
             {
                 //  Mirror는 소켓이 붙는 즉시(인증 완료 전에도) 이 콜백을 부를 수 있다. 아직 신원이
                 //  확인 안 된 연결이라 할 일이 없다 — 인증이 끝나면 그때 세션이 만들어진다.
                 return;
             }
 
-            Debug.Log($"[OnPlayerEnter] userId: {customProperties.userId}, identity: {conn.identity}");
+            Debug.Log($"[OnPlayerEnter] userId: {identity.UserId}, identity: {conn.identity}");
 
-            if (sessionManager.TryGetSessionByUserId<LOPSession>(customProperties.userId, out var session))
+            if (sessionManager.TryGetSessionByUserId<LOPSession>(identity.UserId, out LOPSession session) == false)
             {
-                session.networkConnection = conn;
+                session = new LOPSession(identity.UserId, conn);
+                sessionManager.AddSession(session);
             }
             else
             {
-                sessionManager.AddSession(new LOPSession(customProperties.userId, conn));
+                session.networkConnection = conn;
             }
+
+            //  연결이 자기 세션을 가리키게 한다. 이후 수신·해제는 이 값으로 세션을 찾는다.
+            identity.SessionId = session.sessionId;
         }
 
         public void OnPlayerDisconnect(IConnectionData connectionData)
@@ -209,18 +229,25 @@ namespace LOP
 
             var conn = data.networkConnection;
 
-            if (conn.authenticationData is not CustomProperties customProperties)
+            if (conn.authenticationData is not ConnectionIdentity identity || string.IsNullOrEmpty(identity.SessionId))
             {
                 //  인증되지 못한 채 끊긴 연결이다(로비 장애·타임아웃·만료 토큰·틀린 키 등 — 더 이상
                 //  드문 예외가 아니라 흔히 오는 경로다). 세션을 만든 적이 없으니 더 할 일이 없다.
                 return;
             }
 
-            Debug.Log($"[OnPlayerLeave] userId: {customProperties.userId}, identity: {conn.identity}");
+            Debug.Log($"[OnPlayerLeave] userId: {identity.UserId}, identity: {conn.identity}");
 
-            if (sessionManager.TryGetSessionByUserId<LOPSession>(customProperties.userId, out var session) == false)
+            if (sessionManager.TryGetSessionById(identity.SessionId, out ISession found) == false || found is not LOPSession session)
             {
-                //  세션이 아직 없는데 끊긴 경우(예: 인증 성공 직후 세션 생성 전 경합). 더 할 일이 없다.
+                return;
+            }
+
+            //  이미 새 연결로 갈아탄 세션이면 건드리지 않는다. Mirror의 해제 감지는 타임아웃이라
+            //  옛 연결의 해제가 재접속보다 늦게 도착할 수 있는데, 그때 세션을 끄면 방금 다시 들어온
+            //  플레이어가 아무 조작도 못 하게 된다.
+            if (ReferenceEquals(session.networkConnection, conn) == false)
+            {
                 return;
             }
 

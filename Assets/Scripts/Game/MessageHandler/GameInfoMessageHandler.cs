@@ -10,7 +10,6 @@ namespace LOP
     public class GameInfoMessageHandler : MessageHandlerBase, ITickSystem
     {
         private readonly IRunner runner;
-        private readonly ISessionManager sessionManager;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly MatchSeed matchSeed;
         private readonly IEntityCreationDataFactory entityCreationDataFactory;
@@ -21,7 +20,6 @@ namespace LOP
 
         public GameInfoMessageHandler(
             IRunner runner,
-            ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry,
             MatchSeed matchSeed,
             IEntityCreationDataFactory entityCreationDataFactory,
@@ -29,7 +27,6 @@ namespace LOP
             ISubscriber<ClientMessage<GameInfoToS>> gameInfoSubscriber)
         {
             this.runner = runner;
-            this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
             this.matchSeed = matchSeed;
             this.entityCreationDataFactory = entityCreationDataFactory;
@@ -65,8 +62,8 @@ namespace LOP
 
             foreach (var received in gameInfoToSList)
             {
-                var session = sessionManager.GetSessionByUserId(received.UserId);
-                string entityId = entitySpawner.GetEntityIdByUserId(received.UserId);
+                var session = received.Session;
+                string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
 
                 var gameInfoToC = new GameInfoToC
                 {

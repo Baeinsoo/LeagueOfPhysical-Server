@@ -50,7 +50,7 @@ namespace LOP
             // unregister the handler for the authentication request
             NetworkServer.UnregisterHandler<AuthRequestMessage>();
 
-            handledConnectionIds.Clear();
+            handledConnections.Clear();
         }
 
         /// <summary>
@@ -63,12 +63,15 @@ namespace LOP
         private const int IntrospectTimeoutSeconds = 3;
 
         //  같은 연결이 인증 요청을 반복해 보내면 그때마다 로비를 부르게 된다(소켓 1회 → HTTP N회 증폭).
-        //  첫 요청만 처리한다. 방 수명이 짧고 연결 수는 참가자 수로 묶이므로 OnStopServer에서 통째로 비운다.
-        private readonly HashSet<int> handledConnectionIds = new HashSet<int>();
+        //  첫 요청만 처리한다. 키는 connectionId(int)가 아니라 연결 객체 자체다 — kcp2k는 connectionId를
+        //  클라 주소 해시로 만들어 재접속 시 같은 id가 재사용될 수 있는데, 그때도 Mirror는 매번 새
+        //  NetworkConnectionToClient 인스턴스를 만들므로(참조 동일성) 객체 키는 재접속과 단순 재전송을
+        //  오탐 없이 구분한다. 방 수명이 짧고 연결 수는 참가자 수로 묶이므로 OnStopServer에서 통째로 비운다.
+        private readonly HashSet<NetworkConnectionToClient> handledConnections = new HashSet<NetworkConnectionToClient>();
 
         public void OnAuthRequestMessage(NetworkConnectionToClient conn, AuthRequestMessage msg)
         {
-            if (handledConnectionIds.Add(conn.connectionId) == false)
+            if (handledConnections.Add(conn) == false)
             {
                 return;
             }
@@ -77,6 +80,21 @@ namespace LOP
         }
 
         private async UniTaskVoid AuthenticateAsync(NetworkConnectionToClient conn, AuthRequestMessage msg)
+        {
+            try
+            {
+                await DecideAsync(conn, msg);
+            }
+            catch (Exception exception)
+            {
+                //  UniTaskVoid 밖으로 예외가 새면 UniTaskScheduler가 로그만 남기고 삼킨다 — 그러면
+                //  이 연결은 accept도 reject도 못 받은 채 영원히 멈춘다. 판정 도중 무엇이 터지든
+                //  (널참조 포함) 반드시 여기서 거부 응답까지 보낸다.
+                Reject(conn, $"인증 처리 실패: {exception.Message}");
+            }
+        }
+
+        private async UniTask DecideAsync(NetworkConnectionToClient conn, AuthRequestMessage msg)
         {
             string claimedUserId = msg.customProperties?.userId;
 
@@ -100,22 +118,13 @@ namespace LOP
                 return;
             }
 
-            IntrospectResponse introspect;
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(IntrospectTimeoutSeconds));
+            IntrospectResponse introspect = await WebAPI.Introspect(msg.customProperties.accessToken, timeout.Token);
 
-            try
+            if (introspect == null || introspect.active == false)
             {
-                using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(IntrospectTimeoutSeconds));
-                introspect = await WebAPI.Introspect(msg.customProperties.accessToken, timeout.Token);
-            }
-            catch (Exception exception)
-            {
-                //  확인하지 못한 것은 통과시키지 않는다(fail closed).
-                Reject(conn, $"introspect 실패: {exception.Message}");
-                return;
-            }
-
-            if (introspect.active == false)
-            {
+                //  응답 본문이 비어 있으면(게이트웨이 이상 등) 역직렬화 결과가 null이다 — 토큰이
+                //  유효하지 않은 경우와 동일하게 거부한다(fail closed).
                 Reject(conn, "토큰이 유효하지 않음");
                 return;
             }

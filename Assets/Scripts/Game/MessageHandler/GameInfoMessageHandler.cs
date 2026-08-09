@@ -15,9 +15,9 @@ namespace LOP
         private readonly MatchSeed matchSeed;
         private readonly IEntityCreationDataFactory entityCreationDataFactory;
         private readonly EntitySpawner entitySpawner;
-        private readonly ISubscriber<GameInfoToS> gameInfoSubscriber;
+        private readonly ISubscriber<ClientMessage<GameInfoToS>> gameInfoSubscriber;
 
-        private List<GameInfoToS> gameInfoToSList = new List<GameInfoToS>();
+        private List<ClientMessage<GameInfoToS>> gameInfoToSList = new List<ClientMessage<GameInfoToS>>();
 
         public GameInfoMessageHandler(
             IRunner runner,
@@ -26,7 +26,7 @@ namespace LOP
             MatchSeed matchSeed,
             IEntityCreationDataFactory entityCreationDataFactory,
             EntitySpawner entitySpawner,
-            ISubscriber<GameInfoToS> gameInfoSubscriber)
+            ISubscriber<ClientMessage<GameInfoToS>> gameInfoSubscriber)
         {
             this.runner = runner;
             this.sessionManager = sessionManager;
@@ -49,9 +49,9 @@ namespace LOP
             runner.UnregisterSystem(this);   // 추가 teardown
         }
 
-        private void OnGameInfoToS(GameInfoToS gameInfoToS)
+        private void OnGameInfoToS(ClientMessage<GameInfoToS> received)
         {
-            gameInfoToSList.Add(gameInfoToS);
+            gameInfoToSList.Add(received);
         }
 
         public void Tick(long tick, float deltaTime)
@@ -63,10 +63,10 @@ namespace LOP
 
             EntityCreationData[] allEntityCreationDatas = BuildAllEntityCreationDatas();
 
-            foreach (var gameInfoToS in gameInfoToSList)
+            foreach (var received in gameInfoToSList)
             {
-                var session = sessionManager.GetSessionByUserId(gameInfoToS.UserId);
-                string entityId = entitySpawner.GetEntityIdByUserId(gameInfoToS.UserId);
+                var session = sessionManager.GetSessionByUserId(received.UserId);
+                string entityId = entitySpawner.GetEntityIdByUserId(received.UserId);
 
                 var gameInfoToC = new GameInfoToC
                 {

@@ -25,9 +25,9 @@ namespace LOP
             builder.RegisterMessageBroker<Event.Entity.ItemTouch>(options);
 
             // 네트워크 수신(NetworkMessageDispatcher가 발행 → MessageHandler가 구독)
-            builder.RegisterMessageBroker<GameInfoToS>(options);
-            builder.RegisterMessageBroker<InputCommandToS>(options);
-            builder.RegisterMessageBroker<StatAllocationToS>(options);
+            builder.RegisterMessageBroker<ClientMessage<GameInfoToS>>(options);
+            builder.RegisterMessageBroker<ClientMessage<InputCommandToS>>(options);
+            builder.RegisterMessageBroker<ClientMessage<StatAllocationToS>>(options);
             builder.Register<NetworkMessageDispatcher>(Lifetime.Singleton);
 
             builder.Register<LOP.MasterData.LOPMasterData>(Lifetime.Singleton);

@@ -96,9 +96,12 @@ namespace LOP
 
         public async Task StartRoomServerAsync()
         {
-            NetworkServer.RegisterHandler<CustomMirrorMessage>((id, message) =>
+            NetworkServer.RegisterHandler<CustomMirrorMessage>((conn, message) =>
             {
-                dispatcher.Dispatch(message.payload);
+                //  RegisterHandler의 requireAuthentication 기본값이 true라 미인증 연결은 여기 오지 않는다.
+                //  즉 authenticationData는 인증기가 채워 둔 값이 반드시 들어 있다.
+                var customProperties = (CustomProperties)conn.authenticationData;
+                dispatcher.Dispatch(customProperties.userId, message.payload);
             });
 
             networkManager.onServerConnect += OnPlayerConnect;
@@ -177,7 +180,13 @@ namespace LOP
             }
 
             var conn = data.networkConnection;
-            var customProperties = conn.authenticationData as CustomProperties;
+
+            if (conn.authenticationData is not CustomProperties customProperties)
+            {
+                //  Mirror는 소켓이 붙는 즉시(인증 완료 전에도) 이 콜백을 부를 수 있다. 아직 신원이
+                //  확인 안 된 연결이라 할 일이 없다 — 인증이 끝나면 그때 세션이 만들어진다.
+                return;
+            }
 
             Debug.Log($"[OnPlayerEnter] userId: {customProperties.userId}, identity: {conn.identity}");
 
@@ -199,11 +208,22 @@ namespace LOP
             }
 
             var conn = data.networkConnection;
-            var customProperties = conn.authenticationData as CustomProperties;
+
+            if (conn.authenticationData is not CustomProperties customProperties)
+            {
+                //  인증되지 못한 채 끊긴 연결이다(로비 장애·타임아웃·만료 토큰·틀린 키 등 — 더 이상
+                //  드문 예외가 아니라 흔히 오는 경로다). 세션을 만든 적이 없으니 더 할 일이 없다.
+                return;
+            }
 
             Debug.Log($"[OnPlayerLeave] userId: {customProperties.userId}, identity: {conn.identity}");
 
-            var session = sessionManager.GetSessionByUserId<LOPSession>(customProperties.userId);
+            if (sessionManager.TryGetSessionByUserId<LOPSession>(customProperties.userId, out var session) == false)
+            {
+                //  세션이 아직 없는데 끊긴 경우(예: 인증 성공 직후 세션 생성 전 경합). 더 할 일이 없다.
+                return;
+            }
+
             session.networkConnection = null;
         }
     }

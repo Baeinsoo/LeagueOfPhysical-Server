@@ -131,7 +131,11 @@ namespace LOP
                 });
             }
 
-            runner.Run(0, TICK_INTERVAL, 0);
+            // 틱을 자기 시계에서 유도한다. 0을 넣으면 다음 프레임에 elapsedTime이 ServerNow(프로세스
+            // 가동 시간)로 덮이면서 tick만 뒤처지고, 프레임당 8틱 상한 탓에 몇 초를 8배속으로 질주한다.
+            // 그동안 tick과 elapsedTime이 서로 안 맞아 gameInfo가 자기모순인 값을 클라에 보낸다.
+            double now = runner.networkTime.ServerNow;
+            runner.Run((long)(now / TICK_INTERVAL), TICK_INTERVAL, now);
         }
 
         private void SendHeartbeat()

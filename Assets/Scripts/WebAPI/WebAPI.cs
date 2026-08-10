@@ -7,7 +7,11 @@ namespace LOP
 {
     public class WebAPI
     {
-        private static readonly HttpClient httpClient = new HttpClient(new UnityWebRequestHandler());
+        //  게임서버가 백엔드에 거는 모든 호출은 서비스 간 호출이다 — 키를 한 곳에서 붙인다.
+        //  호출부마다 헤더를 손으로 넣으면 새 API를 추가할 때 빠뜨린다.
+        private static readonly HttpClient httpClient = new HttpClient(
+            new ApiKeyHandler(new UnityWebRequestHandler(), "X-Internal-Api-Key",
+                () => System.Environment.GetEnvironmentVariable("INTERNAL_API_KEY")));
 
         //  응답을 역직렬화한 뒤 전역 발행까지 한다 — 데이터 스토어가 이걸 구독해 상태를 채운다.
         private static async UniTask<T> SendAsync<T>(HttpRequestMessage request, CancellationToken cancellationToken)
@@ -20,16 +24,16 @@ namespace LOP
         #region Room
         public static UniTask<HttpResponse> Heartbeat(string roomId, CancellationToken cancellationToken = default)
             => SendAsync<HttpResponse>(
-                HttpRequestMessage.Put($"{EnvironmentSettings.active.roomBaseURL}/room/heartbeat/{roomId}"), cancellationToken);
+                HttpRequestMessage.Put($"{EnvironmentSettings.active.roomBaseURL}/internal/room/heartbeat/{roomId}"), cancellationToken);
 
 
         public static UniTask<UpdateRoomStatusResponse> UpdateRoomStatus(UpdateRoomStatusRequest request, CancellationToken cancellationToken = default)
             => SendAsync<UpdateRoomStatusResponse>(
-                HttpRequestMessage.Put($"{EnvironmentSettings.active.roomBaseURL}/room/status", request), cancellationToken);
+                HttpRequestMessage.Put($"{EnvironmentSettings.active.roomBaseURL}/internal/room/status", request), cancellationToken);
 
         public static UniTask<GetRoomResponse> GetRoom(string roomId, CancellationToken cancellationToken = default)
             => SendAsync<GetRoomResponse>(
-                HttpRequestMessage.Get($"{EnvironmentSettings.active.roomBaseURL}/room/{roomId}"), cancellationToken);
+                HttpRequestMessage.Get($"{EnvironmentSettings.active.roomBaseURL}/internal/room/{roomId}"), cancellationToken);
         #endregion
 
         #region Match
@@ -44,10 +48,8 @@ namespace LOP
         public static UniTask<IntrospectResponse> Introspect(string accessToken, CancellationToken cancellationToken = default)
         {
             var request = HttpRequestMessage.Post(
-                $"{EnvironmentSettings.active.lobbyBaseURL}/auth/introspect",
+                $"{EnvironmentSettings.active.lobbyBaseURL}/internal/auth/introspect",
                 new IntrospectRequest { token = accessToken });
-
-            request.Headers["X-Internal-Api-Key"] = System.Environment.GetEnvironmentVariable("INTERNAL_API_KEY");
 
             return httpClient.SendAsync<IntrospectResponse>(request, cancellationToken);
         }

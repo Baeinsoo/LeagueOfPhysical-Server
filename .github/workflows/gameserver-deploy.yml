@@ -3,7 +3,7 @@ on:
   workflow_dispatch:
     inputs:
       environment:
-        description: "배포 환경 (local=내 로컬 클러스터, dev=iwinv)"
+        description: "배포 환경 (local=내 로컬 클러스터, dev=iwinv, both=둘 다 — dev 라이브 클러스터에도 반영됨, 주의)"
         required: true
         default: local
         type: choice

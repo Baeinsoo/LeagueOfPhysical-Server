@@ -1,6 +1,13 @@
 name: gameserver-deploy
 on:
   workflow_dispatch:
+    inputs:
+      environment:
+        description: "배포 환경 (local=내 로컬 클러스터, dev=iwinv)"
+        required: true
+        default: local
+        type: choice
+        options: [local, dev, both]
 
 concurrency:
   group: gameserver-deploy
@@ -144,14 +151,23 @@ jobs:
           # keychain 우회 — 토큰을 URL에 임베드 (GitHub Actions가 로그에서 마스킹)
           git clone --depth 1 "https://x-access-token:${INFRA_REPO_TOKEN}@github.com/Baeinsoo/infrastructure" "$TMP/infra"
           cd "$TMP/infra"
-          CM=k8s/apps/backend/game-server-config/configmap.yaml
-          # GAME_SERVER_IMAGE 값을 새 sha로 교체 (BSD sed — 맥 러너)
-          sed -i '' -E "s|(GAME_SERVER_IMAGE: ).*|\\1re5nardo/game-server:${{ steps.tag.outputs.sha }}|" "$CM"
+          if [ "${{ inputs.environment }}" = "both" ]; then
+            envs=(local dev)
+          else
+            envs=("${{ inputs.environment }}")
+          fi
+          for env in "${envs[@]}"; do
+            F="k8s/envs/$env/backend/game-server-config.env"
+            test -f "$F" || { echo "환경 파일 없음: $F"; exit 1; }
+            # BSD sed (맥 러너). KEY=value 라인의 값만 교체한다.
+            sed -i '' -E "s|(GAME_SERVER_IMAGE=).*|\\1re5nardo/game-server:${{ steps.tag.outputs.sha }}|" "$F"
+            echo "bumped $env -> re5nardo/game-server:${{ steps.tag.outputs.sha }}"
+          done
           if git diff --quiet; then
             echo "변경 없음 (태그 동일)"
           else
             git config user.name "lop-ci"
             git config user.email "ci@lop.local"
-            git commit -am "ci(gameserver): bump GAME_SERVER_IMAGE -> ${{ steps.tag.outputs.sha }} [skip ci]"
+            git commit -am "ci(gameserver): bump GAME_SERVER_IMAGE (${{ inputs.environment }}) -> ${{ steps.tag.outputs.sha }} [skip ci]"
             git push origin main
           fi

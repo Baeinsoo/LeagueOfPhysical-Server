@@ -6,6 +6,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using UniRx;
 using UnityEngine;
@@ -17,6 +18,7 @@ namespace LOP
     {
         private const int HEARTBEAT_INTERVAL = 2;       //  sec
         private const double TICK_INTERVAL = 1 / 50d;   //  sec
+        private const int CLOSE_TIMEOUT_SECONDS = 3;
 
         [Inject] private IGameFactory gameFactory;
         [Inject] private LOPNetworkManager networkManager;
@@ -186,22 +188,39 @@ namespace LOP
                 case RunnerState.GameOver:
                     Debug.Log("Game Over");
 
-                    // 룸을 닫으면 클라 연결이 끊겨 못 받는다 — 상태 갱신보다 반드시 먼저 보낸다.
-                    foreach (var session in sessionManager.GetAllSessions())
-                    {
-                        session.Send(new MatchEndedToC());
-                    }
-
-                    if (!EnvironmentSettings.active.Standalone)
-                    {
-                        //  이벤트 핸들러라 await 할 수 없다 — 보내기만 하고 넘어간다.
-                        WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
-                        {
-                            roomId = roomDataStore.room.id,
-                            status = RoomStatus.Closed,
-                        }).Forget();
-                    }
+                    CloseRoomAsync().Forget();
                     break;
+            }
+        }
+
+        //  순서가 중요하다. 백엔드가 "이 방 끝났다"를 먼저 저장해야, 로비로 돌아간 클라가 자기
+        //  위치를 물었을 때 방금 끝난 방으로 다시 끌려가지 않는다. 파드 삭제는 이 호출 안에 없어서
+        //  (룸서버가 주기 정리로 지운다) 기다리는 동안 우리가 먼저 죽지 않는다.
+        private async UniTaskVoid CloseRoomAsync()
+        {
+            if (!EnvironmentSettings.active.Standalone)
+            {
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(CLOSE_TIMEOUT_SECONDS));
+
+                    await WebAPI.UpdateRoomStatus(new UpdateRoomStatusRequest
+                    {
+                        roomId = roomDataStore.room.id,
+                        status = RoomStatus.Closed,
+                    }, cts.Token);
+                }
+                catch (Exception e)
+                {
+                    //  실패해도 통보는 강행한다 — 클라를 끝난 방에 가둬 두는 쪽이 더 나쁘고,
+                    //  그 경우는 룸서버의 하트비트 만료 정리가 받아 준다.
+                    Debug.LogError($"Failed to close room. Notifying clients anyway. Error: {e.Message}");
+                }
+            }
+
+            foreach (var session in sessionManager.GetAllSessions())
+            {
+                session.Send(new MatchEndedToC());
             }
         }
 

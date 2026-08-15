@@ -3,7 +3,7 @@ using UnityEngine;
 
 namespace LOP
 {
-    public class CharacterCreator
+    public class CharacterCreator : ICharacterCreator
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly AbilitySystem abilitySystem;

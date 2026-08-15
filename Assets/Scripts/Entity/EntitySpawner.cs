@@ -15,7 +15,7 @@ namespace LOP
     {
         private readonly ISessionManager sessionManager;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
-        private readonly CharacterCreator characterCreator;
+        private readonly ICharacterCreator characterCreator;
         private readonly ItemCreator itemCreator;
         private readonly IPublisher<EntityCreated> entityCreatedPublisher;
         private readonly IPublisher<EntityDestroyed> entityDestroyedPublisher;
@@ -27,7 +27,7 @@ namespace LOP
         public EntitySpawner(
             ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry,
-            CharacterCreator characterCreator,
+            ICharacterCreator characterCreator,
             ItemCreator itemCreator,
             IPublisher<EntityCreated> entityCreatedPublisher,
             IPublisher<EntityDestroyed> entityDestroyedPublisher)

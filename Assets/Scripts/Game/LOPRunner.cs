@@ -53,7 +53,7 @@ namespace LOP
             Physics.gravity = new Vector3(0, -9.81f * 2, 0);
 
             // 맵 로딩과 베이스 초기화를 병렬로 — 둘 다 끝나길 기다린다.
-            var mapLoadTask = mapLoader.LoadAsync(ResolveScenePath());
+            var mapLoadTask = mapLoader.LoadAsync(ResolveMapScenePath());
 
             await base.InitializeAsync();
 
@@ -67,23 +67,15 @@ namespace LOP
             gameState = RunnerState.Initialized;
         }
 
-        /// <summary>이 판에서 로드할 씬. 매치의 첫 라운드가 가리키는 맵에서 온다.</summary>
-        private string ResolveScenePath()
+        /// <summary>이 판에서 로드할 맵 씬. 매치의 이번 라운드가 가리키는 맵에서 온다.</summary>
+        private string ResolveMapScenePath()
         {
             var rounds = roomDataStore.match?.rounds;
-            if (rounds == null || rounds.Length == 0)
-            {
-                throw new Exception("매치에 라운드가 없어 맵을 정할 수 없습니다.");
-            }
+            var roundIndex = MatchSceneResolver.CurrentRoundIndex(rounds?.Length ?? 0);
+            var round = rounds[roundIndex];
+            var map = masterData.Tables.TbMap.GetOrDefault(round.mapId);
 
-            var mapId = rounds[0].mapId;
-            var map = masterData.Tables.TbMap.GetOrDefault(mapId);
-            if (map == null)
-            {
-                throw new Exception($"TbMap에 없는 mapId입니다. mapId: {mapId}");
-            }
-
-            return map.ScenePath;
+            return MatchSceneResolver.RequireScenePath("TbMap", round.mapId, map?.ScenePath);
         }
 
         public override async Task DeinitializeAsync()

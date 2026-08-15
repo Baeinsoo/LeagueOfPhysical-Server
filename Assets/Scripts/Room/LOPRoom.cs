@@ -228,7 +228,18 @@ namespace LOP
 
             foreach (var session in sessionManager.GetAllSessions())
             {
-                session.Send(new MatchEndedToC());
+                //  한 세션 전송이 실패해도 나머지에겐 계속 보내야 한다 — 여기서 예외가 새면
+                //  아래 배수·종료까지 못 가서, 결과를 못 받은 클라 하나 때문에 파드가 안 죽는다.
+                //  그 클라는 결과를 못 받았으니 로비로 못 돌아가지만, 백엔드의 위치 자가치유가
+                //  구해 준다.
+                try
+                {
+                    session.Send(new MatchEndedToC());
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Failed to send MatchEndedToC to session {session.sessionId}. Error: {e.Message}");
+                }
             }
 
             //  클라는 결과를 받으면 로비 씬을 로드하고, 그때 스스로 연결을 끊는다. 그러니

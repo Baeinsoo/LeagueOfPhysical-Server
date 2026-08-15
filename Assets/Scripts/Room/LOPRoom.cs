@@ -259,6 +259,12 @@ namespace LOP
                 //  백엔드의 위치 자가치유가 로비에서 풀어 준다.
                 Debug.LogWarning($"Drain timed out after {DRAIN_TIMEOUT_SECONDS}s. Quitting anyway.");
             }
+            catch (Exception e)
+            {
+                //  예상 못 한 예외라도 여기서 삼켜야 한다 — 새면 이 메서드 전체가 죽어
+                //  아래 Quit()까지 못 가고, 그게 이 변경 전체가 없애려던 좀비 파드다.
+                Debug.LogError($"Unexpected error while draining sessions. Quitting anyway. Error: {e}");
+            }
 
             //  스스로 빠진다 — 백엔드가 파드를 지워 주기를 기다리지 않는다. 백엔드가 죽어 있어도
             //  포트와 파드가 즉시 반납된다. (에디터에서는 no-op이라 플레이 모드가 안 꺼진다.)

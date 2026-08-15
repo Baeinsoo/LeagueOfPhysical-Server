@@ -25,8 +25,15 @@ namespace LOP
 
                 // HP/MP/Level/Exp/StatPoints 모두 World 코어에서 읽는다.
                 GameFramework.World.Entity worldEntity = entityRegistry.Get(entityId);
+
+                //  매 틱 도는 자리라 "없다"를 그냥 찍으면 초당 수백 줄이 되어 다른 로그를 전부 밀어낸다
+                //  (Flappy의 새로 실제로 겪었다 — 96초에 8만 줄, 시작 로그가 회전으로 날아갔다).
+                //  마스터데이터로 스탯을 받는 몸만 이 값들을 갖는다. 새는 체력·마나 개념이 없어
+                //  없는 게 정상이고, 그건 알릴 일이 아니다.
+                bool expectsStats = worldEntity?.Has<MasterDataRef>() ?? false;
+
                 GameFramework.World.Health health = worldEntity?.Get<GameFramework.World.Health>();
-                if (health == null)
+                if (expectsStats && health == null)
                 {
                     Debug.LogWarning($"[World] UserEntitySnap: Health not found for entity {entityId}");
                 }
@@ -35,21 +42,21 @@ namespace LOP
                 entitySnapsToC.CurrentHP = health?.Current ?? 0;
                 entitySnapsToC.MaxHP = health?.Max ?? 0;
                 GameFramework.World.Mana mana = worldEntity?.Get<GameFramework.World.Mana>();
-                if (mana == null)
+                if (expectsStats && mana == null)
                 {
                     Debug.LogWarning($"[World] UserEntitySnap: Mana not found for entity {entityId}");
                 }
                 entitySnapsToC.CurrentMP = mana?.Current ?? 0;
                 entitySnapsToC.MaxMP = mana?.Max ?? 0;
                 GameFramework.World.Level level = worldEntity?.Get<GameFramework.World.Level>();
-                if (level == null)
+                if (expectsStats && level == null)
                 {
                     Debug.LogWarning($"[World] UserEntitySnap: Level not found for entity {entityId}");
                 }
                 entitySnapsToC.CurrentExp = level?.Exp ?? 0;
                 entitySnapsToC.Level = level?.Value ?? 0;
                 GameFramework.World.Stats stats = worldEntity?.Get<GameFramework.World.Stats>();
-                if (stats == null)
+                if (expectsStats && stats == null)
                 {
                     Debug.LogWarning($"[World] UserEntitySnap: Stats not found for entity {entityId}");
                 }

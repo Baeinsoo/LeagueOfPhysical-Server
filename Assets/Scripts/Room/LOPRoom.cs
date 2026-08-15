@@ -19,6 +19,7 @@ namespace LOP
         private const int HEARTBEAT_INTERVAL = 2;       //  sec
         private const double TICK_INTERVAL = 1 / 50d;   //  sec
         private const double CLOSE_TIMEOUT_SECONDS = 1.5;
+        private const double DRAIN_TIMEOUT_SECONDS = 10;
 
         [Inject] private IGameFactory gameFactory;
         [Inject] private LOPNetworkManager networkManager;
@@ -229,6 +230,30 @@ namespace LOP
             {
                 session.Send(new MatchEndedToC());
             }
+
+            //  클라는 결과를 받으면 로비 씬을 로드하고, 그때 스스로 연결을 끊는다. 그러니
+            //  "다 나갔다"가 곧 "다 받았다"는 뜻이라, 이걸 기다렸다 끄는 게 가장 안전하다.
+            //  고정 시간만 기다렸다 끄면 아직 못 받은 클라의 소켓이 죽는데, 클라에는 끊김을
+            //  처리하는 곳이 없어서(onStopClient 미사용) 그 사람은 끝난 방에 갇힌다.
+            try
+            {
+                using var drainCts = new CancellationTokenSource(TimeSpan.FromSeconds(DRAIN_TIMEOUT_SECONDS));
+                await UniTask.WaitUntil(
+                    () => sessionManager.GetAllSessions().All(session => session.isConnected == false),
+                    cancellationToken: drainCts.Token);
+            }
+            catch (OperationCanceledException)
+            {
+                //  느린 클라 하나 때문에 파드가 영원히 안 죽는 것만 막는다. 남은 사람은
+                //  백엔드의 위치 자가치유가 로비에서 풀어 준다.
+                Debug.LogWarning($"Drain timed out after {DRAIN_TIMEOUT_SECONDS}s. Quitting anyway.");
+            }
+
+            //  스스로 빠진다 — 백엔드가 파드를 지워 주기를 기다리지 않는다. 백엔드가 죽어 있어도
+            //  포트와 파드가 즉시 반납된다. (에디터에서는 no-op이라 플레이 모드가 안 꺼진다.)
+            //  같은 namespace(LOP)에 MonoSingleton `LOP.Application`이 있어 짧은 이름은 그쪽으로
+            //  잡힌다 — UnityEngine.Application을 풀네임으로 명시해야 한다.
+            UnityEngine.Application.Quit();
         }
 
         public void OnPlayerConnect(IConnectionData connectionData)

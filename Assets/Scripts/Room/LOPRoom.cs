@@ -18,7 +18,7 @@ namespace LOP
     {
         private const int HEARTBEAT_INTERVAL = 2;       //  sec
         private const double TICK_INTERVAL = 1 / 50d;   //  sec
-        private const int CLOSE_TIMEOUT_SECONDS = 3;
+        private const double CLOSE_TIMEOUT_SECONDS = 1.5;
 
         [Inject] private IGameFactory gameFactory;
         [Inject] private LOPNetworkManager networkManager;
@@ -194,10 +194,17 @@ namespace LOP
         }
 
         //  순서가 중요하다. 백엔드가 "이 방 끝났다"를 먼저 저장해야, 로비로 돌아간 클라가 자기
-        //  위치를 물었을 때 방금 끝난 방으로 다시 끌려가지 않는다. 파드 삭제는 이 호출 안에 없어서
-        //  (룸서버가 주기 정리로 지운다) 기다리는 동안 우리가 먼저 죽지 않는다.
+        //  위치를 물었을 때 방금 끝난 방으로 다시 끌려가지 않는다 — 그래서 이 저장을 기다린다.
+        //  단, 저장이 끝나는 순간 이 방은 룸서버 정리 대상이 되고, 그 정리는 2초마다 돈다.
+        //  그래서 우리는 정리 주기보다 짧게만 기다린다 — 기다리는 동안 파드가 지워질 가능성을
+        //  일부러 줄이는 것이지, 지워지지 않는다고 보장하는 게 아니다.
         private async UniTaskVoid CloseRoomAsync()
         {
+            //  하트비트부터 멈춘다. 아래 백엔드 호출이 실패/타임아웃해도(우리는 아직 살아있는데)
+            //  하트비트가 계속 나가면 방이 영원히 "진행 중"으로 보여, 하트비트 만료 정리도
+            //  로비 자가치유도 절대 발동하지 않는다 — 성공 경로에서는 이미 Closed라 안전하다.
+            CancelInvoke("SendHeartbeat");
+
             if (!EnvironmentSettings.active.Standalone)
             {
                 try

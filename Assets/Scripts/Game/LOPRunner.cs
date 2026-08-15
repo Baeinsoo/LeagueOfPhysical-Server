@@ -17,7 +17,7 @@ namespace LOP
         [Inject] private GameFramework.World.IWorld world;
 
         [Inject] private IMapLoader mapLoader;
-        [Inject] private GameRuleSystem gameRuleSystem;
+        [Inject] private IGameRuleSystem gameRuleSystem;
         [Inject] private INetworkTime networkTimeSource;
         [Inject] private IRoomDataStore roomDataStore;
         [Inject] private LOP.MasterData.LOPMasterData masterData;

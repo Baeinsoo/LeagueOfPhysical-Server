@@ -13,7 +13,7 @@ namespace LOP
     {
         [SerializeField] private int spawnCount = 50;
 
-        [Inject] private GameRuleSystem gameRuleSystem;
+        [Inject] private FlapWangRuleSystem gameRuleSystem;
 
         [ContextMenu("Spawn Enemies")]
         private void SpawnEnemies()

@@ -10,7 +10,7 @@ using UnityEngine;
 namespace LOP
 {
     /// <summary>
-    /// 서버 게임 룰 — 초기 플레이어 생성, 적 스폰(틱 구동), 아이템 획득 시 경험치.
+    /// FlapWang 룰 — 초기 플레이어 생성, 적 스폰(틱 구동), 아이템 획득 시 경험치.
     /// <para>
     /// ⚠️ 임시 위치. 게임 룰(스폰/점수/승패)의 표준 집은 시뮬(World) 시스템이다
     /// (Quantum SpawnSystem/ScoreSystem, ECS systems). 서버권위·RNG·엔티티생성을
@@ -19,7 +19,7 @@ namespace LOP
     /// 분리만 한다. 호스트가 Initialize/Deinitialize로 구동한다.
     /// </para>
     /// </summary>
-    public class GameRuleSystem
+    public class FlapWangRuleSystem : IGameRuleSystem
     {
         private readonly IRoomDataStore roomDataStore;
         private readonly ISessionManager sessionManager;
@@ -36,7 +36,7 @@ namespace LOP
         private double lastEnemySpawnTime;
         private IDisposable itemTouchSubscription;
 
-        public GameRuleSystem(
+        public FlapWangRuleSystem(
             IRoomDataStore roomDataStore,
             ISessionManager sessionManager,
             IEntityCreationDataFactory entityCreationDataFactory,

@@ -1,4 +1,3 @@
-using GameFramework;
 using GameFramework.Runner;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -10,90 +9,22 @@ namespace LOP
 {
     /// <summary>
     /// 게임 씬의 게임 스코프. EnqueueParent(Room)로 로드되면 Room 자식으로 빌드된다.
+    /// 게임마다 무엇이 달라지는지는 파생 스코프가 <see cref="ConfigureGame"/>에서 정한다.
     /// </summary>
-    public class GameLifetimeScope : LifetimeScope
+    public abstract class GameLifetimeScope : LifetimeScope
     {
-        [SerializeField, FormerlySerializedAs("gameEngine")] private LOPRunner runner;
+        [SerializeField, FormerlySerializedAs("gameEngine")] protected LOPRunner runner;
 
         protected override void Configure(IContainerBuilder builder)
         {
-            builder.Register<GameFramework.World.EntityRegistry>(Lifetime.Singleton);
-            builder.Register<GameFramework.World.WorldEventBuffer>(Lifetime.Singleton);
-            builder.Register<GameFramework.World.HealthSystem>(Lifetime.Singleton);
-            builder.Register<GameFramework.World.LevelSystem>(Lifetime.Singleton);
-            builder.Register<GameFramework.World.StatsSystem>(Lifetime.Singleton);
-            builder.Register<MovementSystem>(Lifetime.Singleton);
-            builder.Register<MotionContributionSystem>(Lifetime.Singleton);
-            builder.Register<InputBufferSystem>(Lifetime.Singleton);
-            builder.Register<StatusEffectSystem>(Lifetime.Singleton);
-            builder.Register<GameFramework.World.ManaSystem>(Lifetime.Singleton);
-            builder.Register<AbilitySystem>(Lifetime.Singleton);
-            builder.Register<StatusEffectDataProvider>(Lifetime.Singleton);
-            builder.Register<AbilityDataProvider>(Lifetime.Singleton);
-            builder.Register<CharacterLoadoutProvider>(Lifetime.Singleton);
-            builder.Register<AbilityActivator>(Lifetime.Singleton);
-            builder.Register<MatchSeed>(Lifetime.Singleton).AsSelf().As<IMatchSeed>();
-
-            // effect 실행 — executor가 타입별 핸들러로 디스패치. AbilitySystem이 Active 창에서 구동.
-            builder.Register<AbilityEffectExecutor>(Lifetime.Singleton);
-            builder.Register<IAbilityEffectHandler>(c => new StatusEffectApplyEffectHandler(
-                c.Resolve<StatusEffectSystem>(),
-                id => c.Resolve<StatusEffectDataProvider>().Get(id),
-                c.Resolve<GameFramework.World.EntityRegistry>()), Lifetime.Singleton);
-            // DamageEffectHandler = 서버 전용 등록. 클라엔 미등록이라 executor가 DamageEffect를 무시 → 데미지 서버권위.
-            // 구체 타입으로 등록(.As) — Func 등록은 ImplementationType이 IAbilityEffectHandler라 다른 Func 핸들러와 충돌.
-            builder.Register<DamageEffectHandler>(Lifetime.Singleton).As<IAbilityEffectHandler>();
-            builder.Register<KnockbackEffectHandler>(Lifetime.Singleton).As<IAbilityEffectHandler>();
-            builder.Register<GameFramework.World.IEventSink, WorldEventSink>(Lifetime.Singleton);
-            builder.Register<GameFramework.World.IWorld, LOPWorld>(Lifetime.Singleton);
-            builder.Register<DeathCascadeSystem>(Lifetime.Singleton);
-            builder.Register<GameFramework.Physics.IPhysicsSimulator, GameFramework.Physics.UnityPhysicsSimulator>(Lifetime.Singleton);
-            builder.Register<GameFramework.Physics.ICollisionQuery, GameFramework.Physics.UnityCollisionQuery>(Lifetime.Singleton);
-            builder.Register<GameFramework.Physics.IOverlapQuery, LOPOverlapQuery>(Lifetime.Singleton);
-            // 클라와 동일: 캐릭터를 벽으로(sweep에 Character 포함) + 겹치면 풀 밀어내기(1.0).
-            // 클·서 같은 충돌이라야 예측이 맞아 recon이 작다.
-            builder.Register<KinematicMoveSystem>(c => new KinematicMoveSystem(
-                c.Resolve<GameFramework.Physics.ICollisionQuery>(), LayerMask.GetMask("Default", "Character")), Lifetime.Singleton);
-            builder.Register<GameFramework.World.IMotionBridge>(_ => new MotionBridge(
-                LayerMask.GetMask("Default"), LayerMask.GetMask("Character"), 1f), Lifetime.Singleton);
-            builder.Register<GameFramework.Rng.IRandom, GameFramework.Rng.UnityRandom>(Lifetime.Singleton);
-            builder.Register<GameFramework.Runner.IMapLoader, AddressablesMapLoader>(Lifetime.Singleton);
+            new GameplayInstaller().Install(builder);
 
             // runner은 게임 서비스에 의존하므로 부모(Room)가 아닌 이 컨테이너에서 주입돼야 한다.
             builder.RegisterComponent(runner).As<IRunner>();
-            // GameRuleSystem이 sim 서비스로 쓰는 ITickUpdater (runner의 형제 컴포넌트). 호스트 역참조를 피하기 위해 직접 등록.
+            // 룰이 sim 서비스로 쓰는 ITickUpdater (runner의 형제 컴포넌트). 호스트 역참조를 피하기 위해 직접 등록.
             builder.Register<ITickUpdater>(_ => runner.GetComponent<ITickUpdater>(), Lifetime.Singleton);
-            builder.Register<GameFramework.Netcode.INetworkTime, MirrorNetworkTime>(Lifetime.Singleton);
 
-            // 메시지 핸들러: 컨테이너 엔트리포인트로 자기 구독 생명주기를 스스로 관리(스코프가 Initialize/Dispose 구동).
-            builder.RegisterEntryPoint<GameInfoMessageHandler>();
-            builder.RegisterEntryPoint<GameEntityMessageHandler>();
-            builder.RegisterEntryPoint<GameInputMessageHandler>();
-            builder.RegisterEntryPoint<EntityBinder>();   // 서버 뷰 스포너(EntityCreated/EntityDestroyed 반응)
-
-            builder.Register<CombatConfigProvider>(Lifetime.Singleton);
-            builder.Register<CombatConfig>(c => c.Resolve<CombatConfigProvider>().Get(), Lifetime.Singleton);
-            builder.Register<LOPCombatSystem>(Lifetime.Singleton);
-            builder.Register<CharacterCreator>(Lifetime.Singleton);
-            builder.Register<ItemCreator>(Lifetime.Singleton);
-            builder.Register<EntitySpawner>(Lifetime.Singleton);
-            builder.Register<ActorRegistry>(Lifetime.Singleton);
-            builder.Register<IEntityCreationDataCreator, CharacterCreationDataCreator>(Lifetime.Singleton);
-            builder.Register<IEntityCreationDataCreator, ItemCreationDataCreator>(Lifetime.Singleton);
-            builder.Register<IEntityCreationDataFactory, EntityCreationDataFactory>(Lifetime.Singleton);
-
-            // 서버 게임 룰(스폰/exp/초기플레이어). ⚠️ 임시 위치 — 목적지는 World 시스템(별도 슬라이스).
-            builder.Register<GameRuleSystem>(Lifetime.Singleton);
-
-            // Slice 5-B: LOPRunner.UpdateRunner 인라인 파이프라인 스텝 → ITickSystem 추출(god-object 해체).
-            builder.Register<ServerInputSystem>(Lifetime.Singleton);
-            builder.Register<PhysicsSimulationSystem>(Lifetime.Singleton);
-            builder.Register<DeathResolveSystem>(Lifetime.Singleton);
-            builder.Register<WorldEventDrainSystem>(Lifetime.Singleton);
-            builder.Register<InputTimingFeedbackSystem>(Lifetime.Singleton);
-            builder.Register<EntitySnapshotBroadcastSystem>(Lifetime.Singleton);
-            builder.Register<UserEntitySnapshotSystem>(Lifetime.Singleton);
-            builder.Register<DespawnFlushSystem>(Lifetime.Singleton);
+            ConfigureGame(builder);
 
             builder.RegisterBuildCallback(container =>
             {
@@ -101,6 +32,9 @@ namespace LOP
                 SceneManager.sceneLoaded += OnSceneLoaded;
             });
         }
+
+        /// <summary>이 게임에서만 쓰는 등록 — 월드, 플레이어 몸 생성기, 룰.</summary>
+        protected abstract void ConfigureGame(IContainerBuilder builder);
 
         protected override void OnDestroy()
         {

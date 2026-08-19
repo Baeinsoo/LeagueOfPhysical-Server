@@ -7,6 +7,7 @@ namespace LOP
     {
         public Room room { get; set; }
         public Match match { get; set; }
+        public MatchOutcome outcome { get; set; }
 
         private readonly IDisposable subscriptions;
 

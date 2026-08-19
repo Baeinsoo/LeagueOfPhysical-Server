@@ -40,6 +40,12 @@ namespace LOP
         public static UniTask<GetMatchResponse> GetMatch(string matchId, CancellationToken cancellationToken = default)
             => SendAsync<GetMatchResponse>(
                 HttpRequestMessage.Get($"{EnvironmentSettings.active.matchmakingBaseURL}/match/{matchId}"), cancellationToken);
+
+        //  결과는 lobby가 받는다 — 레이팅과 유저 데이터의 주인이고, 확정 세 가지(매치 상태·참가자·
+        //  점수)가 거기서 한 트랜잭션에 들어간다.
+        public static UniTask<ReportMatchResultResponse> ReportMatchResult(string matchId, ReportMatchResultRequest request, CancellationToken cancellationToken = default)
+            => SendAsync<ReportMatchResultResponse>(
+                HttpRequestMessage.Post($"{EnvironmentSettings.active.lobbyBaseURL}/internal/match/{matchId}/result", request), cancellationToken);
         #endregion
 
         #region Auth

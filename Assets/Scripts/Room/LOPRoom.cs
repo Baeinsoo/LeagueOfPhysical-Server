@@ -20,6 +20,7 @@ namespace LOP
         private const double TICK_INTERVAL = 1 / 50d;   //  sec
         private const double CLOSE_TIMEOUT_SECONDS = 1.5;
         private const double DRAIN_TIMEOUT_SECONDS = 10;
+        private const double REPORT_TIMEOUT_SECONDS = 1.5;
 
         [Inject] private IGameFactory gameFactory;
         [Inject] private LOPNetworkManager networkManager;
@@ -205,6 +206,38 @@ namespace LOP
             //  하트비트가 계속 나가면 방이 영원히 "진행 중"으로 보여, 하트비트 만료 정리도
             //  로비 자가치유도 절대 발동하지 않는다 — 성공 경로에서는 이미 Closed라 안전하다.
             CancelInvoke("SendHeartbeat");
+
+            //  방을 닫기 전에 보고한다. Closed가 저장되는 순간 이 파드는 룸서버 정리 대상이 되고
+            //  정리는 2초마다 도니, 닫은 뒤에 보고하면 파드가 사라져 결과가 영영 안 나간다.
+            //  실패해도 아래 닫기·통보·배수·종료는 그대로 간다 — 클라를 끝난 방에 가둬 두는 쪽이
+            //  더 나쁘다. 그 판은 점수 무변화로 남는다.
+            if (!EnvironmentSettings.active.Standalone)
+            {
+                try
+                {
+                    //  등수는 러너가 EndMatch() 시점에 이미 채워 뒀다 — Step 5 배선 참고.
+                    var outcome = roomDataStore.outcome;
+                    if (outcome == null)
+                    {
+                        //  러너를 거치지 않고 방이 닫히는 경로(초기화 실패 등)가 있다. 보고할 등수가
+                        //  없으면 조용히 건너뛴다 — 없는 결과를 지어내지 않는다.
+                        Debug.LogWarning("No match outcome to report. Skipping.");
+                    }
+                    else
+                    {
+                        using var reportCts = new CancellationTokenSource(TimeSpan.FromSeconds(REPORT_TIMEOUT_SECONDS));
+
+                        await WebAPI.ReportMatchResult(
+                            roomDataStore.match.id,
+                            new ReportMatchResultRequest { participants = outcome.placements.ToArray() },
+                            reportCts.Token);
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Failed to report match result. Continuing to close the room. Error: {e.Message}");
+                }
+            }
 
             if (!EnvironmentSettings.active.Standalone)
             {

@@ -3,7 +3,8 @@ using GameFramework;
 
 namespace LOP
 {
-    /// <summary>구 LOPRunner.ProcessInput 이동. 조종 엔티티별 입력을 소비해 이동/어빌리티에 반영한다.</summary>
+    /// <summary>구 LOPRunner.ProcessInput 이동. 조종 엔티티별로 이번 틱 커맨드를 확정(Current)만 한다 —
+    /// 그 커맨드가 무슨 뜻인지(이동·발동)는 LOPWorld.Tick이 읽어서 정한다.</summary>
     public class ServerInputSystem : GameFramework.Runner.ITickSystem
     {
         // 유실 틱을 마지막 입력으로 몇 틱까지 메울지. 8틱 = 160ms — 그보다 길게 비면 순간적인
@@ -12,13 +13,11 @@ namespace LOP
 
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly InputBufferSystem inputBufferSystem;
-        private readonly AbilityActivator abilityActivator;
 
-        public ServerInputSystem(GameFramework.World.EntityRegistry entityRegistry, InputBufferSystem inputBufferSystem, AbilityActivator abilityActivator)
+        public ServerInputSystem(GameFramework.World.EntityRegistry entityRegistry, InputBufferSystem inputBufferSystem)
         {
             this.entityRegistry = entityRegistry;
             this.inputBufferSystem = inputBufferSystem;
-            this.abilityActivator = abilityActivator;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -59,12 +58,6 @@ namespace LOP
                 if (gap > 0)
                 {
                     buffer.TimingTracker.RecordSeqGap((int)gap);
-                }
-
-                if (input.AbilityId != 0)
-                {
-                    // 발동 연출 cue는 AbilityActivator가 내부에서 append한다(플레이어·AI 공용).
-                    abilityActivator.TryActivate(worldEntity.Id, input.AbilityId, tick);
                 }
             }
         }

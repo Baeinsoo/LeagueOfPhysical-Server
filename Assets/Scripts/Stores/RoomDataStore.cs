@@ -57,6 +57,10 @@ namespace LOP
         {
             room = null;
             match = null;
+            //  안 지우면 같은 프로세스가 다음 판을 시작했을 때 지난 판의 등수가 남아,
+            //  아직 러너가 새 등수를 채우기 전(EndMatch 호출 전) 방이 닫히는 경로에서
+            //  엉뚱한 등수가 새 matchId로 보고될 수 있다.
+            outcome = null;
         }
     }
 }

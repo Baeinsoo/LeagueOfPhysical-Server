@@ -43,9 +43,16 @@ namespace LOP
 
         //  결과는 lobby가 받는다 — 레이팅과 유저 데이터의 주인이고, 확정 세 가지(매치 상태·참가자·
         //  점수)가 거기서 한 트랜잭션에 들어간다.
+        //  전역 발행(SendAsync<T>)을 쓰지 않는다 — Introspect와 같은 이유. 이 타입은
+        //  RootLifetimeScope에 브로커로 등록돼 있지 않아, 전역 발행을 타면 구독자가 없어도
+        //  IPublisher<T> 조회 자체가 예외를 던진다(성공한 호출도 실패로 보이게 됨).
         public static UniTask<ReportMatchResultResponse> ReportMatchResult(string matchId, ReportMatchResultRequest request, CancellationToken cancellationToken = default)
-            => SendAsync<ReportMatchResultResponse>(
-                HttpRequestMessage.Post($"{EnvironmentSettings.active.lobbyBaseURL}/internal/match/{matchId}/result", request), cancellationToken);
+        {
+            var httpRequest = HttpRequestMessage.Post(
+                $"{EnvironmentSettings.active.lobbyBaseURL}/internal/match/{matchId}/result", request);
+
+            return httpClient.SendAsync<ReportMatchResultResponse>(httpRequest, cancellationToken);
+        }
         #endregion
 
         #region Auth

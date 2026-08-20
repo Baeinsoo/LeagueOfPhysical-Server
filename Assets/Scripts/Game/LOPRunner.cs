@@ -114,6 +114,17 @@ namespace LOP
         /// <summary>매치 종료 진입점. 종료 판정은 서버 권위이고, 클라는 통보를 받아 같은 이름의 메서드로 들어온다.</summary>
         public void EndMatch()
         {
+            //  타이머가 매 프레임 부르므로 첫 호출만 유효해야 한다. 아래 등수 산출이 그때마다
+            //  다시 도는 것을 막는다(예전엔 gameState 세터의 동일값 가드에 우연히 기대고 있었다).
+            if (gameState == RunnerState.GameOver)
+            {
+                return;
+            }
+
+            //  등수는 지금 뽑는다 — 게임이 아직 살아 있을 때만 알 수 있는 값이라(엔티티·점수),
+            //  방이 닫히는 시점에는 이미 늦다. 보고는 LOPRoom이 방을 닫기 전에 한다.
+            roomDataStore.outcome = gameRuleSystem.ResolveOutcome();
+
             gameState = RunnerState.GameOver;
         }
 

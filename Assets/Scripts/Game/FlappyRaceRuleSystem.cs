@@ -1,3 +1,4 @@
+using System.Linq;
 using UnityEngine;
 
 namespace LOP
@@ -41,6 +42,27 @@ namespace LOP
 
         public void Deinitialize()
         {
+        }
+
+        //  진짜 등수(결승선 통과 순서)는 게임플레이가 붙는 슬라이스에서 채운다. 그때까지는
+        //  보고 경로가 끊기지 않도록 무작위로 둔다.
+        public MatchOutcome ResolveOutcome()
+        {
+            var userIds = roomDataStore.match.playerList.ToList();
+
+            for (int i = userIds.Count - 1; i > 0; i--)
+            {
+                int j = UnityEngine.Random.Range(0, i + 1);
+                (userIds[i], userIds[j]) = (userIds[j], userIds[i]);
+            }
+
+            var outcome = new MatchOutcome();
+            for (int i = 0; i < userIds.Count; i++)
+            {
+                outcome.placements.Add(new MatchPlacement { userId = userIds[i], placement = i + 1 });
+            }
+
+            return outcome;
         }
     }
 }

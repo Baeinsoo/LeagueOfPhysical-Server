@@ -245,5 +245,26 @@ namespace LOP
             entitySpawner.Despawn(entityId);
         }
         #endregion
+
+        //  FlapWang은 넷코드 검증용이라 순위 개념이 없다. 결과 보고 배선이 실제로 도는지
+        //  확인하려고 무작위로 섞는다 — 진짜 등수는 Flappy Race가 낸다.
+        public MatchOutcome ResolveOutcome()
+        {
+            var userIds = roomDataStore.match.playerList.ToList();
+
+            for (int i = userIds.Count - 1; i > 0; i--)
+            {
+                int j = UnityEngine.Random.Range(0, i + 1);
+                (userIds[i], userIds[j]) = (userIds[j], userIds[i]);
+            }
+
+            var outcome = new MatchOutcome();
+            for (int i = 0; i < userIds.Count; i++)
+            {
+                outcome.placements.Add(new MatchPlacement { userId = userIds[i], placement = i + 1 });
+            }
+
+            return outcome;
+        }
     }
 }

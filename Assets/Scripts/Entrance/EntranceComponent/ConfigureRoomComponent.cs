@@ -46,7 +46,7 @@ namespace LOP
                     {
                         new MatchRound { index = 0, gameModeId = 1, mapId = 1 },
                     },
-                    targetRating = 1500,
+                    targetMmr = 1500,
                     playerList = new string[]
                     {
                         "5f3a8505-2fc0-42d4-9810-af0fcd3cfdf1",   // 메인 에디터 게스트 (로컬 픽스처)

@@ -8,5 +8,8 @@ namespace LOP
     {
         void Initialize();
         void Deinitialize();
+
+        /// <summary>이 판의 등수. 무엇으로 순위를 매길지는 게임마다 다르다.</summary>
+        MatchOutcome ResolveOutcome();
     }
 }

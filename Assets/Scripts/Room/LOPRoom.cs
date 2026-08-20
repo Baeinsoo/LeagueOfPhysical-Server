@@ -20,6 +20,12 @@ namespace LOP
         private const double TICK_INTERVAL = 1 / 50d;   //  sec
         private const double CLOSE_TIMEOUT_SECONDS = 1.5;
         private const double DRAIN_TIMEOUT_SECONDS = 10;
+        //  CLOSE_TIMEOUT_SECONDS와 달리 이 값은 룸서버 정리 주기가 아니라 백엔드 트랜잭션
+        //  상한(Prisma 기본 5초)과 견줘 정해진다 — 그보다 짧으면 호출자가 서버 처리가 끝나기도
+        //  전에 먼저 포기한다. 재시도 1회까지 최악 2×6=12초라도 하트비트 만료 임계값(60초)에
+        //  한참 못 미쳐 방이 좀비로 판정되지 않는다.
+        private const double REPORT_TIMEOUT_SECONDS = 6.0;
+        private const int REPORT_MAX_ATTEMPTS = 2;   //  보고는 멱등(백엔드가 저장된 결과를 그대로 반환)이라 재시도가 안전하다
 
         [Inject] private IGameFactory gameFactory;
         [Inject] private LOPNetworkManager networkManager;
@@ -206,6 +212,40 @@ namespace LOP
             //  로비 자가치유도 절대 발동하지 않는다 — 성공 경로에서는 이미 Closed라 안전하다.
             CancelInvoke("SendHeartbeat");
 
+            //  방을 닫기 전에 보고한다. Closed가 저장되는 순간 이 파드는 룸서버 정리 대상이 되고
+            //  정리는 2초마다 도니, 닫은 뒤에 보고하면 파드가 사라져 결과가 영영 안 나간다.
+            //  실패해도 아래 닫기·통보·배수·종료는 그대로 간다 — 클라를 끝난 방에 가둬 두는 쪽이
+            //  더 나쁘다. 그 판은 점수 무변화로 남는다.
+            if (!EnvironmentSettings.active.Standalone)
+            {
+                try
+                {
+                    //  등수는 러너가 LOPRunner.EndMatch()에서 이미 채워 뒀다.
+                    var outcome = roomDataStore.outcome;
+                    if (outcome == null)
+                    {
+                        //  러너를 거치지 않고 방이 닫히는 경로(초기화 실패 등)가 있다. 보고할 등수가
+                        //  없으면 조용히 건너뛴다 — 없는 결과를 지어내지 않는다.
+                        Debug.LogWarning("No match outcome to report. Skipping.");
+                    }
+                    else
+                    {
+                        var response = await ReportMatchResultAsync(outcome);
+
+                        //  거절(명단 불일치·매치 없음 등)은 HTTP 자체는 200으로 오고 실패를
+                        //  body의 code로 알린다 — HTTP 상태만 보면 거절을 조용히 놓친다.
+                        if (response.code != 200)
+                        {
+                            Debug.LogError($"Match result report rejected by backend. code={response.code}");
+                        }
+                    }
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Failed to report match result. Continuing to close the room. Error: {e.Message}");
+                }
+            }
+
             if (!EnvironmentSettings.active.Standalone)
             {
                 try
@@ -271,6 +311,29 @@ namespace LOP
             //  같은 namespace(LOP)에 MonoSingleton `LOP.Application`이 있어 짧은 이름은 그쪽으로
             //  잡힌다 — UnityEngine.Application을 풀네임으로 명시해야 한다.
             UnityEngine.Application.Quit();
+        }
+
+        //  보고는 멱등이다 — 두 번째 시도는 백엔드가 계산을 다시 하지 않고 이미 저장된 결과를
+        //  그대로 돌려준다. 그래서 첫 시도가 타임아웃/네트워크 오류로 실패해도 한 번 더 시도해
+        //  볼 가치가 있다. 마지막 시도까지 실패하면 예외를 그대로 던져 호출자(CloseRoomAsync)의
+        //  catch가 로그를 남기고 방 닫기를 이어가게 한다.
+        private async UniTask<ReportMatchResultResponse> ReportMatchResultAsync(MatchOutcome outcome)
+        {
+            var request = new ReportMatchResultRequest { participants = outcome.placements.ToArray() };
+
+            for (int attempt = 1; ; attempt++)
+            {
+                try
+                {
+                    using var reportCts = new CancellationTokenSource(TimeSpan.FromSeconds(REPORT_TIMEOUT_SECONDS));
+
+                    return await WebAPI.ReportMatchResult(roomDataStore.match.id, request, reportCts.Token);
+                }
+                catch (Exception) when (attempt < REPORT_MAX_ATTEMPTS)
+                {
+                    Debug.LogWarning($"Match result report attempt {attempt} failed. Retrying.");
+                }
+            }
         }
 
         public void OnPlayerConnect(IConnectionData connectionData)

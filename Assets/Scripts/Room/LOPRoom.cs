@@ -207,6 +207,9 @@ namespace LOP
         //  일부러 줄이는 것이지, 지워지지 않는다고 보장하는 게 아니다.
         private async UniTaskVoid CloseRoomAsync()
         {
+            //  보고가 성공했을 때만 채워진다. 실패하면 null로 남아 아래 통보가 빈 결과로 나간다.
+            ConfirmedParticipantDto[] confirmed = null;
+
             //  하트비트부터 멈춘다. 아래 백엔드 호출이 실패/타임아웃해도(우리는 아직 살아있는데)
             //  하트비트가 계속 나가면 방이 영원히 "진행 중"으로 보여, 하트비트 만료 정리도
             //  로비 자가치유도 절대 발동하지 않는다 — 성공 경로에서는 이미 Closed라 안전하다.
@@ -237,6 +240,10 @@ namespace LOP
                         if (response.code != 200)
                         {
                             Debug.LogError($"Match result report rejected by backend. code={response.code}");
+                        }
+                        else
+                        {
+                            confirmed = response.participants;
                         }
                     }
                 }
@@ -274,7 +281,7 @@ namespace LOP
                 //  구해 준다.
                 try
                 {
-                    session.Send(new MatchEndedToC());
+                    session.Send(BuildMatchEndedMessage(confirmed, session.userId));
                 }
                 catch (Exception e)
                 {
@@ -334,6 +341,48 @@ namespace LOP
                     Debug.LogWarning($"Match result report attempt {attempt} failed. Retrying.");
                 }
             }
+        }
+
+        //  수신자마다 다른 메시지를 만든다. 등수는 전원 것을 담지만 점수 변화는 본인 것만 담는다 —
+        //  UI에서 가리는 것으로는 부족하고, 남의 실력 점수가 애초에 그 사람 회선으로 나가면 안 된다.
+        private static MatchEndedToC BuildMatchEndedMessage(ConfirmedParticipantDto[] confirmed, string userId)
+        {
+            var message = new MatchEndedToC();
+
+            //  보고가 실패했으면 확정 결과가 없다. 빈 결과로 보내고 화면은 "매치 종료"로 물러선다.
+            if (confirmed == null)
+            {
+                return message;
+            }
+
+            //  등수는 1부터다. 0이 섞여 오면 확정이 안 된 판을 확정된 것처럼 받은 것이므로 통째로
+            //  버린다 — "0등"을 화면에 그리는 것보다 결과가 없다고 하는 편이 정직하다.
+            foreach (var participant in confirmed)
+            {
+                if (participant.placement < 1)
+                {
+                    Debug.LogError($"Confirmed result has an invalid placement ({participant.placement}). Reporting no result.");
+                    return new MatchEndedToC();
+                }
+            }
+
+            foreach (var participant in confirmed)
+            {
+                message.Placements.Add(new MatchPlacementInfo
+                {
+                    UserId = participant.userId,
+                    Placement = participant.placement,
+                });
+
+                if (participant.userId == userId)
+                {
+                    message.HasRatingChange = true;
+                    message.MyMmrBefore = participant.mmrBefore;
+                    message.MyMmrAfter = participant.mmrAfter;
+                }
+            }
+
+            return message;
         }
 
         public void OnPlayerConnect(IConnectionData connectionData)

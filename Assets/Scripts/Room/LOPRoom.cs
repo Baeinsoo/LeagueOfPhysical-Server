@@ -355,6 +355,17 @@ namespace LOP
                 return message;
             }
 
+            //  등수는 1부터다. 0이 섞여 오면 확정이 안 된 판을 확정된 것처럼 받은 것이므로 통째로
+            //  버린다 — "0등"을 화면에 그리는 것보다 결과가 없다고 하는 편이 정직하다.
+            foreach (var participant in confirmed)
+            {
+                if (participant.placement < 1)
+                {
+                    Debug.LogError($"Confirmed result has an invalid placement ({participant.placement}). Reporting no result.");
+                    return new MatchEndedToC();
+                }
+            }
+
             foreach (var participant in confirmed)
             {
                 message.Placements.Add(new MatchPlacementInfo

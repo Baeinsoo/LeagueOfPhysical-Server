@@ -13,7 +13,7 @@ namespace LOP
         // 스코프와 함께 생성·해제되어 룸 재입장 시 stale 참조가 생기지 않는다.)
         public EntityCreationDataFactory(IEnumerable<IEntityCreationDataCreator> creators)
         {
-            foreach (var creator in creators.OrEmpty())
+            foreach (var creator in creators)
             {
                 this.creators[creator.EntityType] = creator;
             }

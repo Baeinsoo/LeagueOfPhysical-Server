@@ -238,7 +238,7 @@ namespace LOP
                 EntityCreationData = entityCreationDataFactory.Create(entityRegistry.Get(data.entityId)),
             };
 
-            foreach (var session in sessionManager.GetAllSessions().OrEmpty())
+            foreach (var session in sessionManager.GetAllSessions())
             {
                 session.Send(entitySpawnToC);
             }

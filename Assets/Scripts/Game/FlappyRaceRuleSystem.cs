@@ -9,7 +9,7 @@ namespace LOP
     /// </summary>
     public class FlappyRaceRuleSystem : IGameRuleSystem
     {
-        // 새를 세로로 벌려 놓는 간격. 같은 자리에 겹쳐 세우면 누가 누군지 안 보인다.
+        // 맵에 스폰 마커가 없을 때만 쓰는 폴백 간격. 같은 자리에 겹쳐 세우면 누가 누군지 안 보인다.
         private const float SpawnSpacingY = 2f;
         private const string BirdVisualId = "Assets/Art/Characters/FlappyBird/Bird.prefab";
 
@@ -24,16 +24,30 @@ namespace LOP
 
         public void Initialize()
         {
+            //  시작 지점은 맵이 정한다 — 룰이 좌표를 들고 있으면 맵을 새로 만들 때마다 룰을 고쳐야 한다.
+            //  비활성 마커까지 찾는다: 마커는 보일 필요가 없어 꺼 둘 수도 있다.
+            var slots = SpawnPlacement.Arrange(
+                Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None));
+            if (slots.Count == 0)
+            {
+                Debug.LogWarning("[FlappyRace] 맵에 SpawnPoint가 없다 — 원점에 세로로 세운다");
+            }
+
             var playerList = roomDataStore.match.playerList;
             for (int i = 0; i < playerList.Length; i++)
             {
+                //  자리가 사람보다 적으면 앞에서부터 다시 쓴다. 겹쳐 서긴 해도 아무도 맵 밖에 나지 않는다.
+                Vector3 position = slots.Count > 0
+                    ? slots[i % slots.Count]
+                    : new Vector3(0f, i * SpawnSpacingY, 0f);
+
                 entitySpawner.Spawn(new CharacterCreationData
                 {
                     userId = playerList[i],
                     entityId = entitySpawner.GenerateEntityId(),
                     visualId = BirdVisualId,
                     characterCode = "",
-                    position = new Vector3(0f, i * SpawnSpacingY, 0f),
+                    position = position,
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 });

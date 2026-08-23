@@ -65,12 +65,18 @@ namespace LOP
 
             // PhysicsBody는 반드시 이 핸들러 안에서 붙인다: 물리 루프가 매 틱 등록된 엔티티를 돌며 몸을 밀기 때문에,
             // 등록만 되고 몸이 아직 없는 순간이 생기면 그 틱 위치가 한 프레임 어긋난다(동기 발행이라 여기선 그 틈이 없다).
-            PhysicsFollower physicsFollower = root.AddComponent<PhysicsFollower>();
-            objectResolver.Inject(physicsFollower);
-            physicsFollower.Initialize(worldEntity, true, isItem);
             // 제네릭을 <PhysicsBody>로 명시해야 한다 — Add<T>는 typeof(T)를 키로 쓰므로,
             // 생략하면 UnityPhysicsBody 키로 저장돼 나중에 Get<PhysicsBody>()가 못 찾는다.
-            worldEntity.Add<GameFramework.World.PhysicsBody>(new UnityPhysicsBody(physicsFollower.entityRigidbody, (CapsuleCollider)physicsFollower.entityColliders[0]));
+            worldEntity.Add<GameFramework.World.PhysicsBody>(PhysicsBodyFactory.Create(root, worldEntity, true, isItem));
+
+            //  트리거인 것(=아이템)만 접촉을 감지할 수 있다 — 감지기가 필요한 것도 그것뿐이다.
+            //  줍기 판정은 조작 가능성 때문에 서버만 한다(클라엔 이 컴포넌트가 없다).
+            if (isItem)
+            {
+                ItemTouchDetector itemTouchDetector = root.AddComponent<ItemTouchDetector>();
+                objectResolver.Inject(itemTouchDetector);
+                itemTouchDetector.Initialize(worldEntity);
+            }
 
             LOPEntityView view = root.AddComponent<LOPEntityView>();
             objectResolver.Inject(view);

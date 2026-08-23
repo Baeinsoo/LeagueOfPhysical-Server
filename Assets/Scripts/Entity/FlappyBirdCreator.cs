@@ -9,10 +9,12 @@ namespace LOP
     public class FlappyBirdCreator : ICharacterCreator
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly FlappyConfig config;
 
-        public FlappyBirdCreator(GameFramework.World.EntityRegistry entityRegistry)
+        public FlappyBirdCreator(GameFramework.World.EntityRegistry entityRegistry, FlappyConfig config)
         {
             this.entityRegistry = entityRegistry;
+            this.config = config;
         }
 
         public void Create(CharacterCreationData creationData)
@@ -27,6 +29,9 @@ namespace LOP
             worldEntity.Add(new EntityKind(EntityType.Character));
             worldEntity.Add(new Appearance(creationData.visualId));
             worldEntity.Add(new MotionContributions());
+            // 새 몸은 시뮬이 쓰는 그 값(TbFlappyConfig)에서 온다 — 물리 팔로워가 다른 몸을 세우면
+            // 겹침 밀어내기가 시뮬이 모르는 위치 점프를 만든다.
+            worldEntity.Add(new GameFramework.World.CapsuleShape(config.BodyRadius, config.BodyHeight));
 
             if (string.IsNullOrEmpty(creationData.userId) == false)
             {

@@ -2,7 +2,6 @@ using GameFramework;
 using LOP.Event.Entity;
 using MessagePipe;
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace LOP
@@ -93,7 +92,7 @@ namespace LOP
                     userEntityMap.Remove(ownerId);
                 }
 
-                foreach (var session in sessionManager.GetAllSessions().DefaultIfEmpty())
+                foreach (var session in sessionManager.GetAllSessions())
                 {
                     session.Send(new EntityDespawnToC
                     {

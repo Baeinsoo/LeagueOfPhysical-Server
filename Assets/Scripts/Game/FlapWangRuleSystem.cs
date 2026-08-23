@@ -132,14 +132,23 @@ namespace LOP
             }
         }
 
+        //  "아이템에 뭔가 닿았다"는 사실만 온다 — 그게 줍기인지는 여기서 정한다.
+        //  감지기(Unity 레이어)는 도메인을 모르고, 이 판단이 게임 규칙이기 때문이다.
         private void HandleItemTouch(ItemTouch itemTouch)
         {
             if (entityRegistry.Get(itemTouch.itemId) != null)
             {
+                GameFramework.World.Entity toucher = entityRegistry.Get(itemTouch.toucherId);
+
+                //  주인이 있는 엔티티(=플레이어)만 줍는다. 몬스터나 다른 아이템이 스친 것은 아무 일도 아니다.
+                if (toucher?.Has<GameFramework.World.Ownership>() != true)
+                {
+                    return;
+                }
+
                 DespawnEntity(itemTouch.itemId);
 
-                GameFramework.World.Entity toucher = entityRegistry.Get(itemTouch.toucherId);
-                GameFramework.World.Level level = toucher?.Get<GameFramework.World.Level>();
+                GameFramework.World.Level level = toucher.Get<GameFramework.World.Level>();
                 if (level == null)
                 {
                     Debug.LogWarning($"[World] HandleItemTouch: Level not found for entity {itemTouch.toucherId}");
@@ -149,7 +158,7 @@ namespace LOP
                 int gained = levelSystem.AddExperience(level, 10);
                 if (gained > 0)
                 {
-                    GameFramework.World.Stats stats = toucher?.Get<GameFramework.World.Stats>();
+                    GameFramework.World.Stats stats = toucher.Get<GameFramework.World.Stats>();
                     if (stats != null)
                     {
                         statsSystem.AddUnspent(stats, gained);

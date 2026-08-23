@@ -8,16 +8,14 @@ using VContainer;
 namespace LOP
 {
     /// <summary>
-    /// 아이템에 몸이 닿았을 때 <see cref="ItemTouch"/>를 발행한다. 줍기 판정은 서버만 한다.
+    /// 아이템에 뭔가 닿았다는 **엔진 사실**을 도메인 이벤트(<see cref="ItemTouch"/>)로 옮긴다.
     ///
-    /// 예전엔 물리 몸을 만드는 코드와 한 클래스(`PhysicsFollower`)에 붙어 있었는데, 둘은 상관없는
-    /// 일이다 — 몸 만들기는 클·서 공통(`PhysicsBodyFactory`)이고 접촉 판정은 서버만의 규칙이다.
+    /// 딱 그것만 한다 — *그게 줍기인가*(닿은 게 플레이어인가)는 규칙(`FlapWangRuleSystem`)이 정한다.
+    /// 그래서 이 클래스는 World Core를 모른다. 트리거를 받으려면 MonoBehaviour일 수밖에 없으므로
+    /// 여기 있는 것이고, 도메인 지식을 들이면 그때부터 게임 규칙이 Unity 레이어로 새기 시작한다.
     /// </summary>
     public class ItemTouchDetector : MonoBehaviour
     {
-        [Inject]
-        private GameFramework.World.EntityRegistry entityRegistry;
-
         [Inject]
         private IPublisher<ItemTouch> itemTouchPublisher;
 
@@ -36,15 +34,11 @@ namespace LOP
             LOPActor otherEntity = other.GetComponentInParent<LOPActor>();
             if (otherEntity == null)
             {
-                // 바닥 등 엔티티 아닌 콜라이더와의 접촉은 정상(아이템 줍기 대상이 아님) — 조용히 무시.
+                // 바닥 등 엔티티가 아닌 콜라이더는 옮길 도메인 사실이 없다 — 조용히 무시.
                 return;
             }
 
-            //  상대가 주인 있는 엔티티(=플레이어)일 때만 줍기다. 아이템끼리 닿는 것은 아무 일도 아니다.
-            if (entityRegistry.Get(otherEntity.entityId)?.Has<GameFramework.World.Ownership>() == true)
-            {
-                itemTouchPublisher.Publish(new ItemTouch(worldEntity.Id, otherEntity.entityId));
-            }
+            itemTouchPublisher.Publish(new ItemTouch(worldEntity.Id, otherEntity.entityId));
         }
     }
 }

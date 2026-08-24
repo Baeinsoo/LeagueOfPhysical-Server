@@ -4,15 +4,15 @@ using UnityEngine;
 namespace LOP
 {
     /// <summary>
-    /// 판치기 동전(서버). 다이나믹 몸이라 유니티 물리가 굴리고, 그 결과를
+    /// 동전(서버). 다이나믹 몸이라 유니티 물리가 굴리고, 그 결과를
     /// PhysicsSimulationSystem이 World로 되읽어 스냅샷에 실린다.
     /// Simulated을 붙이지 않는다 — 우리 시뮬이 굴리는 것이 아니다.
     /// </summary>
-    public class PanchigiCoinCreator
+    public class CoinCreator
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
 
-        public PanchigiCoinCreator(GameFramework.World.EntityRegistry entityRegistry)
+        public CoinCreator(GameFramework.World.EntityRegistry entityRegistry)
         {
             this.entityRegistry = entityRegistry;
         }
@@ -34,7 +34,7 @@ namespace LOP
                 GameFramework.World.BodyKind.Dynamic, freezeRotation: false, isTrigger: false));
 
             entityRegistry.Add(worldEntity);
-            Debug.Log($"[World] Registered panchigi coin {worldEntity.Id}");
+            Debug.Log($"[World] Registered coin {worldEntity.Id}");
         }
     }
 }

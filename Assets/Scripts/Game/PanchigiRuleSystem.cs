@@ -8,10 +8,9 @@ namespace LOP
     /// </summary>
     public class PanchigiRuleSystem : IGameRuleSystem
     {
-        //  동전 프리팹이 아직 없다(아트 서브모듈에 판치기 에셋 미도입). 빈 visualId는
-        //  "보여줄 몸이 없다"는 정당한 상태로 처리된다(LOPEntityView.UpdateVisual 가드) — 콘솔 에러 없이
-        //  동기화만 검증한다. 아트가 들어오면 이 상수만 채우면 된다.
-        private const string CoinVisualId = "";
+        //  진짜 동전 아트가 아직 없다 — 임시 실린더로 모양만 세운다.
+        //  아트가 들어오면 이 상수만 갈아 끼우면 된다.
+        private const string CoinVisualId = "Assets/Art_Placeholder/Panchigi/Coin.prefab";
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;

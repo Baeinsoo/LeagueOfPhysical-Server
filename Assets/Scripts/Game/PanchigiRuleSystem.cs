@@ -8,13 +8,20 @@ namespace LOP
     /// </summary>
     public class PanchigiRuleSystem : IGameRuleSystem
     {
+        //  동전 프리팹이 아직 없다(아트 서브모듈에 판치기 에셋 미도입). 빈 visualId는
+        //  "보여줄 몸이 없다"는 정당한 상태로 처리된다(LOPEntityView.UpdateVisual 가드) — 콘솔 에러 없이
+        //  동기화만 검증한다. 아트가 들어오면 이 상수만 채우면 된다.
+        private const string CoinVisualId = "";
+
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
+        private readonly LOP.MasterData.LOPMasterData masterData;
 
-        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner)
+        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
+            this.masterData = masterData;
         }
 
         public void Initialize()
@@ -32,6 +39,28 @@ namespace LOP
                     visualId = "",
                     characterCode = "",
                     position = new Vector3(0f, -10f, 0f),
+                    rotation = Vector3.zero,
+                    velocity = Vector3.zero,
+                });
+            }
+
+            var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(playerList.Length);
+            if (setup == null)
+            {
+                //  조용히 넘기면 판이 빈 채로 시작하고 왜인지 런타임에 추적해야 한다.
+                throw new System.InvalidOperationException(
+                    $"TbPanchigiSetup에 {playerList.Length}인 구성이 없다 — 테이블을 채워야 한다.");
+            }
+
+            //  대형(formation) 해석은 슬라이스 3에서 갈라진다. 지금은 일렬로 떨어뜨려
+            //  "쌓이는 것"과 "두 클라가 같은 것을 보는지"만 확인한다.
+            for (int i = 0; i < setup.CoinCount; i++)
+            {
+                entitySpawner.Spawn(new CoinCreationData
+                {
+                    entityId = entitySpawner.GenerateEntityId(),
+                    visualId = CoinVisualId,
+                    position = new Vector3(0f, 1.5f, i * 0.5f),
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 });

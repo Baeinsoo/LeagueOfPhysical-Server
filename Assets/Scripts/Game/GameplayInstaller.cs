@@ -69,6 +69,10 @@ namespace LOP
             builder.Register<CombatConfig>(c => c.Resolve<CombatConfigProvider>().Get(), Lifetime.Singleton);
             builder.Register<LOPCombatSystem>(Lifetime.Singleton);
             builder.Register<ItemCreator>(Lifetime.Singleton);
+            // PanchigiCoinCreator는 이름은 판치기 전용이지만 등록은 여기 공통 자리다 — EntitySpawner가
+            // 모든 게임 스코프에서 생성자로 직접 물기 때문에(ItemCreator와 같은 방식), 판치기가 아닌
+            // 게임 스코프(FlapWang·FlappyRace)에도 이게 없으면 EntitySpawner 자체를 못 만든다.
+            builder.Register<PanchigiCoinCreator>(Lifetime.Singleton);
             builder.Register<EntitySpawner>(Lifetime.Singleton);
             builder.Register<ActorRegistry>(Lifetime.Singleton);
             builder.Register<IEntityCreationDataCreator, CharacterCreationDataCreator>(Lifetime.Singleton);

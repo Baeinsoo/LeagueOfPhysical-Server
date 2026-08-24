@@ -19,11 +19,13 @@ namespace LOP
         public NetworkMessageDispatcher(
             IPublisher<ClientMessage<GameInfoToS>> gameInfo,
             IPublisher<ClientMessage<InputCommandToS>> inputCommand,
-            IPublisher<ClientMessage<StatAllocationToS>> statAllocation)
+            IPublisher<ClientMessage<StatAllocationToS>> statAllocation,
+            IPublisher<ClientMessage<PanchigiStrikeToS>> panchigiStrike)
         {
             Register(gameInfo);
             Register(inputCommand);
             Register(statAllocation);
+            Register(panchigiStrike);
         }
 
         private void Register<T>(IPublisher<ClientMessage<T>> publisher) where T : IMessage

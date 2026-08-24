@@ -36,6 +36,7 @@ namespace LOP
             builder.RegisterOrderedMessageBroker<ClientMessage<GameInfoToS>>();
             builder.RegisterOrderedMessageBroker<ClientMessage<InputCommandToS>>();
             builder.RegisterOrderedMessageBroker<ClientMessage<StatAllocationToS>>();
+            builder.RegisterOrderedMessageBroker<ClientMessage<PanchigiStrikeToS>>();
             builder.Register<NetworkMessageDispatcher>(Lifetime.Singleton);
 
             builder.Register<LOP.MasterData.LOPMasterData>(Lifetime.Singleton);

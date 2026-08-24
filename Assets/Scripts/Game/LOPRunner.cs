@@ -23,6 +23,7 @@ namespace LOP
         [Inject] private LOP.MasterData.LOPMasterData masterData;
 
         // Slice 5-B: 파이프라인 스텝 — 순서대로 직접 호출(넷코드 순서 불변식이 코드에 명시).
+        [Inject] private MatchStartSystem matchStartSystem;
         [Inject] private ServerInputSystem serverInputSystem;
         [Inject] private PhysicsSimulationSystem physicsSimulationSystem;
         [Inject] private DeathResolveSystem deathResolveSystem;
@@ -131,6 +132,8 @@ namespace LOP
         protected override void UpdateRunner()
         {
             RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.deltaTime);
+            //  이번 틱이 출발틱인지가 먼저 정해져야 월드가 그걸 보고 굴린다.
+            matchStartSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             serverInputSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             world.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             physicsSimulationSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);

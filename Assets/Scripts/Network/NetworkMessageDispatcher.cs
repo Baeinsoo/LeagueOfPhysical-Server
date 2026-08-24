@@ -20,12 +20,14 @@ namespace LOP
             IPublisher<ClientMessage<GameInfoToS>> gameInfo,
             IPublisher<ClientMessage<InputCommandToS>> inputCommand,
             IPublisher<ClientMessage<StatAllocationToS>> statAllocation,
-            IPublisher<ClientMessage<PanchigiStrikeToS>> panchigiStrike)
+            IPublisher<ClientMessage<PanchigiStrikeToS>> panchigiStrike,
+            IPublisher<ClientMessage<MatchReadyToS>> matchReady)
         {
             Register(gameInfo);
             Register(inputCommand);
             Register(statAllocation);
             Register(panchigiStrike);
+            Register(matchReady);
         }
 
         private void Register<T>(IPublisher<ClientMessage<T>> publisher) where T : IMessage

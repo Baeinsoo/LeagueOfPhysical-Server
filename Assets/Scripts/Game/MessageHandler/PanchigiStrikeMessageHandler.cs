@@ -12,7 +12,10 @@ namespace LOP
     public class PanchigiStrikeMessageHandler : MessageHandlerBase
     {
         //  판·동전만 본다. 판 밖 지형이나 트리거에 걸리면 판정이 엉킨다.
-        private static readonly int StrikeLayerMask = LayerMask.GetMask("Default", "Character");
+        //  static 필드 초기화자에서 LayerMask.GetMask를 부르는 건 Unity가 MonoBehaviour에서
+        //  금지하는 패턴이다 — 이 클래스는 MonoBehaviour가 아니라 지금 당장 문제는 없지만,
+        //  그대로 두면 다음에 누가 그대로 베껴 MonoBehaviour에 옮길 위험이 있어 생성자로 옮긴다.
+        private readonly int StrikeLayerMask;
 
         //  샘플은 동전 바로 위에서 아래로 쏜다 — 발자국 위에 무엇이 얹혀 있는지 보려는 것이라
         //  동전 두께보다 넉넉히 위에서 시작해 판까지 닿을 만큼만 간다.
@@ -40,6 +43,7 @@ namespace LOP
             this.masterData = masterData;
             this.roomDataStore = roomDataStore;
             this.strikeSubscriber = strikeSubscriber;
+            StrikeLayerMask = LayerMask.GetMask("Default", "Character");
         }
 
         protected override void Subscribe() => Track(strikeSubscriber.Subscribe(OnStrike));

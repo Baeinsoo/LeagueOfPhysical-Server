@@ -17,10 +17,13 @@ namespace LOP
         //  그대로 두면 다음에 누가 그대로 베껴 MonoBehaviour에 옮길 위험이 있어 생성자로 옮긴다.
         private readonly int StrikeLayerMask;
 
-        //  샘플은 동전 바로 위에서 아래로 쏜다 — 발자국 위에 무엇이 얹혀 있는지 보려는 것이라
-        //  동전 두께보다 넉넉히 위에서 시작해 판까지 닿을 만큼만 간다.
-        private const float SampleRayHeight = 1f;
-        private const float SampleRayDistance = 2f;
+        //  샘플 자리에서 바로 아래로 짧게 쏜다 — "판이 내 바로 밑에 있나"를 묻는 것이지
+        //  "저 아래 어딘가에 판이 있나"가 아니다. 길게 쏘면 얹혀 있는 동전도 통과한다.
+        private const float SampleRayDistance = 0.1f;
+
+        //  클라가 상한에 맞춰 자른 값이라도 성분에서 크기를 다시 재면 미세하게 커질 수 있다
+        //  (ClampMagnitude는 성분을 다시 계산한다). 정직한 클라가 경계에서 거절당하지 않게 봐준다.
+        private const float BoundEpsilon = 0.001f;
 
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.Physics.ICollisionQuery collisionQuery;
@@ -81,14 +84,19 @@ namespace LOP
                 Debug.LogWarning($"[Panchigi] 판 밖 타격점 {strikePoint} — {userId}");
                 return;
             }
-            if (message.HoldTime < 0f || message.HoldTime > config.HoldTimeMax)
+            if (message.HoldTime < -BoundEpsilon || message.HoldTime > config.HoldTimeMax + BoundEpsilon)
             {
                 Debug.LogWarning($"[Panchigi] 누른 시간 범위 밖 {message.HoldTime} — {userId}");
                 return;
             }
-            if (dragDelta.magnitude > config.StrikePowerMax)
+            if (dragDelta.magnitude > config.StrikePowerMax + BoundEpsilon)
             {
                 Debug.LogWarning($"[Panchigi] 세기 범위 밖 {dragDelta.magnitude} — {userId}");
+                return;
+            }
+            if (config.CoverageSamples <= 0)
+            {
+                Debug.LogWarning($"[Panchigi] TbPanchigiConfig의 CoverageSamples가 {config.CoverageSamples}다 — 타격을 버린다.");
                 return;
             }
 
@@ -98,6 +106,12 @@ namespace LOP
         private void ApplyStrike(Vector3 strikePoint, Vector3 dragDelta, float holdTime,
             Bounds board, LOP.MasterData.PanchigiConfig config)
         {
+            //  끌지도 누르지도 않은 빈 탭 — 어차피 힘이 0이다. 동전마다 K번 쏘는 스윕을 아낀다.
+            if (dragDelta == Vector3.zero && holdTime == 0f)
+            {
+                return;
+            }
+
             var input = new StrikeInput(strikePoint.ToNumerics(), dragDelta.ToNumerics(), holdTime);
             var tuning = new StrikeTuning(
                 config.ForceMultiplier, config.HorizontalForceMultiplier, config.FalloffRate);
@@ -127,14 +141,14 @@ namespace LOP
                         continue;   // 판 끄트머리 밖으로 삐져나온 부분
                     }
 
-                    //  이 자리 위에 실제로 놓인 것이 이 동전인지 본다. 다른 동전이 먼저 맞으면
-                    //  이 동전은 그 위에 얹혀 있다는 뜻이라 판에서 힘을 받지 못한다.
-                    Vector3 origin = new Vector3(sample.x, sample.y + SampleRayHeight, sample.z);
+                    //  이 자리에서 내가 판에 닿아 있나 — 다른 동전이 먼저 걸리면 그 위에 얹혀
+                    //  있다는 뜻이고, 그러면 판에서 힘을 받지 못한다. 자기 자신은 레이가 콜라이더
+                    //  안에서 출발하므로 PhysX가 알아서 건너뛴다.
                     GameFramework.Physics.CollisionHit hit =
-                        collisionQuery.Raycast(origin, Vector3.down, SampleRayDistance, StrikeLayerMask);
-                    if (hit.GetEntityId() != entity.Id)
+                        collisionQuery.Raycast(sample, Vector3.down, SampleRayDistance, StrikeLayerMask);
+                    if (hit.HasHit == false || hit.GetEntityId() != null)
                     {
-                        continue;
+                        continue;   // 아무것도 없거나(허공) 엔티티가 먼저 걸렸다(포개짐)
                     }
 
                     live[liveCount++] = samples[i];
@@ -186,8 +200,9 @@ namespace LOP
         }
 
         //  판은 평면이라 높이는 보지 않는다 — 위아래로 얼마나 떨어져 있든 "판 위"다.
+        //  가장자리를 정확히 친 값도 반올림으로 밖에 떨어질 수 있어 BoundEpsilon만큼 넉넉히 본다.
         private static bool ContainsXZ(Bounds bounds, Vector3 point)
-            => point.x >= bounds.min.x && point.x <= bounds.max.x
-            && point.z >= bounds.min.z && point.z <= bounds.max.z;
+            => point.x >= bounds.min.x - BoundEpsilon && point.x <= bounds.max.x + BoundEpsilon
+            && point.z >= bounds.min.z - BoundEpsilon && point.z <= bounds.max.z + BoundEpsilon;
     }
 }

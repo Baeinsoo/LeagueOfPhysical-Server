@@ -14,6 +14,7 @@ namespace LOP
         private readonly MatchSeed matchSeed;
         private readonly IEntityCreationDataFactory entityCreationDataFactory;
         private readonly EntitySpawner entitySpawner;
+        private readonly MatchStartSystem matchStartSystem;
         private readonly ISubscriber<ClientMessage<GameInfoToS>> gameInfoSubscriber;
 
         private List<ClientMessage<GameInfoToS>> gameInfoToSList = new List<ClientMessage<GameInfoToS>>();
@@ -24,6 +25,7 @@ namespace LOP
             MatchSeed matchSeed,
             IEntityCreationDataFactory entityCreationDataFactory,
             EntitySpawner entitySpawner,
+            MatchStartSystem matchStartSystem,
             ISubscriber<ClientMessage<GameInfoToS>> gameInfoSubscriber)
         {
             this.runner = runner;
@@ -31,6 +33,7 @@ namespace LOP
             this.matchSeed = matchSeed;
             this.entityCreationDataFactory = entityCreationDataFactory;
             this.entitySpawner = entitySpawner;
+            this.matchStartSystem = matchStartSystem;
             this.gameInfoSubscriber = gameInfoSubscriber;
         }
 
@@ -86,6 +89,9 @@ namespace LOP
                 gameInfoToC.GameInfo.EntityCreationDatas.AddRange(allEntityCreationDatas);
 
                 session.Send(gameInfoToC);
+                //  이미 달리는 판에 붙은 사람도 이 한 줄로 출발틱을 받아 바로 참여한다 —
+                //  지각 입장용 별도 경로가 필요 없다.
+                session.Send(matchStartSystem.BuildMessage());
             }
 
             gameInfoToSList.Clear();

@@ -35,6 +35,9 @@ namespace LOP
 
         private readonly Restorer restorer = new Restorer();
 
+        //  50Hz × 300초.
+        private const long MatchDurationTicks = 15000;
+
         public override async Task InitializeAsync()
         {
             gameState = RunnerState.Initializing;
@@ -106,7 +109,13 @@ namespace LOP
 
         private void LateUpdate()
         {
-            if (initialized && (gameRuleSystem.IsMatchOver || tickUpdater.elapsedTime > 60 * 5))
+            //  끝나는 길이 둘이다: 룰이 끝났다고 하거나(판치기 라운드 등), 제한 시간이 지나거나.
+            //  제한 시간은 방이 부팅된 때가 아니라 출발한 때부터 잰다 — 부팅 기준이면 참가자를
+            //  기다리는 동안 판이 시작도 못 하고 끝난다(로컬 대기 상한이 600초라 특히).
+            if (initialized
+                && (gameRuleSystem.IsMatchOver
+                    || (matchStartSystem.Phase == MatchPhase.InProgress
+                        && tickUpdater.tick - matchStartSystem.StartTick > MatchDurationTicks)))
             {
                 EndMatch();
             }
@@ -125,6 +134,8 @@ namespace LOP
             //  등수는 지금 뽑는다 — 게임이 아직 살아 있을 때만 알 수 있는 값이라(엔티티·점수),
             //  방이 닫히는 시점에는 이미 늦다. 보고는 LOPRoom이 방을 닫기 전에 한다.
             roomDataStore.outcome = gameRuleSystem.ResolveOutcome();
+
+            matchStartSystem.Finish();
 
             gameState = RunnerState.GameOver;
         }

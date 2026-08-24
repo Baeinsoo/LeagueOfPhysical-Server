@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace LOP
 {
     /// <summary>
@@ -7,13 +9,32 @@ namespace LOP
     public class PanchigiRuleSystem : IGameRuleSystem
     {
         private readonly IRoomDataStore roomDataStore;
+        private readonly EntitySpawner entitySpawner;
 
-        public PanchigiRuleSystem(IRoomDataStore roomDataStore)
+        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner)
         {
             this.roomDataStore = roomDataStore;
+            this.entitySpawner = entitySpawner;
         }
 
-        public void Initialize() { }
+        public void Initialize()
+        {
+            //  아바타는 없지만 신원 엔티티는 필요하다 — 누구 차례인지·누가 쳤는지를 잇는다.
+            var playerList = roomDataStore.match.playerList;
+            for (int i = 0; i < playerList.Length; i++)
+            {
+                entitySpawner.Spawn(new CharacterCreationData
+                {
+                    userId = playerList[i],
+                    entityId = entitySpawner.GenerateEntityId(),
+                    visualId = "",
+                    characterCode = "",
+                    position = Vector3.zero,
+                    rotation = Vector3.zero,
+                    velocity = Vector3.zero,
+                });
+            }
+        }
 
         public void Deinitialize() { }
 

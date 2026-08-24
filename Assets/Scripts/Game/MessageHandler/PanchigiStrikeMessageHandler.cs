@@ -17,10 +17,6 @@ namespace LOP
         //  그대로 두면 다음에 누가 그대로 베껴 MonoBehaviour에 옮길 위험이 있어 생성자로 옮긴다.
         private readonly int StrikeLayerMask;
 
-        //  샘플 자리에서 바로 아래로 짧게 쏜다 — "판이 내 바로 밑에 있나"를 묻는 것이지
-        //  "저 아래 어딘가에 판이 있나"가 아니다. 길게 쏘면 얹혀 있는 동전도 통과한다.
-        private const float SampleRayDistance = 0.1f;
-
         //  클라가 상한에 맞춰 자른 값이라도 성분에서 크기를 다시 재면 미세하게 커질 수 있다
         //  (ClampMagnitude는 성분을 다시 계산한다). 정직한 클라가 경계에서 거절당하지 않게 봐준다.
         private const float BoundEpsilon = 0.001f;
@@ -132,6 +128,11 @@ namespace LOP
 
                 PanchigiStrikeKernel.BuildSamples(transform.Position, disc.Radius, samples);
 
+                //  판에 닿아 있다면 중심이 판 위로 몸의 대각 절반보다 높이 뜰 수는 없다 —
+                //  납작하게 누웠든 모로 섰든 이 거리 안에 판이 있어야 "닿아 있다"가 성립한다.
+                //  고정값을 쓰면 모로 선 동전이 영영 타격에 반응하지 않는다.
+                float reach = new Vector3(disc.Radius, disc.Thickness * 0.5f, disc.Radius).magnitude + BoundEpsilon;
+
                 int liveCount = 0;
                 for (int i = 0; i < sampleCount; i++)
                 {
@@ -145,7 +146,7 @@ namespace LOP
                     //  있다는 뜻이고, 그러면 판에서 힘을 받지 못한다. 자기 자신은 레이가 콜라이더
                     //  안에서 출발하므로 PhysX가 알아서 건너뛴다.
                     GameFramework.Physics.CollisionHit hit =
-                        collisionQuery.Raycast(sample, Vector3.down, SampleRayDistance, StrikeLayerMask);
+                        collisionQuery.Raycast(sample, Vector3.down, reach, StrikeLayerMask);
                     if (hit.HasHit == false || hit.GetEntityId() != null)
                     {
                         continue;   // 아무것도 없거나(허공) 엔티티가 먼저 걸렸다(포개짐)

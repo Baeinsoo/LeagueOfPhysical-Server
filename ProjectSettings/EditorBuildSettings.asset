@@ -17,6 +17,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/FlappyRace.unity
     guid: 579e9ce572d9c48e0a124fd14a13da9e
+  - enabled: 1
+    path: Assets/Scenes/Panchigi.unity
+    guid: d9cc2e1ce041a544ea71c0e2597e0bbb
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 35add8549303d7e40afb044c7a36484b, type: 2}
   m_UseUCBPForAssetBundles: 0

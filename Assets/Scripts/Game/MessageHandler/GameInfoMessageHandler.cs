@@ -69,7 +69,8 @@ namespace LOP
                 {
                     EntityId = entityId,
                     SessionId = session.sessionId,
-                    ExpectedNextSequence = entityRegistry.Get(entityId).Get<InputBuffer>().ExpectedNextSequence,
+                    // 판치기 등 입력을 안 보내는 모드는 InputBuffer가 없다 — 없는 게 정상이니 조회 실패를 감내한다.
+                    ExpectedNextSequence = entityRegistry.Get(entityId).Get<InputBuffer>()?.ExpectedNextSequence ?? 0,
                     GameInfo = new GameInfo
                     {
                         // Tick·ElapsedTime은 클라가 더 이상 시드로 쓰지 않는다(자기 시계에서 유도).

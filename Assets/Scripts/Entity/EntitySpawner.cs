@@ -16,6 +16,7 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly ICharacterCreator characterCreator;
         private readonly ItemCreator itemCreator;
+        private readonly CoinCreator coinCreator;
         private readonly IPublisher<EntityCreated> entityCreatedPublisher;
         private readonly IPublisher<EntityDestroyed> entityDestroyedPublisher;
 
@@ -28,6 +29,7 @@ namespace LOP
             GameFramework.World.EntityRegistry entityRegistry,
             ICharacterCreator characterCreator,
             ItemCreator itemCreator,
+            CoinCreator coinCreator,
             IPublisher<EntityCreated> entityCreatedPublisher,
             IPublisher<EntityDestroyed> entityDestroyedPublisher)
         {
@@ -35,6 +37,7 @@ namespace LOP
             this.entityRegistry = entityRegistry;
             this.characterCreator = characterCreator;
             this.itemCreator = itemCreator;
+            this.coinCreator = coinCreator;
             this.entityCreatedPublisher = entityCreatedPublisher;
             this.entityDestroyedPublisher = entityDestroyedPublisher;
         }
@@ -64,6 +67,12 @@ namespace LOP
         public void Spawn(ItemCreationData creationData)
         {
             itemCreator.Create(creationData);
+            entityCreatedPublisher.Publish(new EntityCreated(creationData.entityId));
+        }
+
+        public void Spawn(CoinCreationData creationData)
+        {
+            coinCreator.Create(creationData);
             entityCreatedPublisher.Publish(new EntityCreated(creationData.entityId));
         }
 

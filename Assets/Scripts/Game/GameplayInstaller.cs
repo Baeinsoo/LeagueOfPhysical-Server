@@ -69,10 +69,12 @@ namespace LOP
             builder.Register<CombatConfig>(c => c.Resolve<CombatConfigProvider>().Get(), Lifetime.Singleton);
             builder.Register<LOPCombatSystem>(Lifetime.Singleton);
             builder.Register<ItemCreator>(Lifetime.Singleton);
+            builder.Register<CoinCreator>(Lifetime.Singleton);
             builder.Register<EntitySpawner>(Lifetime.Singleton);
             builder.Register<ActorRegistry>(Lifetime.Singleton);
             builder.Register<IEntityCreationDataCreator, CharacterCreationDataCreator>(Lifetime.Singleton);
             builder.Register<IEntityCreationDataCreator, ItemCreationDataCreator>(Lifetime.Singleton);
+            builder.Register<IEntityCreationDataCreator, CoinCreationDataCreator>(Lifetime.Singleton);
             builder.Register<IEntityCreationDataFactory, EntityCreationDataFactory>(Lifetime.Singleton);
 
             // Slice 5-B: LOPRunner.UpdateRunner 인라인 파이프라인 스텝 → ITickSystem 추출(god-object 해체).

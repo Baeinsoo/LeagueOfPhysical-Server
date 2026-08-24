@@ -20,6 +20,8 @@ namespace LOP
         public void Initialize()
         {
             //  아바타는 없지만 신원 엔티티는 필요하다 — 누구 차례인지·누가 쳤는지를 잇는다.
+            //  아바타가 없어 물리적 존재가 없어야 한다 — 판 위에 두면 다음 슬라이스의 동전을
+            //  막는다. 실제 자리 배치는 전용 맵이 생길 때.
             var playerList = roomDataStore.match.playerList;
             for (int i = 0; i < playerList.Length; i++)
             {
@@ -29,7 +31,7 @@ namespace LOP
                     entityId = entitySpawner.GenerateEntityId(),
                     visualId = "",
                     characterCode = "",
-                    position = Vector3.zero,
+                    position = new Vector3(0f, -10f, 0f),
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 });

@@ -1,9 +1,6 @@
 using System.Linq;
 using System.Reflection;
 using UnityEditor;
-using UnityEditor.AddressableAssets;
-using UnityEditor.AddressableAssets.Build;
-using UnityEditor.AddressableAssets.Settings;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 using UnityEngine;
@@ -26,34 +23,6 @@ public static class BuildScript
         var osArch = fromStr.Invoke(null, new object[] { arch }); // "x86_64"→x64, "arm64"→arm64
         archProp.SetValue(null, osArch);
         Debug.Log($"Linux architecture set: {arch} -> {archProp.GetValue(null)}");
-    }
-
-    // 에셋 카탈로그(Addressables)는 플레이어 빌드에 자동으로 따라오지 않는다. 프로젝트 설정의
-    // "Build Addressables on Player Build"는 기본값이 *에디터 환경설정을 따름*이라 레포에 없고
-    // 빌드 머신마다 다르다 — CI 러너는 Library/를 지우지 않으므로 예전에 구워 둔 카탈로그가
-    // 그대로 남아, 새로 등록한 에셋이 런타임에 "No Location found"로 실패한다(실제로 겪음:
-    // 판치기 동전 프리팹). 그래서 여기서 명시적으로 굽는다 — 빌드 머신 설정에 기대지 않는다.
-    static void BuildAddressables()
-    {
-        var settings = AddressableAssetSettingsDefaultObject.Settings;
-        if (settings == null)
-        {
-            throw new System.Exception("AddressableAssetSettings not found");
-        }
-
-        //  옛 번들이 남아 있으면 새 카탈로그와 섞인다 — 지우고 처음부터 굽는다.
-        AddressableAssetSettings.CleanPlayerContent(settings.ActivePlayerDataBuilder);
-        AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
-
-        if (string.IsNullOrEmpty(result.Error) == false)
-        {
-            throw new System.Exception($"Addressables build failed: {result.Error}");
-        }
-
-        //  remoteCatalog=true면 런타임이 S3의 카탈로그를 먼저 본다 — 여기서 구운 것이 그대로
-        //  쓰이지 않는다는 뜻이라, 진단할 때 이 값을 같이 봐야 한다.
-        Debug.Log($"Addressables OK: {result.LocationCount} locations, {result.Duration:F1}s, " +
-                  $"remoteCatalog={settings.BuildRemoteCatalog}");
     }
 
     // CI: LOP_BUILD_ARCH=x86_64|arm64 Unity -batchmode -quit -nographics -projectPath . \
@@ -97,8 +66,6 @@ public static class BuildScript
 
         try
         {
-            BuildAddressables();
-
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
             if (summary.result != BuildResult.Succeeded)

@@ -13,6 +13,11 @@ namespace LOP
     {
         //  50Hz 기준. 카운트다운 3초는 카트라이더·로켓리그 관례.
         private const long CountdownTicks = 150;
+        //  전원이 준비된 뒤 한 박자 쉬고 센다. 늦게 들어온 사람은 로딩·시계정착이 끝나자마자
+        //  준비가 되므로, 이 여유가 없으면 화면을 보자마자 "3"을 맞는다.
+        private const long SettleTicks = 100;   // 2초
+        //  게이트가 열린 뒤 실제 출발까지의 여유. 이걸 어떻게 나눠 보여줄지는 클라 화면이 정한다.
+        private const long LeadTicks = SettleTicks + CountdownTicks;
         //  실서비스: 모바일 콜드 로딩 + 맵 로드를 덮는 30초.
         private const long WaitCapTicks = 1500;
         //  로컬(에디터): 사람이 손으로 에디터 셋을 켜는 시간. 이 한 줄이 2인 검증 리그를 세운다.
@@ -48,7 +53,7 @@ namespace LOP
         {
             int expected = roomDataStore.match?.playerList?.Length ?? 0;
             long cap = EnvironmentSettings.active.Standalone ? StandaloneWaitCapTicks : WaitCapTicks;
-            gate = new MatchStartGate(expected, cap, CountdownTicks);
+            gate = new MatchStartGate(expected, cap, LeadTicks);
 
             Track(readySubscriber.Subscribe(OnMatchReadyToS));
         }

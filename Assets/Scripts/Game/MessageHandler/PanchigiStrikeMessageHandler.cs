@@ -27,6 +27,7 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly ISubscriber<ClientMessage<PanchigiStrikeToS>> strikeSubscriber;
         private readonly PanchigiBoard board;
+        private readonly PanchigiTurnSystem turnSystem;
 
         public PanchigiStrikeMessageHandler(
             GameFramework.World.EntityRegistry entityRegistry,
@@ -34,7 +35,8 @@ namespace LOP
             LOP.MasterData.LOPMasterData masterData,
             IRoomDataStore roomDataStore,
             ISubscriber<ClientMessage<PanchigiStrikeToS>> strikeSubscriber,
-            PanchigiBoard board)
+            PanchigiBoard board,
+            PanchigiTurnSystem turnSystem)
         {
             this.entityRegistry = entityRegistry;
             this.collisionQuery = collisionQuery;
@@ -42,6 +44,7 @@ namespace LOP
             this.roomDataStore = roomDataStore;
             this.strikeSubscriber = strikeSubscriber;
             this.board = board;
+            this.turnSystem = turnSystem;
             StrikeLayerMask = LayerMask.GetMask("Default", "Character");
         }
 
@@ -68,6 +71,11 @@ namespace LOP
             if (IsParticipant(userId) == false)
             {
                 Debug.LogWarning($"[Panchigi] 참가자가 아닌 타격 — {userId}");
+                return;
+            }
+            if (turnSystem.CanStrike(userId) == false)
+            {
+                Debug.LogWarning($"[Panchigi] 차례가 아닌 타격 — {userId}");
                 return;
             }
 
@@ -99,6 +107,7 @@ namespace LOP
             }
 
             ApplyStrike(strikePoint, dragDelta, message.HoldTime, boardBounds, config);
+            turnSystem.NotifyStruck(userId);
         }
 
         private void ApplyStrike(Vector3 strikePoint, Vector3 dragDelta, float holdTime,

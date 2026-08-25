@@ -108,8 +108,8 @@ namespace LOP
                 return;
             }
 
-            var input = new StrikeInput(strikePoint.ToNumerics(), dragDelta.ToNumerics(), holdTime);
-            var tuning = new StrikeTuning(
+            var input = new PanchigiStrike.StrikeInput(strikePoint.ToNumerics(), dragDelta.ToNumerics(), holdTime);
+            var tuning = new PanchigiStrike.StrikeTuning(
                 config.ForceMultiplier, config.HorizontalForceMultiplier, config.FalloffRate);
 
             int sampleCount = config.CoverageSamples;
@@ -126,7 +126,7 @@ namespace LOP
                     continue;   // 동전이 아니다
                 }
 
-                PanchigiStrikeKernel.BuildSamples(transform.Position, disc.Radius, samples);
+                PanchigiStrike.BuildSamples(transform.Position, disc.Radius, samples);
 
                 //  판에 닿아 있다면 중심이 판 위로 몸의 대각 절반보다 높이 뜰 수는 없다 —
                 //  납작하게 누웠든 모로 섰든 이 거리 안에 판이 있어야 "닿아 있다"가 성립한다.
@@ -156,7 +156,7 @@ namespace LOP
                 }
 
                 System.Numerics.Vector3 impulse =
-                    PanchigiStrikeKernel.ComputeImpulse(input, tuning, live, liveCount, sampleCount);
+                    PanchigiStrike.ComputeImpulse(input, tuning, live, liveCount, sampleCount);
                 if (impulse == System.Numerics.Vector3.Zero)
                 {
                     continue;

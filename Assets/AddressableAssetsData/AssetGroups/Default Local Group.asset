@@ -14,7 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_GroupName: Default Local Group
   m_GUID: 80172ce325c144348befe0d09102b229
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 5aed4d32941005040a2e9636c344c3d2
+    m_Address: Assets/Art_Placeholder/Panchigi/Coin.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 10e191c3a157d4046ae7e47bd1e7a639, type: 2}
   m_SchemaSet:

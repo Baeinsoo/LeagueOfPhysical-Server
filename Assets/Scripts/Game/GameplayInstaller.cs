@@ -48,7 +48,6 @@ namespace LOP
             builder.Register<DeathCascadeSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.Physics.IPhysicsSimulator, GameFramework.Physics.UnityPhysicsSimulator>(Lifetime.Singleton);
             builder.Register<GameFramework.Physics.ICollisionQuery, GameFramework.Physics.UnityCollisionQuery>(Lifetime.Singleton);
-            builder.Register<GameFramework.Physics.IOverlapQuery, LOPOverlapQuery>(Lifetime.Singleton);
             // 클라와 동일: 캐릭터를 벽으로(sweep에 Character 포함) + 겹치면 풀 밀어내기(1.0).
             // 클·서 같은 충돌이라야 예측이 맞아 recon이 작다.
             builder.Register<KinematicMoveSystem>(c => new KinematicMoveSystem(

@@ -245,7 +245,17 @@ namespace LOP
 
             foreach (var session in sessionManager.GetAllSessions())
             {
-                if (session.isConnected == false || receivedSessionIds.Contains(session.sessionId))
+                if (session.isConnected == false)
+                {
+                    //  끊긴 세션은 "받은 적 없음"으로 되돌린다. 재접속은 같은 sessionId를 그대로
+                    //  다시 쓰기 때문(LOPRoom.OnPlayerEnter가 세션 객체를 재사용한다), 지워 두지
+                    //  않으면 돌아온 플레이어가 자기 차례를 통째로 놓친다. 방을 떠난 세션의 id가
+                    //  쌓이는 것도 같이 막는다.
+                    receivedSessionIds.Remove(session.sessionId);
+                    continue;
+                }
+
+                if (receivedSessionIds.Contains(session.sessionId))
                 {
                     continue;
                 }

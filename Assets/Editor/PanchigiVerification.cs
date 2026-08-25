@@ -169,9 +169,28 @@ namespace LOP.EditorTools
             limited.OnRested(false);
             limited.OnAimTimeout();
             limited.OnAimTimeout();  // 이미 Over라 무시돼야 한다
-            sb.AppendLine($"  상한 도달(turnLimit=1) → {limited.Phase} / 승자 {limited.WinnerEntityId ?? "없음"}");
+            sb.AppendLine($"  상한 도달(turnLimit=1, 경로 B=OnAimTimeout) → {limited.Phase} / 승자 {limited.WinnerEntityId ?? "없음"}");
             CheckBool(sb, "    Over인가", limited.Phase == PanchigiPhase.Over, true);
             CheckBool(sb, "    무승부(승자 없음)인가", limited.WinnerEntityId == null, true);
+
+            //  경로 A — "쳐서 동전이 멎었는데 그 시점에 상한 도달"은 OnRested 안의 상한 체크가 처리한다.
+            //  위 limited 시나리오는 OnAimTimeout(경로 B)만 지나가므로, OnRested(경로 A)를 따로 지나가 본다.
+            var pathA = new PanchigiTurn(players, 1);
+            pathA.OnRested(false);
+            sb.AppendLine($"  경로A① 첫 정지 → {pathA.Phase} / {pathA.CurrentEntityId} / 턴 {pathA.TurnCount}");
+            CheckBool(sb, "    Aiming인가", pathA.Phase == PanchigiPhase.Aiming, true);
+            CheckBool(sb, "    P1 차례인가", pathA.CurrentEntityId == "P1", true);
+            CheckBool(sb, "    턴 0인가", pathA.TurnCount == 0, true);
+
+            pathA.OnStruck("P1");
+            sb.AppendLine($"  경로A② 타격 → {pathA.Phase} / 턴 {pathA.TurnCount}");
+            CheckBool(sb, "    Settling인가", pathA.Phase == PanchigiPhase.Settling, true);
+            CheckBool(sb, "    턴 1인가", pathA.TurnCount == 1, true);
+
+            pathA.OnRested(false);  // TurnCount(1) >= turnLimit(1) — OnRested 안에서 바로 Over (경로 A)
+            sb.AppendLine($"  경로A③ 정지(상한 도달, 경로 A=OnRested) → {pathA.Phase} / 승자 {pathA.WinnerEntityId ?? "없음"}");
+            CheckBool(sb, "    Over인가(OnRested 경로)", pathA.Phase == PanchigiPhase.Over, true);
+            CheckBool(sb, "    무승부(P1이 쳤지만 안 뒤집혀 승자 아님)인가", pathA.WinnerEntityId == null, true);
         }
 
         // ── PanchigiStrike — 잃어버린 EditMode 테스트 13개를 대신한다 ────

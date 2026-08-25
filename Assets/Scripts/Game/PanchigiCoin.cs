@@ -1,3 +1,4 @@
+using GameFramework;
 using UnityEngine;
 
 namespace LOP
@@ -14,7 +15,7 @@ namespace LOP
         /// </summary>
         public static bool IsFlipped(System.Numerics.Quaternion rotation)
         {
-            Quaternion q = new Quaternion(rotation.X, rotation.Y, rotation.Z, rotation.W);
+            Quaternion q = rotation.ToUnity();
             return Vector3.Dot(q * Vector3.up, Vector3.up) < 0f;
         }
 

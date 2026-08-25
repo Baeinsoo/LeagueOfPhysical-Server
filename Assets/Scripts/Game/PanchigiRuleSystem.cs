@@ -4,8 +4,9 @@ using UnityEngine;
 namespace LOP
 {
     /// <summary>
-    /// 판치기 룰(서버). 이 슬라이스에서는 판을 세우는 것까지만 하고, 턴 상태 기계와 승패 판정은
-    /// 다음 슬라이스에서 붙인다 — 지금은 전원 동일 등수를 돌려준다.
+    /// 판치기 룰(서버). 판을 세우고(플레이어·동전 스폰, 대형 배치) <see cref="PanchigiTurnSystem"/>에
+    /// 턴 진행을 맡긴 뒤, 그 결과(승자 유무)로 등수를 매긴다. 승자가 있으면 1등/공동 꼴등, 없으면
+    /// (무승부) 전원 1등.
     /// </summary>
     public class PanchigiRuleSystem : IGameRuleSystem
     {

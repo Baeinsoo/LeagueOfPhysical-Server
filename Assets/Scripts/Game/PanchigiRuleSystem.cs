@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace LOP
@@ -15,12 +16,20 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
         private readonly LOP.MasterData.LOPMasterData masterData;
+        private readonly PanchigiBoard board;
 
-        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData)
+        private readonly List<string> playerEntityIds = new();
+        private readonly List<string> coinEntityIds = new();
+
+        public IReadOnlyList<string> PlayerEntityIds => playerEntityIds;
+        public IReadOnlyList<string> CoinEntityIds => coinEntityIds;
+
+        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoard board)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.masterData = masterData;
+            this.board = board;
         }
 
         public void Initialize()
@@ -31,16 +40,18 @@ namespace LOP
             var playerList = roomDataStore.match.playerList;
             for (int i = 0; i < playerList.Length; i++)
             {
+                string playerId = entitySpawner.GenerateEntityId();
                 entitySpawner.Spawn(new CharacterCreationData
                 {
                     userId = playerList[i],
-                    entityId = entitySpawner.GenerateEntityId(),
+                    entityId = playerId,
                     visualId = "",
                     characterCode = "",
                     position = new Vector3(0f, -10f, 0f),
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 });
+                playerEntityIds.Add(playerId);
             }
 
             var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(playerList.Length);
@@ -51,18 +62,27 @@ namespace LOP
                     $"TbPanchigiSetup에 {playerList.Length}인 구성이 없다 — 테이블을 채워야 한다.");
             }
 
-            //  대형(formation) 해석은 슬라이스 3에서 갈라진다. 지금은 일렬로 떨어뜨려
-            //  "쌓이는 것"과 "두 클라가 같은 것을 보는지"만 확인한다.
-            for (int i = 0; i < setup.CoinCount; i++)
+            if (board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
             {
+                //  조용히 넘기면 판이 빈 채로 시작하고 왜인지 런타임에 추적해야 한다.
+                throw new System.InvalidOperationException(
+                    $"씬의 PanchigiBoard에 '{setup.Formation}' 대형이 없다 — 자리를 채워야 한다.");
+            }
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                string coinId = entitySpawner.GenerateEntityId();
                 entitySpawner.Spawn(new CoinCreationData
                 {
-                    entityId = entitySpawner.GenerateEntityId(),
+                    entityId = coinId,
                     visualId = CoinVisualId,
-                    position = new Vector3(0f, 1.5f, i * 0.5f),
+                    position = slots[i].position,
+                    //  자리의 회전은 쓰지 않는다 — 동전은 전부 같은 면(+up)으로 놓인다는 것이
+                    //  종료 조건의 전제다. 자리를 돌려 놓으면 그 전제가 조용히 깨진다.
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
                 });
+                coinEntityIds.Add(coinId);
             }
         }
 

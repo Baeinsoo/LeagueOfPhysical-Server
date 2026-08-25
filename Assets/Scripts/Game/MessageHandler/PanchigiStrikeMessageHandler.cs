@@ -26,22 +26,25 @@ namespace LOP
         private readonly LOP.MasterData.LOPMasterData masterData;
         private readonly IRoomDataStore roomDataStore;
         private readonly ISubscriber<ClientMessage<PanchigiStrikeToS>> strikeSubscriber;
-
-        private Bounds boardBounds;
-        private bool boardFound;
+        private readonly PanchigiBoard board;
+        private readonly PanchigiTurnSystem turnSystem;
 
         public PanchigiStrikeMessageHandler(
             GameFramework.World.EntityRegistry entityRegistry,
             GameFramework.Physics.ICollisionQuery collisionQuery,
             LOP.MasterData.LOPMasterData masterData,
             IRoomDataStore roomDataStore,
-            ISubscriber<ClientMessage<PanchigiStrikeToS>> strikeSubscriber)
+            ISubscriber<ClientMessage<PanchigiStrikeToS>> strikeSubscriber,
+            PanchigiBoard board,
+            PanchigiTurnSystem turnSystem)
         {
             this.entityRegistry = entityRegistry;
             this.collisionQuery = collisionQuery;
             this.masterData = masterData;
             this.roomDataStore = roomDataStore;
             this.strikeSubscriber = strikeSubscriber;
+            this.board = board;
+            this.turnSystem = turnSystem;
             StrikeLayerMask = LayerMask.GetMask("Default", "Character");
         }
 
@@ -49,11 +52,13 @@ namespace LOP
 
         private void OnStrike(ClientMessage<PanchigiStrikeToS> received)
         {
-            if (TryGetBoardBounds(out Bounds board) == false)
+            if (board == null)
             {
                 Debug.LogWarning("[Panchigi] 판을 찾지 못했다 — 타격을 버린다.");
                 return;
             }
+
+            Bounds boardBounds = board.Bounds;
 
             var config = masterData.Tables.TbPanchigiConfig.GetOrDefault(1);
             if (config == null)
@@ -68,6 +73,11 @@ namespace LOP
                 Debug.LogWarning($"[Panchigi] 참가자가 아닌 타격 — {userId}");
                 return;
             }
+            if (turnSystem.CanStrike(userId) == false)
+            {
+                Debug.LogWarning($"[Panchigi] 차례가 아닌 타격 — {userId}");
+                return;
+            }
 
             PanchigiStrikeToS message = received.Message;
             Vector3 strikePoint = MapperConfig.mapper.Map<Vector3>(message.StrikePoint);
@@ -75,7 +85,7 @@ namespace LOP
 
             //  클라가 이미 상한을 걸어 보내지만 믿지 않는다. 클램프가 아니라 거절이다 —
             //  클램프하면 조작된 값이 조용히 게임에 들어오고 로그도 안 남는다.
-            if (ContainsXZ(board, strikePoint) == false)
+            if (ContainsXZ(boardBounds, strikePoint) == false)
             {
                 Debug.LogWarning($"[Panchigi] 판 밖 타격점 {strikePoint} — {userId}");
                 return;
@@ -96,11 +106,12 @@ namespace LOP
                 return;
             }
 
-            ApplyStrike(strikePoint, dragDelta, message.HoldTime, board, config);
+            ApplyStrike(strikePoint, dragDelta, message.HoldTime, boardBounds, config);
+            turnSystem.NotifyStruck(userId);
         }
 
         private void ApplyStrike(Vector3 strikePoint, Vector3 dragDelta, float holdTime,
-            Bounds board, LOP.MasterData.PanchigiConfig config)
+            Bounds boardBounds, LOP.MasterData.PanchigiConfig config)
         {
             //  끌지도 누르지도 않은 빈 탭 — 어차피 힘이 0이다. 동전마다 K번 쏘는 스윕을 아낀다.
             if (dragDelta == Vector3.zero && holdTime == 0f)
@@ -108,8 +119,8 @@ namespace LOP
                 return;
             }
 
-            var input = new StrikeInput(strikePoint.ToNumerics(), dragDelta.ToNumerics(), holdTime);
-            var tuning = new StrikeTuning(
+            var input = new PanchigiStrike.StrikeInput(strikePoint.ToNumerics(), dragDelta.ToNumerics(), holdTime);
+            var tuning = new PanchigiStrike.StrikeTuning(
                 config.ForceMultiplier, config.HorizontalForceMultiplier, config.FalloffRate);
 
             int sampleCount = config.CoverageSamples;
@@ -126,7 +137,7 @@ namespace LOP
                     continue;   // 동전이 아니다
                 }
 
-                PanchigiStrikeKernel.BuildSamples(transform.Position, disc.Radius, samples);
+                PanchigiStrike.BuildSamples(transform.Position, disc.Radius, samples);
 
                 //  판에 닿아 있다면 중심이 판 위로 몸의 대각 절반보다 높이 뜰 수는 없다 —
                 //  납작하게 누웠든 모로 섰든 이 거리 안에 판이 있어야 "닿아 있다"가 성립한다.
@@ -137,7 +148,7 @@ namespace LOP
                 for (int i = 0; i < sampleCount; i++)
                 {
                     Vector3 sample = samples[i].ToUnity();
-                    if (ContainsXZ(board, sample) == false)
+                    if (ContainsXZ(boardBounds, sample) == false)
                     {
                         continue;   // 판 끄트머리 밖으로 삐져나온 부분
                     }
@@ -156,7 +167,7 @@ namespace LOP
                 }
 
                 System.Numerics.Vector3 impulse =
-                    PanchigiStrikeKernel.ComputeImpulse(input, tuning, live, liveCount, sampleCount);
+                    PanchigiStrike.ComputeImpulse(input, tuning, live, liveCount, sampleCount);
                 if (impulse == System.Numerics.Vector3.Zero)
                 {
                     continue;
@@ -176,28 +187,6 @@ namespace LOP
                 }
             }
             return false;
-        }
-
-        private bool TryGetBoardBounds(out Bounds bounds)
-        {
-            if (boardFound)
-            {
-                bounds = boardBounds;
-                return true;
-            }
-
-            GameObject board = GameObject.Find("Board");
-            Collider collider = board != null ? board.GetComponent<Collider>() : null;
-            if (collider == null)
-            {
-                bounds = default;
-                return false;
-            }
-
-            boardBounds = collider.bounds;
-            boardFound = true;
-            bounds = boardBounds;
-            return true;
         }
 
         //  판은 평면이라 높이는 보지 않는다 — 위아래로 얼마나 떨어져 있든 "판 위"다.

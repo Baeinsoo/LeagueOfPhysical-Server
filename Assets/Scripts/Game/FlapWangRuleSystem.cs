@@ -74,6 +74,9 @@ namespace LOP
             tickUpdater.onTick -= OnTick;
         }
 
+        //  아직 자기만의 종료 조건이 없다 — 러너의 시간 상한으로 끝난다.
+        public bool IsMatchOver => false;
+
         private void OnTick(long tick)
         {
             if (tickUpdater.elapsedTime - lastEnemySpawnTime >= 10f)

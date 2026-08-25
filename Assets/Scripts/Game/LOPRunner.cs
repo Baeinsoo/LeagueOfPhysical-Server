@@ -105,7 +105,7 @@ namespace LOP
 
         private void LateUpdate()
         {
-            if (initialized && tickUpdater.elapsedTime > 60 * 5)
+            if (initialized && (gameRuleSystem.IsMatchOver || tickUpdater.elapsedTime > 60 * 5))
             {
                 EndMatch();
             }

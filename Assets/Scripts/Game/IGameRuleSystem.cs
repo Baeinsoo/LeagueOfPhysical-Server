@@ -9,6 +9,9 @@ namespace LOP
         void Initialize();
         void Deinitialize();
 
+        /// <summary>이 판이 끝났나. 러너가 매 프레임 물어본다 — 종료 시점은 게임마다 다르다.</summary>
+        bool IsMatchOver { get; }
+
         /// <summary>이 판의 등수. 무엇으로 순위를 매길지는 게임마다 다르다.</summary>
         MatchOutcome ResolveOutcome();
     }

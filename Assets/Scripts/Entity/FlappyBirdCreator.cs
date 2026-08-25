@@ -35,7 +35,7 @@ namespace LOP
             // 지금까지 EntityBinder가 하드코딩하던 값을 그대로 옮긴 것 — 거동 변화 없음.
             worldEntity.Add(new GameFramework.World.PhysicsConfig(
                 GameFramework.World.BodyKind.Kinematic, freezeRotation: true, isTrigger: false));
-            worldEntity.Add(new FlappyGhost());
+            worldEntity.Add(new FlappyStun());
 
             if (string.IsNullOrEmpty(creationData.userId) == false)
             {

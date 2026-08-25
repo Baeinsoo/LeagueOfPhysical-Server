@@ -58,6 +58,9 @@ namespace LOP
         {
         }
 
+        //  아직 자기만의 종료 조건이 없다 — 러너의 시간 상한으로 끝난다.
+        public bool IsMatchOver => false;
+
         //  진짜 등수(결승선 통과 순서)는 게임플레이가 붙는 슬라이스에서 채운다. 그때까지는
         //  보고 경로가 끊기지 않도록 무작위로 둔다.
         public MatchOutcome ResolveOutcome()

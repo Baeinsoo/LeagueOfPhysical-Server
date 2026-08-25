@@ -18,6 +18,7 @@ namespace LOP
         private readonly LOP.MasterData.LOPMasterData masterData;
         private readonly PanchigiBoard board;
         private readonly PanchigiTurnSystem turnSystem;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
 
         private readonly List<string> playerEntityIds = new();
         private readonly List<string> coinEntityIds = new();
@@ -25,13 +26,14 @@ namespace LOP
         public IReadOnlyList<string> PlayerEntityIds => playerEntityIds;
         public IReadOnlyList<string> CoinEntityIds => coinEntityIds;
 
-        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoard board, PanchigiTurnSystem turnSystem)
+        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoard board, PanchigiTurnSystem turnSystem, GameFramework.World.EntityRegistry entityRegistry)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.masterData = masterData;
             this.board = board;
             this.turnSystem = turnSystem;
+            this.entityRegistry = entityRegistry;
         }
 
         public void Initialize()
@@ -92,16 +94,28 @@ namespace LOP
 
         public void Deinitialize() { }
 
+        public bool IsMatchOver => turnSystem.IsOver;
+
         public MatchOutcome ResolveOutcome()
         {
-            //  판이 끝나는 조건은 다음 슬라이스에서 붙는다 — 그때까지는 결과 보고 경로가 끊기지
-            //  않도록 전원 동일 등수로 둔다(아직 승자가 정해지지 않는다).
             var outcome = new MatchOutcome();
-            foreach (var userId in roomDataStore.match.playerList)
+            string winnerEntityId = turnSystem.WinnerEntityId;
+
+            foreach (string userId in roomDataStore.match.playerList)
             {
-                outcome.placements.Add(new MatchPlacement { userId = userId, placement = 1 });
+                //  승자 1등 / 나머지 공동 꼴등. 무승부(승자 없음)면 전원 1등.
+                int placement = winnerEntityId == null || IsWinner(userId, winnerEntityId) ? 1 : 2;
+                outcome.placements.Add(new MatchPlacement { userId = userId, placement = placement });
             }
+
             return outcome;
+        }
+
+        private bool IsWinner(string userId, string winnerEntityId)
+        {
+            var entity = entityRegistry.Get(winnerEntityId);
+            var ownership = entity?.Get<GameFramework.World.Ownership>();
+            return ownership != null && ownership.OwnerId == userId;
         }
     }
 }

@@ -17,6 +17,7 @@ namespace LOP
         private readonly EntitySpawner entitySpawner;
         private readonly LOP.MasterData.LOPMasterData masterData;
         private readonly PanchigiBoard board;
+        private readonly PanchigiTurnSystem turnSystem;
 
         private readonly List<string> playerEntityIds = new();
         private readonly List<string> coinEntityIds = new();
@@ -24,12 +25,13 @@ namespace LOP
         public IReadOnlyList<string> PlayerEntityIds => playerEntityIds;
         public IReadOnlyList<string> CoinEntityIds => coinEntityIds;
 
-        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoard board)
+        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoard board, PanchigiTurnSystem turnSystem)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.masterData = masterData;
             this.board = board;
+            this.turnSystem = turnSystem;
         }
 
         public void Initialize()
@@ -84,6 +86,8 @@ namespace LOP
                 });
                 coinEntityIds.Add(coinId);
             }
+
+            turnSystem.Begin(playerEntityIds, coinEntityIds);
         }
 
         public void Deinitialize() { }

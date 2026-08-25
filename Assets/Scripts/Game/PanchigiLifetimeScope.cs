@@ -16,6 +16,7 @@ namespace LOP
                 c.Resolve<GameFramework.World.WorldEventBuffer>()), Lifetime.Singleton);
             builder.Register<ICharacterCreator, PanchigiPlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, PanchigiRuleSystem>(Lifetime.Singleton);
+            builder.Register<PanchigiTurnSystem>(Lifetime.Singleton);
             builder.RegisterComponent(board);
 
             // 타격 수신·검증·임펄스 — 판치기만 있는 흐름이라 공통 GameplayInstaller가 아니라 여기에 둔다.

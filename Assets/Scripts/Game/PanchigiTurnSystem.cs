@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using GameFramework;
 using GameFramework.Runner;
-using LOP.Event.LOPRunner.Update;
 using UnityEngine;
 
 namespace LOP
@@ -12,7 +11,7 @@ namespace LOP
     /// </summary>
     public class PanchigiTurnSystem : ITickSystem
     {
-        private readonly IRunner runner;
+        private readonly ITickUpdater tickUpdater;
         private readonly IRoomDataStore roomDataStore;
         private readonly ISessionManager sessionManager;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
@@ -36,18 +35,16 @@ namespace LOP
         public bool IsOver => turn != null && turn.Phase == PanchigiPhase.Over;
         public string WinnerEntityId => turn?.WinnerEntityId;
 
-        public PanchigiTurnSystem(IRunner runner, IRoomDataStore roomDataStore, ISessionManager sessionManager,
+        public PanchigiTurnSystem(ITickUpdater tickUpdater, IRoomDataStore roomDataStore, ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry, LOP.MasterData.LOPMasterData masterData,
             PanchigiBoard board)
         {
-            this.runner = runner;
+            this.tickUpdater = tickUpdater;
             this.roomDataStore = roomDataStore;
             this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
             this.masterData = masterData;
             this.board = board;
-
-            runner.RegisterSystem<End>(this);
         }
 
         public void Begin(IReadOnlyList<string> playerEntityIds, IReadOnlyList<string> coinEntityIds)
@@ -126,7 +123,7 @@ namespace LOP
 
             lastDeadlineTurnCount = turn.TurnCount;
 
-            double interval = runner.tickUpdater?.interval ?? 0;
+            double interval = tickUpdater?.interval ?? 0;
             long window = interval > 0 ? (long)(config.AimTimeoutSec / interval) : 0;
             aimDeadlineTick = tick + window;
         }

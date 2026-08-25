@@ -50,29 +50,10 @@ public static class BuildScript
             throw new System.Exception($"Addressables build failed: {result.Error}");
         }
 
+        //  remoteCatalog=true면 런타임이 S3의 카탈로그를 먼저 본다 — 여기서 구운 것이 그대로
+        //  쓰이지 않는다는 뜻이라, 진단할 때 이 값을 같이 봐야 한다.
         Debug.Log($"Addressables OK: {result.LocationCount} locations, {result.Duration:F1}s, " +
                   $"remoteCatalog={settings.BuildRemoteCatalog}");
-    }
-
-    // 원격 카탈로그를 켜 두면 런타임이 시작할 때 S3(프로필의 RemoteLoadPath)를 먼저 보고,
-    // 거기 있는 *옛* 카탈로그로 이미지에 구운 것을 덮어쓴다 — 새 에셋이 "No Location found"가 된다.
-    // 게임서버는 커밋마다 이미지가 통째로 갈리므로 원격 갱신이 의미가 없다.
-    //
-    // 끄는 구간이 BuildPlayer까지 이어져야 한다. 플레이어 빌드가 Addressables 콘텐츠를 *한 번 더*
-    // 굽고(빌드 로그에 "Post Processing Catalog Entries"가 두 번 찍힌다), 실제로 실려 나가는 건
-    // 그 두 번째 결과다. 굽기 직후에만 되돌리면 두 번째가 다시 원격을 켠 채로 덮어쓴다(실제로 겪음).
-    static bool DisableRemoteCatalog()
-    {
-        var settings = AddressableAssetSettingsDefaultObject.Settings;
-        bool previous = settings.BuildRemoteCatalog;
-        settings.BuildRemoteCatalog = false;
-        return previous;
-    }
-
-    static void RestoreRemoteCatalog(bool previous)
-    {
-        //  CI 러너는 체크아웃을 지우지 않는다(Library 유지 목적) — 건드린 채로 두면 다음 실행에 남는다.
-        AddressableAssetSettingsDefaultObject.Settings.BuildRemoteCatalog = previous;
     }
 
     // CI: LOP_BUILD_ARCH=x86_64|arm64 Unity -batchmode -quit -nographics -projectPath . \
@@ -114,8 +95,6 @@ public static class BuildScript
             options = BuildOptions.None,
         };
 
-        bool remoteCatalog = DisableRemoteCatalog();
-
         try
         {
             BuildAddressables();
@@ -135,10 +114,6 @@ public static class BuildScript
         {
             Debug.LogError($"Build threw: {e}");
             EditorApplication.Exit(1);
-        }
-        finally
-        {
-            RestoreRemoteCatalog(remoteCatalog);
         }
     }
 }

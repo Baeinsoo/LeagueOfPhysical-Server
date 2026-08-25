@@ -72,7 +72,7 @@ namespace LOP
                 };
 
                 snap.Grounded = worldEntity.Get<GameFramework.World.GroundState>()?.IsGrounded ?? false;
-                snap.Ghost = worldEntity.Get<FlappyStun>()?.StunRemaining > 0f;
+                snap.Stunned = worldEntity.Get<FlappyStun>()?.StunRemaining > 0f;
 
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)

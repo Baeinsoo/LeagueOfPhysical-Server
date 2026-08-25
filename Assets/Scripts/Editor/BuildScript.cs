@@ -41,33 +41,38 @@ public static class BuildScript
             throw new System.Exception("AddressableAssetSettings not found");
         }
 
-        //  원격 카탈로그를 켜 두면 런타임이 시작할 때 S3(프로필의 RemoteLoadPath)를 먼저 보고,
-        //  거기 있는 *옛* 카탈로그로 방금 구운 것을 덮어쓴다 — 새 에셋이 "No Location found"가 된다.
-        //  게임서버는 커밋마다 이미지가 통째로 갈리므로 원격 갱신이 의미가 없다. 이미지에 구운
-        //  로컬 카탈로그만 쓰게 한다. (배포 파이프라인은 S3에 아무것도 올리지 않는다.)
-        //  실측: 원격 hash 39e9ac43… vs 이미지 안 af040976… — 달라서 원격이 이겼다.
-        bool remoteCatalog = settings.BuildRemoteCatalog;
+        //  옛 번들이 남아 있으면 새 카탈로그와 섞인다 — 지우고 처음부터 굽는다.
+        AddressableAssetSettings.CleanPlayerContent(settings.ActivePlayerDataBuilder);
+        AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
+
+        if (string.IsNullOrEmpty(result.Error) == false)
+        {
+            throw new System.Exception($"Addressables build failed: {result.Error}");
+        }
+
+        Debug.Log($"Addressables OK: {result.LocationCount} locations, {result.Duration:F1}s, " +
+                  $"remoteCatalog={settings.BuildRemoteCatalog}");
+    }
+
+    // 원격 카탈로그를 켜 두면 런타임이 시작할 때 S3(프로필의 RemoteLoadPath)를 먼저 보고,
+    // 거기 있는 *옛* 카탈로그로 이미지에 구운 것을 덮어쓴다 — 새 에셋이 "No Location found"가 된다.
+    // 게임서버는 커밋마다 이미지가 통째로 갈리므로 원격 갱신이 의미가 없다.
+    //
+    // 끄는 구간이 BuildPlayer까지 이어져야 한다. 플레이어 빌드가 Addressables 콘텐츠를 *한 번 더*
+    // 굽고(빌드 로그에 "Post Processing Catalog Entries"가 두 번 찍힌다), 실제로 실려 나가는 건
+    // 그 두 번째 결과다. 굽기 직후에만 되돌리면 두 번째가 다시 원격을 켠 채로 덮어쓴다(실제로 겪음).
+    static bool DisableRemoteCatalog()
+    {
+        var settings = AddressableAssetSettingsDefaultObject.Settings;
+        bool previous = settings.BuildRemoteCatalog;
         settings.BuildRemoteCatalog = false;
+        return previous;
+    }
 
-        try
-        {
-            //  옛 번들이 남아 있으면 새 카탈로그와 섞인다 — 지우고 처음부터 굽는다.
-            AddressableAssetSettings.CleanPlayerContent(settings.ActivePlayerDataBuilder);
-            AddressableAssetSettings.BuildPlayerContent(out AddressablesPlayerBuildResult result);
-
-            if (string.IsNullOrEmpty(result.Error) == false)
-            {
-                throw new System.Exception($"Addressables build failed: {result.Error}");
-            }
-
-            Debug.Log($"Addressables OK: {result.LocationCount} locations, {result.Duration:F1}s");
-        }
-        finally
-        {
-            //  CI 러너는 체크아웃을 지우지 않는다(Library 유지 목적) — 설정을 건드린 채로 두면
-            //  다음 실행이나 에디터 사용에 남는다. 원래대로 돌려놓는다.
-            settings.BuildRemoteCatalog = remoteCatalog;
-        }
+    static void RestoreRemoteCatalog(bool previous)
+    {
+        //  CI 러너는 체크아웃을 지우지 않는다(Library 유지 목적) — 건드린 채로 두면 다음 실행에 남는다.
+        AddressableAssetSettingsDefaultObject.Settings.BuildRemoteCatalog = previous;
     }
 
     // CI: LOP_BUILD_ARCH=x86_64|arm64 Unity -batchmode -quit -nographics -projectPath . \
@@ -109,6 +114,8 @@ public static class BuildScript
             options = BuildOptions.None,
         };
 
+        bool remoteCatalog = DisableRemoteCatalog();
+
         try
         {
             BuildAddressables();
@@ -128,6 +135,10 @@ public static class BuildScript
         {
             Debug.LogError($"Build threw: {e}");
             EditorApplication.Exit(1);
+        }
+        finally
+        {
+            RestoreRemoteCatalog(remoteCatalog);
         }
     }
 }

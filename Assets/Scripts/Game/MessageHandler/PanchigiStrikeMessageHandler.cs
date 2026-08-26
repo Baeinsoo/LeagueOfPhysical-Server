@@ -78,6 +78,14 @@ namespace LOP
 
             PanchigiStrikeToS message = received.Message;
 
+            //  개수부터 본다 — Validate가 상한을 검사하긴 하지만, 그건 전부 매핑한 *뒤*다.
+            //  조작된 클라가 접촉점을 아주 많이 보내면 거절하기 전에 그 개수만큼 매핑이 돈다.
+            if (message.Contacts.Count > config.ContactMax)
+            {
+                Debug.LogWarning($"[Panchigi] 타격 거절 — 접촉점이 상한을 넘었다 {message.Contacts.Count} > {config.ContactMax} — {userId}");
+                return;
+            }
+
             var contacts = new List<PanchigiStrikeValidation.Contact>(message.Contacts.Count);
             foreach (PanchigiStrikeContact wire in message.Contacts)
             {

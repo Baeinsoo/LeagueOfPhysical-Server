@@ -330,6 +330,29 @@ namespace LOP.EditorTools
             // 9. 샘플_개수가_0_이하면_예외
             CheckThrows(sb, "totalSamples=0 → ArgumentOutOfRangeException", () =>
                 PanchigiStrike.ComputeImpulse(Strike(zero), Tuning(), new System.Numerics.Vector3[1], 1, 0));
+
+            // 10. 접촉점_2개는_각각의_임펄스를_합산한다 (같은 점을 두 번 치면 2배)
+            //  커널 자체는 접촉점 하나만 받는다 — "합산"은 호출부(핸들러)가 여러 접촉점을
+            //  차례로 더하는 것이다. 여기서는 그 성질(선형 가산)을 단언한다.
+            {
+                var samples = new[] { zero, zero, zero, zero };
+                var once = PanchigiStrike.ComputeImpulse(Strike(zero), Tuning(), samples, 4, 4);
+                var twiceSummed = PanchigiStrike.ComputeImpulse(Strike(zero), Tuning(), samples, 4, 4)
+                                 + PanchigiStrike.ComputeImpulse(Strike(zero), Tuning(), samples, 4, 4);
+                CheckVector3(sb, "같은 접촉점 2회 합산 == 1회 결과의 2배", twiceSummed, once * 2f);
+            }
+
+            // 11. 접촉점을_벌리면_먼_동전이_덜_밀린다 (간격 감쇠)
+            //  동전(샘플) 위치는 고정하고 접촉점만 가깝게/멀게 둬서, 벌어진 접촉점일수록
+            //  그 동전에 주는 힘이 작아짐을 확인한다 — "벌리면 영향 범위가 넓어진다"의 근거.
+            {
+                var coinSamples = new[] { new System.Numerics.Vector3(2f, 0f, 0f) };
+                float nearImpulse = PanchigiStrike.ComputeImpulse(
+                    Strike(new System.Numerics.Vector3(1.9f, 0f, 0f)), Tuning(), coinSamples, 1, 1).Length();
+                float farImpulse = PanchigiStrike.ComputeImpulse(
+                    Strike(new System.Numerics.Vector3(0f, 0f, 0f)), Tuning(), coinSamples, 1, 1).Length();
+                CheckLess(sb, "먼 접촉점 임펄스 < 가까운 접촉점 임펄스", farImpulse, nearImpulse);
+            }
         }
 
         private static void SampleLayout(StringBuilder sb)

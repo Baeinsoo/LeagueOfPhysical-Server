@@ -20,6 +20,7 @@ namespace LOP.EditorTools
             OutOfBoard(sb);
             Rest(sb);
             Turn(sb);
+            StrikeValidation(sb);
             StrikeKernel(sb);
             SampleLayout(sb);
             Debug.Log(sb.ToString());
@@ -191,6 +192,54 @@ namespace LOP.EditorTools
             sb.AppendLine($"  경로A③ 정지(상한 도달, 경로 A=OnRested) → {pathA.Phase} / 승자 {pathA.WinnerEntityId ?? "없음"}");
             CheckBool(sb, "    Over인가(OnRested 경로)", pathA.Phase == PanchigiPhase.Over, true);
             CheckBool(sb, "    무승부(P1이 쳤지만 안 뒤집혀 승자 아님)인가", pathA.WinnerEntityId == null, true);
+        }
+
+        // ── PanchigiStrikeValidation ────────────────────────────────────
+
+        private static void StrikeValidation(StringBuilder sb)
+        {
+            sb.AppendLine("[타격 검증] PanchigiStrikeValidation.Validate");
+
+            var board = new Bounds(Vector3.zero, new Vector3(10f, 0.1f, 10f));
+            const float HoldMax = 1f;
+            const float PowerMax = 3f;
+            const int ContactMax = 4;
+
+            var good = new PanchigiStrikeValidation.Contact(new Vector3(1f, 0f, 1f), new Vector3(1f, 0f, 0f), 0.5f);
+            string reason;
+
+            CheckBool(sb, "접촉점 1개 정상 → 통과",
+                PanchigiStrikeValidation.Validate(new[] { good }, board, HoldMax, PowerMax, ContactMax, out reason), true);
+
+            CheckBool(sb, "상한만큼(4개) → 통과",
+                PanchigiStrikeValidation.Validate(new[] { good, good, good, good }, board, HoldMax, PowerMax, ContactMax, out reason), true);
+
+            CheckBool(sb, "빈 배열 → 거절",
+                PanchigiStrikeValidation.Validate(new PanchigiStrikeValidation.Contact[0], board, HoldMax, PowerMax, ContactMax, out reason), false);
+
+            CheckBool(sb, "null → 거절",
+                PanchigiStrikeValidation.Validate(null, board, HoldMax, PowerMax, ContactMax, out reason), false);
+
+            CheckBool(sb, "상한 초과(5개) → 거절",
+                PanchigiStrikeValidation.Validate(new[] { good, good, good, good, good }, board, HoldMax, PowerMax, ContactMax, out reason), false);
+
+            //  하나만 어긋나도 전체가 막힌다 — 이게 "전부 아니면 전무"의 핵심이다
+            var farOut = new PanchigiStrikeValidation.Contact(new Vector3(99f, 0f, 0f), Vector3.zero, 0f);
+            CheckBool(sb, "3개 정상 + 1개 판 밖 → 전체 거절",
+                PanchigiStrikeValidation.Validate(new[] { good, good, good, farOut }, board, HoldMax, PowerMax, ContactMax, out reason), false);
+
+            var tooLong = new PanchigiStrikeValidation.Contact(new Vector3(1f, 0f, 1f), Vector3.zero, HoldMax + 1f);
+            CheckBool(sb, "1개만 누른 시간 초과 → 전체 거절",
+                PanchigiStrikeValidation.Validate(new[] { good, tooLong }, board, HoldMax, PowerMax, ContactMax, out reason), false);
+
+            var tooStrong = new PanchigiStrikeValidation.Contact(new Vector3(1f, 0f, 1f), new Vector3(PowerMax + 1f, 0f, 0f), 0f);
+            CheckBool(sb, "1개만 세기 초과 → 전체 거절",
+                PanchigiStrikeValidation.Validate(new[] { good, tooStrong }, board, HoldMax, PowerMax, ContactMax, out reason), false);
+
+            //  경계에서 정직한 클라가 막히지 않아야 한다
+            var atEdge = new PanchigiStrikeValidation.Contact(new Vector3(5f, 0f, 5f), new Vector3(PowerMax, 0f, 0f), HoldMax);
+            CheckBool(sb, "판 모서리 + 상한 정확히 → 통과",
+                PanchigiStrikeValidation.Validate(new[] { atEdge }, board, HoldMax, PowerMax, ContactMax, out reason), true);
         }
 
         // ── PanchigiStrike — 잃어버린 EditMode 테스트 13개를 대신한다 ────

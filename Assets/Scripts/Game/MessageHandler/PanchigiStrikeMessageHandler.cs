@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using GameFramework;
 using MessagePipe;
 using UnityEngine;
@@ -16,10 +17,6 @@ namespace LOP
         //  금지하는 패턴이다 — 이 클래스는 MonoBehaviour가 아니라 지금 당장 문제는 없지만,
         //  그대로 두면 다음에 누가 그대로 베껴 MonoBehaviour에 옮길 위험이 있어 생성자로 옮긴다.
         private readonly int StrikeLayerMask;
-
-        //  클라가 상한에 맞춰 자른 값이라도 성분에서 크기를 다시 재면 미세하게 커질 수 있다
-        //  (ClampMagnitude는 성분을 다시 계산한다). 정직한 클라가 경계에서 거절당하지 않게 봐준다.
-        private const float BoundEpsilon = 0.001f;
 
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.Physics.ICollisionQuery collisionQuery;
@@ -80,24 +77,30 @@ namespace LOP
             }
 
             PanchigiStrikeToS message = received.Message;
-            Vector3 strikePoint = MapperConfig.mapper.Map<Vector3>(message.StrikePoint);
-            Vector3 dragDelta = MapperConfig.mapper.Map<Vector3>(message.DragDelta);
+
+            //  개수부터 본다 — Validate가 상한을 검사하긴 하지만, 그건 전부 매핑한 *뒤*다.
+            //  조작된 클라가 접촉점을 아주 많이 보내면 거절하기 전에 그 개수만큼 매핑이 돈다.
+            if (message.Contacts.Count > config.ContactMax)
+            {
+                Debug.LogWarning($"[Panchigi] 타격 거절 — 접촉점이 상한을 넘었다 {message.Contacts.Count} > {config.ContactMax} — {userId}");
+                return;
+            }
+
+            var contacts = new List<PanchigiStrikeValidation.Contact>(message.Contacts.Count);
+            foreach (PanchigiStrikeContact wire in message.Contacts)
+            {
+                contacts.Add(new PanchigiStrikeValidation.Contact(
+                    MapperConfig.mapper.Map<Vector3>(wire.StrikePoint),
+                    MapperConfig.mapper.Map<Vector3>(wire.DragDelta),
+                    wire.HoldTime));
+            }
 
             //  클라가 이미 상한을 걸어 보내지만 믿지 않는다. 클램프가 아니라 거절이다 —
             //  클램프하면 조작된 값이 조용히 게임에 들어오고 로그도 안 남는다.
-            if (ContainsXZ(boardBounds, strikePoint) == false)
+            if (PanchigiStrikeValidation.Validate(contacts, boardBounds,
+                    config.HoldTimeMax, config.StrikePowerMax, config.ContactMax, out string reason) == false)
             {
-                Debug.LogWarning($"[Panchigi] 판 밖 타격점 {strikePoint} — {userId}");
-                return;
-            }
-            if (message.HoldTime < -BoundEpsilon || message.HoldTime > config.HoldTimeMax + BoundEpsilon)
-            {
-                Debug.LogWarning($"[Panchigi] 누른 시간 범위 밖 {message.HoldTime} — {userId}");
-                return;
-            }
-            if (dragDelta.magnitude > config.StrikePowerMax + BoundEpsilon)
-            {
-                Debug.LogWarning($"[Panchigi] 세기 범위 밖 {dragDelta.magnitude} — {userId}");
+                Debug.LogWarning($"[Panchigi] 타격 거절 — {reason} — {userId}");
                 return;
             }
             if (config.CoverageSamples <= 0)
@@ -106,7 +109,13 @@ namespace LOP
                 return;
             }
 
-            ApplyStrike(strikePoint, dragDelta, message.HoldTime, boardBounds, config);
+            //  접촉점마다 같은 커널을 돌려 임펄스를 누적한다 — 손가락 수와 간격이 결과를 바꾸는 건
+            //  힘 모델이 달라서가 아니라, 힘이 각자 자리에서 여러 번 들어가기 때문이다.
+            for (int i = 0; i < contacts.Count; i++)
+            {
+                ApplyStrike(contacts[i].StrikePoint, contacts[i].DragDelta, contacts[i].HoldTime,
+                    boardBounds, config);
+            }
             turnSystem.NotifyStruck(userId);
         }
 
@@ -142,13 +151,13 @@ namespace LOP
                 //  판에 닿아 있다면 중심이 판 위로 몸의 대각 절반보다 높이 뜰 수는 없다 —
                 //  납작하게 누웠든 모로 섰든 이 거리 안에 판이 있어야 "닿아 있다"가 성립한다.
                 //  고정값을 쓰면 모로 선 동전이 영영 타격에 반응하지 않는다.
-                float reach = new Vector3(disc.Radius, disc.Thickness * 0.5f, disc.Radius).magnitude + BoundEpsilon;
+                float reach = new Vector3(disc.Radius, disc.Thickness * 0.5f, disc.Radius).magnitude + PanchigiStrikeValidation.BoundEpsilon;
 
                 int liveCount = 0;
                 for (int i = 0; i < sampleCount; i++)
                 {
                     Vector3 sample = samples[i].ToUnity();
-                    if (ContainsXZ(boardBounds, sample) == false)
+                    if (PanchigiStrikeValidation.ContainsXZ(boardBounds, sample) == false)
                     {
                         continue;   // 판 끄트머리 밖으로 삐져나온 부분
                     }
@@ -188,11 +197,5 @@ namespace LOP
             }
             return false;
         }
-
-        //  판은 평면이라 높이는 보지 않는다 — 위아래로 얼마나 떨어져 있든 "판 위"다.
-        //  가장자리를 정확히 친 값도 반올림으로 밖에 떨어질 수 있어 BoundEpsilon만큼 넉넉히 본다.
-        private static bool ContainsXZ(Bounds bounds, Vector3 point)
-            => point.x >= bounds.min.x - BoundEpsilon && point.x <= bounds.max.x + BoundEpsilon
-            && point.z >= bounds.min.z - BoundEpsilon && point.z <= bounds.max.z + BoundEpsilon;
     }
 }

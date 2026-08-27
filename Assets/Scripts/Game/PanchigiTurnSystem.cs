@@ -16,7 +16,7 @@ namespace LOP
         private readonly ISessionManager sessionManager;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly LOP.MasterData.LOPMasterData masterData;
-        private readonly PanchigiBoard board;
+        private readonly PanchigiBoardLocator boardLocator;
 
         private PanchigiTurn turn;
         private IReadOnlyList<string> coinIds;
@@ -37,14 +37,14 @@ namespace LOP
 
         public PanchigiTurnSystem(ITickUpdater tickUpdater, IRoomDataStore roomDataStore, ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry, LOP.MasterData.LOPMasterData masterData,
-            PanchigiBoard board)
+            PanchigiBoardLocator boardLocator)
         {
             this.tickUpdater = tickUpdater;
             this.roomDataStore = roomDataStore;
             this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
             this.masterData = masterData;
-            this.board = board;
+            this.boardLocator = boardLocator;
         }
 
         public void Begin(IReadOnlyList<string> playerEntityIds, IReadOnlyList<string> coinEntityIds)
@@ -148,7 +148,7 @@ namespace LOP
 
         private bool AllAtRest(LOP.MasterData.PanchigiConfig config)
         {
-            Bounds bounds = board.Bounds;
+            Bounds bounds = boardLocator.Board.Bounds;
             foreach (string id in coinIds)
             {
                 var body = entityRegistry.Get(id)?.Get<GameFramework.World.PhysicsBody>();
@@ -195,12 +195,12 @@ namespace LOP
         private void ResetBoardIfAnyCoinDroppedOut()
         {
             var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
-            if (setup == null || board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
+            if (setup == null || boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
             {
                 return;
             }
 
-            Bounds bounds = board.Bounds;
+            Bounds bounds = boardLocator.Board.Bounds;
             if (AnyCoinOutOfBoard(bounds) == false)
             {
                 return;

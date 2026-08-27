@@ -23,7 +23,7 @@ namespace LOP
         private readonly LOP.MasterData.LOPMasterData masterData;
         private readonly IRoomDataStore roomDataStore;
         private readonly ISubscriber<ClientMessage<PanchigiStrikeToS>> strikeSubscriber;
-        private readonly PanchigiBoard board;
+        private readonly PanchigiBoardLocator boardLocator;
         private readonly PanchigiTurnSystem turnSystem;
 
         public PanchigiStrikeMessageHandler(
@@ -32,7 +32,7 @@ namespace LOP
             LOP.MasterData.LOPMasterData masterData,
             IRoomDataStore roomDataStore,
             ISubscriber<ClientMessage<PanchigiStrikeToS>> strikeSubscriber,
-            PanchigiBoard board,
+            PanchigiBoardLocator boardLocator,
             PanchigiTurnSystem turnSystem)
         {
             this.entityRegistry = entityRegistry;
@@ -40,7 +40,7 @@ namespace LOP
             this.masterData = masterData;
             this.roomDataStore = roomDataStore;
             this.strikeSubscriber = strikeSubscriber;
-            this.board = board;
+            this.boardLocator = boardLocator;
             this.turnSystem = turnSystem;
             StrikeLayerMask = LayerMask.GetMask("Default", "Character");
         }
@@ -49,13 +49,13 @@ namespace LOP
 
         private void OnStrike(ClientMessage<PanchigiStrikeToS> received)
         {
-            if (board == null)
+            if (boardLocator.Board == null)
             {
                 Debug.LogWarning("[Panchigi] 판을 찾지 못했다 — 타격을 버린다.");
                 return;
             }
 
-            Bounds boardBounds = board.Bounds;
+            Bounds boardBounds = boardLocator.Board.Bounds;
 
             var config = masterData.Tables.TbPanchigiConfig.GetOrDefault(1);
             if (config == null)

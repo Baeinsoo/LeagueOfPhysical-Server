@@ -17,7 +17,7 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
         private readonly LOP.MasterData.LOPMasterData masterData;
-        private readonly PanchigiBoard board;
+        private readonly PanchigiBoardLocator boardLocator;
         private readonly PanchigiTurnSystem turnSystem;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
 
@@ -27,12 +27,12 @@ namespace LOP
         public IReadOnlyList<string> PlayerEntityIds => playerEntityIds;
         public IReadOnlyList<string> CoinEntityIds => coinEntityIds;
 
-        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoard board, PanchigiTurnSystem turnSystem, GameFramework.World.EntityRegistry entityRegistry)
+        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoardLocator boardLocator, PanchigiTurnSystem turnSystem, GameFramework.World.EntityRegistry entityRegistry)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.masterData = masterData;
-            this.board = board;
+            this.boardLocator = boardLocator;
             this.turnSystem = turnSystem;
             this.entityRegistry = entityRegistry;
         }
@@ -67,7 +67,7 @@ namespace LOP
                     $"TbPanchigiSetup에 {playerList.Length}인 구성이 없다 — 테이블을 채워야 한다.");
             }
 
-            if (board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
+            if (boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
             {
                 //  조용히 넘기면 판이 빈 채로 시작하고 왜인지 런타임에 추적해야 한다.
                 throw new System.InvalidOperationException(

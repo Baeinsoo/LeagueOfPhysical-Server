@@ -27,6 +27,7 @@ namespace LOP
         private long lastDeadlineTurnCount = -1;   // 마감을 이미 정한 턴인지 — TurnCount는 조준 진입마다 반드시 바뀐다
         private PanchigiPhase sentPhase = PanchigiPhase.Over;   // 첫 틱에 반드시 한 번 보내도록
         private string sentEntityId;
+        private int sentDropOutTotal = -1;
 
         //  이번 상태(phase+차례)를 이미 받은 세션 id들. 늦게 접속하거나 재접속한 세션은 여기 없으니
         //  다음 틱에 현재 상태를 받는다 — "바뀔 때만 보낸다"가 "0명한테 보내고 끝"이 되지 않게 한다.
@@ -52,7 +53,9 @@ namespace LOP
             coinIds = coinEntityIds;
 
             var config = masterData.Tables.TbPanchigiConfig.GetOrDefault(1);
-            turn = new PanchigiTurn(playerEntityIds, config != null ? config.MatchTurnLimit : 60);
+            turn = new PanchigiTurn(playerEntityIds,
+                config != null ? config.MatchTurnLimit : 60,
+                config != null ? config.DropOutLimit : 0);
 
             //  차례는 엔티티로 돌지만 타격은 userId로 온다 — 한 번만 이어 둔다.
             string[] playerList = roomDataStore.match.playerList;
@@ -142,8 +145,11 @@ namespace LOP
             }
 
             restTicks = 0;
-            ResetBoardIfAnyCoinDroppedOut();
-            turn.OnRested(AllFlipped());
+
+            //  뒤집힘은 판을 되돌리기 *전에* 봐야 한다 — 되돌리면 회전이 초기화돼 흔적이 사라진다.
+            bool allFlipped = AllFlipped();
+            bool droppedOut = ResetBoardIfAnyCoinDroppedOut();
+            turn.OnRested(allFlipped, droppedOut);
         }
 
         private bool AllAtRest(LOP.MasterData.PanchigiConfig config)
@@ -192,18 +198,19 @@ namespace LOP
         /// 같이 사라져야 "떨어뜨리면 손해"가 성립한다. 되돌린 뒤엔 뒤집힌 동전이 없으므로
         /// 같은 턴에 승리 판정이 나지도 않는다.
         /// </summary>
-        private void ResetBoardIfAnyCoinDroppedOut()
+        /// <returns>낙이 나서 판을 되돌렸으면 true.</returns>
+        private bool ResetBoardIfAnyCoinDroppedOut()
         {
-            var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
-            if (setup == null || boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
-            {
-                return;
-            }
-
             Bounds bounds = boardLocator.Board.Bounds;
             if (AnyCoinOutOfBoard(bounds) == false)
             {
-                return;
+                return false;
+            }
+
+            var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
+            if (setup == null || boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
+            {
+                return false;
             }
 
             for (int i = 0; i < coinIds.Count && i < slots.Count; i++)
@@ -222,6 +229,8 @@ namespace LOP
                 body.SetVelocity(System.Numerics.Vector3.Zero);
                 body.SetAngularVelocity(System.Numerics.Vector3.Zero);
             }
+
+            return true;
         }
 
         private bool AnyCoinOutOfBoard(Bounds bounds)
@@ -250,10 +259,14 @@ namespace LOP
                 return;   // 종료는 기존 매치 종료 경로가 알린다
             }
 
-            if (turn.Phase != sentPhase || turn.CurrentEntityId != sentEntityId)
+            //  낙도 "달라진 것"에 넣는다. 국면·차례만 보면, 낙이 났는데 마침 같은 사람이 다시
+            //  조준하게 된 경우 벌점이 화면에 영영 안 올라간다.
+            if (turn.Phase != sentPhase || turn.CurrentEntityId != sentEntityId
+                || turn.TotalDropOuts != sentDropOutTotal)
             {
                 sentPhase = turn.Phase;
                 sentEntityId = turn.CurrentEntityId;
+                sentDropOutTotal = turn.TotalDropOuts;
                 receivedSessionIds.Clear();
             }
 
@@ -263,6 +276,12 @@ namespace LOP
                 CurrentEntityId = turn.CurrentEntityId ?? string.Empty,
                 AimDeadlineTick = aimDeadlineTick,
             };
+
+            foreach (var pair in turn.DropOutCounts)
+            {
+                message.DropOutCounts.Add(pair.Key, pair.Value);
+            }
+            message.EliminatedEntityIds.AddRange(turn.EliminatedEntityIds);
 
             foreach (var session in sessionManager.GetAllSessions())
             {

@@ -142,7 +142,7 @@ namespace LOP
             }
 
             restTicks = 0;
-            ReturnOutOfBoardCoins();
+            ResetBoardIfAnyCoinDroppedOut();
             turn.OnRested(AllFlipped());
         }
 
@@ -186,7 +186,13 @@ namespace LOP
             return true;
         }
 
-        private void ReturnOutOfBoardCoins()
+        /// <summary>
+        /// 동전이 하나라도 판 밖으로 나갔으면 <b>판 전체</b>를 처음 세팅으로 되돌린다.
+        /// 나간 것만 주워 담지 않는 이유는 낙(落)이 벌칙이기 때문이다 — 그 턴에 뒤집어 둔 것까지
+        /// 같이 사라져야 "떨어뜨리면 손해"가 성립한다. 되돌린 뒤엔 뒤집힌 동전이 없으므로
+        /// 같은 턴에 승리 판정이 나지도 않는다.
+        /// </summary>
+        private void ResetBoardIfAnyCoinDroppedOut()
         {
             var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
             if (setup == null || board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
@@ -195,10 +201,15 @@ namespace LOP
             }
 
             Bounds bounds = board.Bounds;
+            if (AnyCoinOutOfBoard(bounds) == false)
+            {
+                return;
+            }
+
             for (int i = 0; i < coinIds.Count && i < slots.Count; i++)
             {
                 var body = entityRegistry.Get(coinIds[i])?.Get<GameFramework.World.PhysicsBody>();
-                if (body == null || PanchigiCoin.IsOutOfBoard(body.GetPosition(), bounds) == false)
+                if (body == null)
                 {
                     continue;
                 }
@@ -211,6 +222,19 @@ namespace LOP
                 body.SetVelocity(System.Numerics.Vector3.Zero);
                 body.SetAngularVelocity(System.Numerics.Vector3.Zero);
             }
+        }
+
+        private bool AnyCoinOutOfBoard(Bounds bounds)
+        {
+            foreach (string id in coinIds)
+            {
+                var body = entityRegistry.Get(id)?.Get<GameFramework.World.PhysicsBody>();
+                if (body != null && PanchigiCoin.IsOutOfBoard(body.GetPosition(), bounds))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         /// <summary>

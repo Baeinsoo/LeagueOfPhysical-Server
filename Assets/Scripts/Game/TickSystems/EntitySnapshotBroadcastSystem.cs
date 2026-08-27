@@ -72,6 +72,10 @@ namespace LOP
                 };
 
                 snap.Grounded = worldEntity.Get<GameFramework.World.GroundState>()?.IsGrounded ?? false;
+                var stun = worldEntity.Get<FlappyStun>();
+                snap.Stunned = stun?.StunRemaining > 0f;
+                //  스턴이 풀린 뒤의 짧은 무적. 두 구간은 겹치지 않는다(스턴이 끝나는 틱에 무적이 채워진다).
+                snap.Invulnerable = stun?.InvulnRemaining > 0f;
 
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)

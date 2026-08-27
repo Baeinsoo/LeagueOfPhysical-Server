@@ -23,6 +23,7 @@ namespace LOP
         [Inject] private LOP.MasterData.LOPMasterData masterData;
 
         // Slice 5-B: 파이프라인 스텝 — 순서대로 직접 호출(넷코드 순서 불변식이 코드에 명시).
+        [Inject] private MatchStartSystem matchStartSystem;
         [Inject] private ServerInputSystem serverInputSystem;
         [Inject] private PhysicsSimulationSystem physicsSimulationSystem;
         [Inject] private DeathResolveSystem deathResolveSystem;
@@ -33,6 +34,9 @@ namespace LOP
         [Inject] private DespawnFlushSystem despawnFlushSystem;
 
         private readonly Restorer restorer = new Restorer();
+
+        //  50Hz × 300초.
+        private const long MatchDurationTicks = 15000;
 
         public override async Task InitializeAsync()
         {
@@ -105,7 +109,13 @@ namespace LOP
 
         private void LateUpdate()
         {
-            if (initialized && (gameRuleSystem.IsMatchOver || tickUpdater.elapsedTime > 60 * 5))
+            //  끝나는 길이 둘이다: 룰이 끝났다고 하거나(판치기 라운드 등), 제한 시간이 지나거나.
+            //  제한 시간은 방이 부팅된 때가 아니라 출발한 때부터 잰다 — 부팅 기준이면 참가자를
+            //  기다리는 동안 판이 시작도 못 하고 끝난다(로컬 대기 상한이 600초라 특히).
+            if (initialized
+                && (gameRuleSystem.IsMatchOver
+                    || (matchStartSystem.Phase == MatchPhase.InProgress
+                        && tickUpdater.tick - matchStartSystem.StartTick > MatchDurationTicks)))
             {
                 EndMatch();
             }
@@ -125,12 +135,16 @@ namespace LOP
             //  방이 닫히는 시점에는 이미 늦다. 보고는 LOPRoom이 방을 닫기 전에 한다.
             roomDataStore.outcome = gameRuleSystem.ResolveOutcome();
 
+            matchStartSystem.Finish();
+
             gameState = RunnerState.GameOver;
         }
 
         protected override void UpdateRunner()
         {
             RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.deltaTime);
+            //  이번 틱이 출발틱인지가 먼저 정해져야 월드가 그걸 보고 굴린다.
+            matchStartSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             serverInputSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             world.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             physicsSimulationSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);

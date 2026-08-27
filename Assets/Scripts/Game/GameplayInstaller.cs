@@ -63,6 +63,9 @@ namespace LOP
             builder.RegisterEntryPoint<GameEntityMessageHandler>();
             builder.RegisterEntryPoint<GameInputMessageHandler>();
             builder.RegisterEntryPoint<EntityBinder>();   // 서버 뷰 스포너(EntityCreated/EntityDestroyed 반응)
+            //  RegisterEntryPoint여야 MessageHandlerBase의 구독이 살아난다(스코프가 Initialize/Dispose 구동).
+            //  AsSelf는 LOPRunner가 구체 타입으로 [Inject]해 Tick·Phase를 직접 쓰기 때문이다.
+            builder.RegisterEntryPoint<MatchStartSystem>().AsSelf();
 
             builder.Register<CombatConfigProvider>(Lifetime.Singleton);
             builder.Register<CombatConfig>(c => c.Resolve<CombatConfigProvider>().Get(), Lifetime.Singleton);

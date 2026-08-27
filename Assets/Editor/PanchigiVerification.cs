@@ -330,11 +330,111 @@ namespace LOP.EditorTools
             // 9. 샘플_개수가_0_이하면_예외
             CheckThrows(sb, "totalSamples=0 → ArgumentOutOfRangeException", () =>
                 PanchigiStrike.ComputeImpulse(Strike(zero), Tuning(), new System.Numerics.Vector3[1], 1, 0));
-            //  설계 §6이 요구한 "접촉점 합산"·"벌리면 영향 범위가 넓어진다"는 여기서 검증하지
-            //  않는다. 그 성질은 커널이 아니라 호출부(핸들러의 접촉점 루프)와 PhysX 임펄스 누적에서
-            //  일어나므로 물리 씬 없이는 단위로 확인할 수 없다 — 억지로 넣으면 항등식이 되어
-            //  "검증됐다"는 착각만 남는다. 실제 확인은 실기기 플레이테스트가 한다
-            //  (손가락 수를 늘리면 더 많이, 벌리면 더 넓게 움직이는지).
+            // 10. 손가락_수와_간격이_결과를_바꾼다 (설계 §6)
+            //
+            //  핵심: 힘 모델이 접촉점마다 다른 게 아니라, **같은 커널이 각자 자리에서 여러 번**
+            //  들어가기 때문에 수와 간격이 결과를 바꾼다. 그래서 커널 하나만 두고는 검증할 수
+            //  없고, 호출부가 하는 것과 같은 방식(접촉점마다 돌려 누적)으로 재야 한다.
+            //
+            //  ⚠️ 이 검증을 "f(a)+f(a) == f(a)*2" 같은 항등식으로 쓰면 안 된다 — 커널이 무엇을
+            //  계산하든 항상 참이라 아무것도 안 잡힌다(그렇게 썼다가 지운 적이 있다).
+            //  **서로 다른 접촉점**을 실제 대형에 넣어 **동전별 분포**를 비교해야 의미가 생긴다.
+            ContactSpread(sb);
+        }
+
+        //  실제 마스터데이터 값. 여기 숫자가 TbPanchigiConfig와 어긋나면 이 검증의 의미가 흐려지므로
+        //  값을 바꿀 때 같이 본다(회귀 방지가 목적이지 값 동기화 장치는 아니다).
+        private static LOP.PanchigiStrike.StrikeTuning LiveTuning()
+            => new LOP.PanchigiStrike.StrikeTuning(
+                forceMultiplier: 8f, horizontalForceMultiplier: 2f, falloffRate: 4f);
+
+        /// <summary>동전마다 "접촉점들이 준 임펄스 크기의 합"을 구한다 — 서버 핸들러가 하는 것과 같은 누적.</summary>
+        private static float[] ImpulsePerCoin(System.Numerics.Vector3[] contacts, float[] coinX)
+        {
+            const int Samples = 13;
+            const float Radius = 0.15f;
+
+            var result = new float[coinX.Length];
+            var buffer = new System.Numerics.Vector3[Samples];
+            var tuning = LiveTuning();
+
+            for (int c = 0; c < coinX.Length; c++)
+            {
+                var center = new System.Numerics.Vector3(coinX[c], 0.02f, 0f);
+                LOP.PanchigiStrike.BuildSamples(center, Radius, buffer);
+
+                var total = System.Numerics.Vector3.Zero;
+                foreach (var point in contacts)
+                {
+                    var input = new LOP.PanchigiStrike.StrikeInput(
+                        point, new System.Numerics.Vector3(1f, 0f, 0f), 0.7f);
+                    total += LOP.PanchigiStrike.ComputeImpulse(input, tuning, buffer, Samples, Samples);
+                }
+                result[c] = total.Length();
+            }
+            return result;
+        }
+
+        private static float Sum(float[] a) { float s = 0; foreach (var v in a) s += v; return s; }
+
+        private static string Row(float[] a)
+        {
+            var b = new StringBuilder();
+            for (int i = 0; i < a.Length; i++)
+            {
+                if (i > 0) { b.Append(" | "); }
+                b.Append(a[i].ToString("F3"));
+            }
+            return b.ToString();
+        }
+
+        /// <summary>최대÷합 — 힘이 한 동전에 얼마나 쏠렸나. 낮을수록 고루 퍼진 것.</summary>
+        private static float Concentration(float[] a)
+        {
+            float max = 0, sum = 0;
+            foreach (var v in a) { if (v > max) max = v; sum += v; }
+            return sum > 0f ? max / sum : 0f;
+        }
+
+        private static void ContactSpread(StringBuilder sb)
+        {
+            sb.AppendLine("[손가락 수·간격] 접촉점마다 커널을 돌려 누적");
+
+            //  FourInLine 대형 그대로 — 씬의 자리와 같은 x 좌표
+            float[] coinX = { -1.05f, -0.35f, 0.35f, 1.05f };
+
+            var single = new[] { new System.Numerics.Vector3(0f, 0.02f, 0f) };
+            //  세 손가락을 붙여 짚은 손 (간격 2cm)
+            var together = new[] {
+                new System.Numerics.Vector3(-0.02f, 0.02f, 0f),
+                new System.Numerics.Vector3( 0.00f, 0.02f, 0f),
+                new System.Numerics.Vector3( 0.02f, 0.02f, 0f) };
+            //  같은 세 손가락을 벌려 짚은 손 (간격 70cm — 동전 간격과 같게)
+            var spread = new[] {
+                new System.Numerics.Vector3(-0.70f, 0.02f, 0f),
+                new System.Numerics.Vector3( 0.00f, 0.02f, 0f),
+                new System.Numerics.Vector3( 0.70f, 0.02f, 0f) };
+
+            float[] one = ImpulsePerCoin(single, coinX);
+            float[] near = ImpulsePerCoin(together, coinX);
+            float[] wide = ImpulsePerCoin(spread, coinX);
+
+            sb.AppendLine($"  동전별 임펄스 1개   : {Row(one)}  합={Sum(one):F3}");
+            sb.AppendLine($"  동전별 임펄스 모아서: {Row(near)}  합={Sum(near):F3}");
+            sb.AppendLine($"  동전별 임펄스 벌려서: {Row(wide)}  합={Sum(wide):F3}");
+
+            //  ① 손가락 수 — 같은 자리를 3번 치면 한 번의 3배가 들어간다(선형 누적)
+            CheckFloat(sb, "3개 모아서 합 == 1개 합의 3배", Sum(near), Sum(one) * 3f, eps: 1e-2f);
+
+            //  ② 간격 — 바깥 동전은 벌려 칠 때 더 받고, 가운데 동전은 덜 받는다.
+            //     이게 "벌리면 영향 범위가 넓어진다"의 실체다.
+            CheckLess(sb, "바깥 동전: 모아서 < 벌려서 (왼쪽)", near[0], wide[0]);
+            CheckLess(sb, "바깥 동전: 모아서 < 벌려서 (오른쪽)", near[3], wide[3]);
+            CheckLess(sb, "가운데 동전: 벌려서 < 모아서 (왼쪽)", wide[1], near[1]);
+            CheckLess(sb, "가운데 동전: 벌려서 < 모아서 (오른쪽)", wide[2], near[2]);
+
+            //  ③ 분포 — 벌려 치면 힘이 한 동전에 덜 쏠린다
+            CheckLess(sb, "집중도(최대/합): 벌려서 < 모아서", Concentration(wide), Concentration(near));
         }
 
         private static void SampleLayout(StringBuilder sb)

@@ -74,7 +74,7 @@ namespace LOP
             }
             if (turnSystem.CanStrike(userId) == false)
             {
-                Debug.LogWarning($"[Panchigi] 차례가 아닌 타격 — {userId}");
+                Debug.LogWarning($"[Panchigi] 타격 거절 — {turnSystem.DescribeStrikeRejection(userId)} — {userId}");
                 return;
             }
 

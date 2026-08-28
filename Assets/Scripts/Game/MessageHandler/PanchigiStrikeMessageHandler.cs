@@ -42,7 +42,9 @@ namespace LOP
             this.strikeSubscriber = strikeSubscriber;
             this.boardLocator = boardLocator;
             this.turnSystem = turnSystem;
-            StrikeLayerMask = LayerMask.GetMask("Default", "Character");
+            //  "Board"가 빠지면 아래 접지 레이가 판을 못 맞혀 모든 샘플이 죽고 힘이 0이 된다
+            //  — 화면에선 조준선도 나오고 차례도 넘어가는데 동전만 미동도 없다.
+            StrikeLayerMask = LayerMask.GetMask("Default", "Character", "Board");
         }
 
         protected override void Subscribe() => Track(strikeSubscriber.Subscribe(OnStrike));

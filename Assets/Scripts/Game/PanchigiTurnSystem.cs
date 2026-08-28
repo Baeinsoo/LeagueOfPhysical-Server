@@ -73,6 +73,28 @@ namespace LOP
                 && entityId == turn.CurrentEntityId;
         }
 
+        /// <summary>
+        /// 이 유저의 타격을 왜 못 받는지 사람이 읽을 수 있게 적는다. 거절 로그에 붙인다 —
+        /// "차례가 아니다"만 남기면 <b>클라는 자기 차례로 보는데</b> 서버가 아니라고 할 때
+        /// 어디가 어긋났는지(매핑인지, 국면인지, 정말 남의 차례인지)를 가릴 수가 없다.
+        /// </summary>
+        public string DescribeStrikeRejection(string userId)
+        {
+            if (turn == null)
+            {
+                return "판이 아직 시작되지 않았다";
+            }
+            if (userToEntity.TryGetValue(userId, out string entityId) == false)
+            {
+                return $"이 유저가 참가자 매핑에 없다 (매핑된 유저: {string.Join(",", userToEntity.Keys)})";
+            }
+            if (turn.Phase != PanchigiPhase.Aiming)
+            {
+                return $"지금은 조준 국면이 아니다 (국면={turn.Phase}, 이 유저=엔티티 {entityId})";
+            }
+            return $"남의 차례다 (이 유저=엔티티 {entityId}, 지금 차례=엔티티 {turn.CurrentEntityId})";
+        }
+
         public void NotifyStruck(string userId)
         {
             if (userToEntity.TryGetValue(userId, out string entityId))

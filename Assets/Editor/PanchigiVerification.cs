@@ -91,10 +91,6 @@ namespace LOP.EditorTools
             }
         }
 
-        //  PanchigiTurn 전이 검증은 공용 패키지의 EditMode 테스트(PanchigiTurnTests)로 옮겼다.
-        //  진행 규칙이 패키지로 가면서 진짜 테스트를 붙일 수 있게 됐다. 여기 한 벌 더 두면
-        //  시그니처가 바뀔 때 한쪽만 고쳐져 조용히 어긋난다 - 실제로 그렇게 배포가 깨졌다.
-
         // ── PanchigiStrikeValidation ────────────────────────────────────
 
         private static void StrikeValidation(StringBuilder sb)
@@ -142,9 +138,5 @@ namespace LOP.EditorTools
             CheckBool(sb, "판 모서리 + 상한 정확히 → 통과",
                 PanchigiStrikeValidation.Validate(new[] { atEdge }, board, HoldMax, PowerMax, ContactMax, out reason), true);
         }
-
-        //  PanchigiStrike 커널 검증은 Assets/Tests/Editor의 EditMode 테스트로 옮겼다.
-        //  여기 한 벌 더 두면 시그니처가 바뀔 때 한쪽만 고쳐져 조용히 어긋난다 - 실제로 그렇게
-        //  게임서버 배포가 깨진 적이 있다.
     }
 }

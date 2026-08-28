@@ -62,6 +62,14 @@ namespace LOP
                 throw new ArgumentOutOfRangeException(nameof(totalSamples),
                     "샘플 개수는 1 이상이어야 한다 — 마스터데이터를 확인할 것.");
             }
+            if (tuning.InfluenceRadius <= 0f)
+            {
+                //  0으로 나누면 NaN이 나오고, 그 NaN은 Vector3.Zero 가드를 통과해 그대로
+                //  물리엔진에 들어간다(동전이 폭발하듯 튄다). 음수여도 exp(+거리/반경)이 되어
+                //  먼 동전이 더 세게 맞는다 — 둘 다 여기서 미리 막는다.
+                throw new ArgumentOutOfRangeException(nameof(tuning),
+                    "영향 반경(InfluenceRadius)은 0보다 커야 한다 — 마스터데이터를 확인할 것.");
+            }
             if (liveCount <= 0)
             {
                 return Vector3.Zero;

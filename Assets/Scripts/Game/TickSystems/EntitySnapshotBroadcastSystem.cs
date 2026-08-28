@@ -17,7 +17,7 @@ namespace LOP
 
         public void Tick(long tick, float deltaTime)
         {
-            EntitySnap[] allEntitySnaps = BuildAllEntitySnaps();
+            EntitySnap[] allEntitySnaps = BuildAllEntitySnaps(tick, deltaTime);
 
             // durable 스냅샷 → unreliable(막 배송). 유실돼도 다음 스냅이 최신 전체를 덮음.
             // Mirror unreliable은 큰 메시지 조각내기(fragment) 불가 → 배치 한도(≈1184B) 초과 시 통째 드롭.
@@ -54,7 +54,7 @@ namespace LOP
             }
         }
 
-        private EntitySnap[] BuildAllEntitySnaps()
+        private EntitySnap[] BuildAllEntitySnaps(long tick, float deltaTime)
         {
             var entitySnapList = new List<EntitySnap>();
 
@@ -73,9 +73,10 @@ namespace LOP
 
                 snap.Grounded = worldEntity.Get<GameFramework.World.GroundState>()?.IsGrounded ?? false;
                 var stun = worldEntity.Get<FlappyStun>();
-                snap.Stunned = stun?.StunRemaining > 0f;
-                //  스턴이 풀린 뒤의 짧은 무적. 두 구간은 겹치지 않는다(스턴이 끝나는 틱에 무적이 채워진다).
-                snap.Invulnerable = stun?.InvulnRemaining > 0f;
+                //  남은 시간이 아니라 "끝나는 절대 틱"을 보낸다 — 받는 쪽이 자기 틱과 빼면 되고,
+                //  스냅이 늦게 도착해도 값이 낡지 않는다(어빌리티의 ability_end_tick과 같은 관례).
+                snap.StunEndTick = StunEndTick(stun?.StunRemaining ?? 0f, tick, deltaTime);
+                snap.InvulnEndTick = StunEndTick(stun?.InvulnRemaining ?? 0f, tick, deltaTime);
 
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)
@@ -119,6 +120,16 @@ namespace LOP
             }
 
             return entitySnapList.ToArray();
+        }
+
+        //  남은 시간(초) → 끝나는 절대 틱. 0 이하면 0(= 해당 상태 아님).
+        private static long StunEndTick(float remaining, long tick, float deltaTime)
+        {
+            if (remaining <= 0f || deltaTime <= 0f)
+            {
+                return 0;
+            }
+            return tick + (long)System.Math.Ceiling(remaining / deltaTime);
         }
     }
 }

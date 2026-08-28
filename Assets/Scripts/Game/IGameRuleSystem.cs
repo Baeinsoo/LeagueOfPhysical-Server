@@ -12,6 +12,12 @@ namespace LOP
         /// <summary>이 판이 끝났나. 러너가 매 프레임 물어본다 — 종료 시점은 게임마다 다르다.</summary>
         bool IsMatchOver { get; }
 
+        /// <summary>
+        /// 이 판의 제한 시간(틱). <b>0 이하면 시간으로는 끝내지 않는다</b> — 그때는
+        /// <see cref="IsMatchOver"/>가 유일한 종료 조건이다(판치기는 턴 수로 끝난다).
+        /// </summary>
+        long MatchDurationTicks { get; }
+
         /// <summary>이 판의 등수. 무엇으로 순위를 매길지는 게임마다 다르다.</summary>
         MatchOutcome ResolveOutcome();
     }

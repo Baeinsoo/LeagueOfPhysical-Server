@@ -97,6 +97,9 @@ namespace LOP
 
         public bool IsMatchOver => turnSystem.IsOver;
 
+        //  시간이 아니라 턴 수로 끝난다 — TbPanchigiConfig.MatchTurnLimit.
+        public long MatchDurationTicks => 0;
+
         public MatchOutcome ResolveOutcome()
         {
             var outcome = new MatchOutcome();

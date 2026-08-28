@@ -77,13 +77,16 @@ namespace LOP
         //  아직 자기만의 종료 조건이 없다 — 러너의 시간 상한으로 끝난다.
         public bool IsMatchOver => false;
 
+        //  50Hz × 300초.
+        public long MatchDurationTicks => 15000;
+
         private void OnTick(long tick)
         {
             if (tickUpdater.elapsedTime - lastEnemySpawnTime >= 10f)
             {
                 if (entityRegistry.All.Count() < 100)
                 {
-                    SpawnEnemies(10);
+                    SpawnEnemies(1);
                     lastEnemySpawnTime = tickUpdater.elapsedTime;
                 }
             }

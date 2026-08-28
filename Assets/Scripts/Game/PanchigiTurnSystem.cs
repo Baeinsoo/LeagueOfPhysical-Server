@@ -28,6 +28,7 @@ namespace LOP
         private PanchigiPhase sentPhase = PanchigiPhase.Over;   // 첫 틱에 반드시 한 번 보내도록
         private string sentEntityId;
         private int sentDropOutTotal = -1;
+        private int sentTurnCount = -1;
 
         //  이번 상태(phase+차례)를 이미 받은 세션 id들. 늦게 접속하거나 재접속한 세션은 여기 없으니
         //  다음 틱에 현재 상태를 받는다 — "바뀔 때만 보낸다"가 "0명한테 보내고 끝"이 되지 않게 한다.
@@ -284,11 +285,13 @@ namespace LOP
             //  낙도 "달라진 것"에 넣는다. 국면·차례만 보면, 낙이 났는데 마침 같은 사람이 다시
             //  조준하게 된 경우 벌점이 화면에 영영 안 올라간다.
             if (turn.Phase != sentPhase || turn.CurrentEntityId != sentEntityId
-                || turn.TotalDropOuts != sentDropOutTotal)
+                || turn.TotalDropOuts != sentDropOutTotal
+                || turn.TurnCount != sentTurnCount)
             {
                 sentPhase = turn.Phase;
                 sentEntityId = turn.CurrentEntityId;
                 sentDropOutTotal = turn.TotalDropOuts;
+                sentTurnCount = turn.TurnCount;
                 receivedSessionIds.Clear();
             }
 
@@ -297,6 +300,7 @@ namespace LOP
                 Phase = turn.Phase == PanchigiPhase.Aiming ? 1 : 0,
                 CurrentEntityId = turn.CurrentEntityId ?? string.Empty,
                 AimDeadlineTick = aimDeadlineTick,
+                TurnCount = turn.TurnCount,
             };
 
             foreach (var pair in turn.DropOutCounts)

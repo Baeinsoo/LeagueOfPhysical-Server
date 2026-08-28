@@ -132,7 +132,7 @@ namespace LOP
 
             var input = new PanchigiStrike.StrikeInput(strikePoint.ToNumerics(), dragDelta.ToNumerics(), holdTime);
             var tuning = new PanchigiStrike.StrikeTuning(
-                config.ForceMultiplier, config.HorizontalForceMultiplier, config.FalloffRate);
+                config.ForceMultiplier, config.HorizontalForceMultiplier, config.InfluenceRadius);
 
             int sampleCount = config.CoverageSamples;
             var samples = new System.Numerics.Vector3[sampleCount];

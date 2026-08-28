@@ -1,4 +1,3 @@
-using System;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -6,9 +5,15 @@ using UnityEngine;
 namespace LOP.EditorTools
 {
     /// <summary>
-    /// 판치기 판정·전이·타격 커널을 표로 찍는다. 눈으로 틀린 걸 알기 어려운 값들이라 직접 대조한다.
-    /// EditMode 테스트를 안 만들기로 했으므로(asmdef 없이 Assembly-CSharp-Editor에서 바로 부른다) 이 슬라이스의
-    /// 유일한 자동 검증이다. unity CLI의 menu 명령으로 헤드리스 재실행이 된다.
+    /// 판치기 판정(면 뒤집힘·장외·정지)과 타격 접촉 검증(PanchigiStrikeValidation)을 표로 찍는다.
+    /// 눈으로 틀린 걸 알기 어려운 값들이라 직접 대조한다.
+    ///
+    /// 진행 규칙(PanchigiTurn)과 타격 힘 커널(PanchigiStrike)의 검증은 여기 없다 - 각각
+    /// PanchigiTurnTests·PanchigiStrikeTests로 Assets/Tests/Editor에 옮겨 EditMode 테스트로 돈다.
+    /// 새 검증을 추가할 땐 여기 늘리지 말고 그쪽에 EditMode 테스트로 붙일 것 - 한 규칙에 검증이
+    /// 두 벌로 갈라지면 시그니처가 바뀔 때 한쪽만 고쳐져 조용히 어긋난다(실제로 배포가 깨진 적이 있다).
+    ///
+    /// unity CLI의 menu 명령으로 헤드리스 재실행이 된다.
     /// </summary>
     public static class PanchigiVerification
     {
@@ -29,48 +34,6 @@ namespace LOP.EditorTools
         {
             bool ok = actual == expected;
             sb.AppendLine($"  {label}: 실제={actual} 기대={expected} → {(ok ? "OK" : "FAIL")}");
-        }
-
-        private static void CheckFloat(StringBuilder sb, string label, float actual, float expected, float eps = 1e-4f)
-        {
-            bool ok = MathF.Abs(actual - expected) <= eps;
-            sb.AppendLine($"  {label}: 실제={actual:F4} 기대={expected:F4} → {(ok ? "OK" : "FAIL")}");
-        }
-
-        private static void CheckLess(StringBuilder sb, string label, float smaller, float larger)
-        {
-            bool ok = smaller < larger;
-            sb.AppendLine($"  {label}: {smaller:F4} < {larger:F4} → {(ok ? "OK" : "FAIL")}");
-        }
-
-        private static void CheckVector3(StringBuilder sb, string label,
-            System.Numerics.Vector3 actual, System.Numerics.Vector3 expected, float eps = 1e-4f)
-        {
-            bool ok = MathF.Abs(actual.X - expected.X) <= eps
-                && MathF.Abs(actual.Y - expected.Y) <= eps
-                && MathF.Abs(actual.Z - expected.Z) <= eps;
-            sb.AppendLine($"  {label}: 실제=({actual.X:F4},{actual.Y:F4},{actual.Z:F4}) " +
-                $"기대=({expected.X:F4},{expected.Y:F4},{expected.Z:F4}) → {(ok ? "OK" : "FAIL")}");
-        }
-
-        private static void CheckThrows(StringBuilder sb, string label, Action action)
-        {
-            bool threw;
-            try
-            {
-                action();
-                threw = false;
-            }
-            catch (ArgumentOutOfRangeException)
-            {
-                threw = true;
-            }
-            catch (Exception ex)
-            {
-                sb.AppendLine($"  {label}: 예상과 다른 예외 {ex.GetType().Name} → FAIL");
-                return;
-            }
-            sb.AppendLine($"  {label}: 예외 발생={threw} 기대=True → {(threw ? "OK" : "FAIL")}");
         }
 
         // ── PanchigiCoin ────────────────────────────────────────────────

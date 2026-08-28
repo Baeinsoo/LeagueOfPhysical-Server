@@ -104,23 +104,6 @@ namespace LOP
             gameState = RunnerState.Paused;
         }
 
-        private void LateUpdate()
-        {
-            //  끝나는 길이 둘이다: 룰이 끝났다고 하거나, 제한 시간이 지나거나. 제한 시간은
-            //  게임마다 다르고(판치기는 시간 대신 턴 수로 끝난다) 0이면 시간으로는 안 끝낸다.
-            //  시간은 방이 부팅된 때가 아니라 출발한 때부터 잰다 — 부팅 기준이면 참가자를
-            //  기다리는 동안 판이 시작도 못 하고 끝난다(로컬 대기 상한이 600초라 특히).
-            long durationTicks = gameRuleSystem.MatchDurationTicks;
-            if (initialized
-                && (gameRuleSystem.IsMatchOver
-                    || (durationTicks > 0
-                        && matchStartSystem.Phase == MatchPhase.InProgress
-                        && tickUpdater.tick - matchStartSystem.StartTick > durationTicks)))
-            {
-                EndMatch();
-            }
-        }
-
         /// <summary>매치 종료 진입점. 종료 판정은 서버 권위이고, 클라는 통보를 받아 같은 이름의 메서드로 들어온다.</summary>
         public void EndMatch()
         {
@@ -155,6 +138,30 @@ namespace LOP
             entitySnapshotBroadcastSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             userEntitySnapshotSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             despawnFlushSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
+
+            //  이번 틱을 다 굴리고 내보낸 뒤에 끝을 본다 — 마지막 상태까지 클라에 가고 나서 끝난다.
+            CheckMatchOver();
+        }
+
+        //  유니티 프레임(LateUpdate)이 아니라 러너 틱 끝에서 본다. 프레임 경계에서 보면 밀린 틱을
+        //  한 프레임에 최대 8개까지 몰아 돌기 때문에, 조건이 참이 된 틱과 실제로 끝나는 틱이 최대
+        //  7틱 어긋난다 — 같은 입력이라도 서버 프레임레이트에 따라 다른 틱에 끝난다는 뜻이다.
+        //  룰 판정은 렌더 클럭이 아니라 시뮬 클럭에 있어야 한다.
+        private void CheckMatchOver()
+        {
+            //  끝나는 길이 둘이다: 룰이 끝났다고 하거나, 제한 시간이 지나거나. 제한 시간은
+            //  게임마다 다르고(판치기는 시간 대신 턴 수로 끝난다) 0이면 시간으로는 안 끝낸다.
+            //  시간은 방이 부팅된 때가 아니라 출발한 때부터 잰다 — 부팅 기준이면 참가자를
+            //  기다리는 동안 판이 시작도 못 하고 끝난다(로컬 대기 상한이 600초라 특히).
+            long durationTicks = gameRuleSystem.MatchDurationTicks;
+            if (initialized
+                && (gameRuleSystem.IsMatchOver
+                    || (durationTicks > 0
+                        && matchStartSystem.Phase == MatchPhase.InProgress
+                        && tickUpdater.tick - matchStartSystem.StartTick > durationTicks)))
+            {
+                EndMatch();
+            }
         }
     }
 }

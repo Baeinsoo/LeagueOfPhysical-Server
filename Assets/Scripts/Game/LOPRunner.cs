@@ -30,6 +30,7 @@ namespace LOP
         [Inject] private WorldEventDrainSystem worldEventDrainSystem;
         [Inject] private InputTimingFeedbackSystem inputTimingFeedbackSystem;
         [Inject] private EntitySnapshotBroadcastSystem entitySnapshotBroadcastSystem;
+        [Inject] private EntityInputBroadcastSystem entityInputBroadcastSystem;
         [Inject] private UserEntitySnapshotSystem userEntitySnapshotSystem;
         [Inject] private DespawnFlushSystem despawnFlushSystem;
 
@@ -136,6 +137,8 @@ namespace LOP
             inputTimingFeedbackSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             RunPhase<End>(tickUpdater.tick, (float)tickUpdater.deltaTime);
             entitySnapshotBroadcastSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
+            //  스냅샷과 같은 틱의 입력을 함께 보낸다 — 받는 쪽이 둘을 같은 틱으로 짝지어 쓴다.
+            entityInputBroadcastSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             userEntitySnapshotSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             despawnFlushSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
 

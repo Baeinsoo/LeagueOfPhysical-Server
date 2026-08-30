@@ -86,6 +86,7 @@ namespace LOP
             builder.Register<WorldEventDrainSystem>(Lifetime.Singleton);
             builder.Register<InputTimingFeedbackSystem>(Lifetime.Singleton);
             builder.Register<EntitySnapshotBroadcastSystem>(Lifetime.Singleton);
+            builder.Register<EntityInputBroadcastSystem>(Lifetime.Singleton);
             builder.Register<UserEntitySnapshotSystem>(Lifetime.Singleton);
             builder.Register<DespawnFlushSystem>(Lifetime.Singleton);
         }

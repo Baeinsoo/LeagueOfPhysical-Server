@@ -22,6 +22,12 @@ namespace LOP
 
             builder.Register<ICharacterCreator, SkydivePlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, SkydiveRuleSystem>(Lifetime.Singleton);
+
+            builder.Register<SkydiveFinishSystem>(Lifetime.Singleton);
+            // 도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
+            // 러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다.
+            builder.RegisterBuildCallback(container =>
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<SkydiveFinishSystem>()));
         }
     }
 }

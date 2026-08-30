@@ -1,12 +1,11 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace LOP
 {
     /// <summary>
-    /// Skydive 룰(서버). 참가자마다 몸을 하늘에 세우고, 시간 상한으로 판을 끝낸다.
-    /// 결승선 판정(등수)은 슬라이스 3, 죽음 처리는 슬라이스 4가 여기에 붙는다.
+    /// Skydive 룰(서버). 참가자마다 몸을 하늘에 세우고, 전원이 바닥에 닿으면 판을 끝내며 도착 순서로
+    /// 등수를 매긴다. 죽음 처리는 슬라이스 4가 여기에 붙는다.
     /// </summary>
     public class SkydiveRuleSystem : IGameRuleSystem
     {
@@ -14,22 +13,26 @@ namespace LOP
         private const float FallbackSpawnY = 200f;
         private const float FallbackSpawnSpacingX = 3f;
 
-        // 겉모습은 Flappy의 새를 빌려 쓴다 — 슬라이스 1에서 확인할 것은 "떨어지는가"뿐이고,
-        // 전용 모델을 기다리면 그 확인이 막힌다. 자세(다이브/대자/패러세일)가 생기는 슬라이스 2에서
-        // 자세별 애니메이션이 있는 몸으로 바꾼다.
-        private const string BodyVisualId = "Assets/Art/Characters/FlappyBird/Bird.prefab";
+        // Bird.prefab은 Animator가 없어 어떤 자세도 못 취한다. Knight는 리그가 있는 사람 몸이라
+        // 지금은 기울기만 쓰지만, 나중에 진짜 스카이다이빙 클립(다이브/대자/패러세일)을 얹을 자리가 된다.
+        private const string BodyVisualId = "Assets/Art/Characters/Knight/Knight.prefab";
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly SkydiveFinishSystem finishSystem;
 
-        // 슬라이스 3의 결승선 판정이 이 목록으로 레지스트리를 되짚는다 — 지금은 채우기만 하고
-        // 아직 아무도 읽지 않는다.
-        private readonly List<string> bodyEntityIds = new List<string>();
+        // 도착 감시(entityId 기준)를 등수(userId)로 옮기려면 이 대응표가 있어야 한다.
+        // 남아 있는 사람의 몸 위치를 다시 찾을 때(ResolveOutcome 2단계)도 이걸로 entityId를 얻는다.
+        private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
-        public SkydiveRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner)
+        public SkydiveRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
+                                  GameFramework.World.EntityRegistry entityRegistry, SkydiveFinishSystem finishSystem)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
+            this.entityRegistry = entityRegistry;
+            this.finishSystem = finishSystem;
         }
 
         public void Initialize()
@@ -51,7 +54,8 @@ namespace LOP
                     : new Vector3(i * FallbackSpawnSpacingX, FallbackSpawnY, 0f);
 
                 string entityId = entitySpawner.GenerateEntityId();
-                bodyEntityIds.Add(entityId);
+                entityIdToUserId[entityId] = playerList[i];
+                finishSystem.Watch(entityId);
 
                 entitySpawner.Spawn(new CharacterCreationData
                 {
@@ -68,31 +72,70 @@ namespace LOP
 
         public void Deinitialize()
         {
-            bodyEntityIds.Clear();
+            entityIdToUserId.Clear();
+            finishSystem.Reset();  // 다음 판이 이번 판의 도착 순서를 물려받으면 등수가 처음부터 틀어진다
         }
 
-        // 결승선이 아직 없다(슬라이스 3). 그때까지는 시간 상한만으로 끝난다.
-        public bool IsMatchOver => false;
+        /// <summary>남아 있는 사람이 전원 바닥에 닿으면 끝난다. 시간 상한은 러너가 따로 본다.</summary>
+        public bool IsMatchOver => finishSystem.AllWatchedFinished;
 
-        // 50Hz × 60초. 200m를 40m/s 상한으로 떨어지면 10초 남짓이라 넉넉한 상한이다.
+        // 50Hz × 60초. 코스가 1000m라 다이브(45m/s)는 22초, 대자(25m/s)는 40초로 누구든 60초 안에
+        // 도착한다. 패러세일만 붙들고 있으면 1000/6 ≈ 166초가 걸려 이 상한에 걸린다 — 그게 활공의 대가다.
         public long MatchDurationTicks => 3000;
 
-        // 진짜 등수(결승선 통과 순서)는 슬라이스 3에서 채운다. 그때까지는 보고 경로가 끊기지
-        // 않도록 무작위로 둔다.
         public MatchOutcome ResolveOutcome()
         {
-            var userIds = roomDataStore.match.playerList.ToList();
+            var orderedUserIds = new List<string>();
+            var finishedUserIds = new HashSet<string>();
 
-            for (int i = userIds.Count - 1; i > 0; i--)
+            // 1. 먼저 도착한 순서대로 1등부터 — FinishedOrder는 entityId라 대응표로 옮긴다.
+            foreach (string entityId in finishSystem.FinishedOrder)
             {
-                int j = UnityEngine.Random.Range(0, i + 1);
-                (userIds[i], userIds[j]) = (userIds[j], userIds[i]);
+                if (entityIdToUserId.TryGetValue(entityId, out string userId) == false)
+                {
+                    continue;   // 대응표에 없는 entityId는 있을 수 없지만, 있어도 등수를 못 매길 뿐 판이 죽으면 안 된다
+                }
+                orderedUserIds.Add(userId);
+                finishedUserIds.Add(userId);
             }
 
-            var outcome = new MatchOutcome();
-            for (int i = 0; i < userIds.Count; i++)
+            // 2. 도착 못 하고 남은 사람 — 몸이 있으면 더 낮게 내려간 사람(y 오름차순)이 앞,
+            //    몸이 사라진 사람(나간 사람)은 맨 뒤.
+            var stillFalling = new List<(string userId, float y)>();
+            var left = new List<string>();
+
+            foreach (var pair in entityIdToUserId)
             {
-                outcome.placements.Add(new MatchPlacement { userId = userIds[i], placement = i + 1 });
+                string entityId = pair.Key;
+                string userId = pair.Value;
+                if (finishedUserIds.Contains(userId))
+                {
+                    continue;
+                }
+
+                var body = entityRegistry.Get(entityId);
+                var transform = body?.Get<GameFramework.World.Transform>();
+                if (transform == null)
+                {
+                    left.Add(userId);
+                }
+                else
+                {
+                    stillFalling.Add((userId, transform.Position.Y));
+                }
+            }
+
+            stillFalling.Sort((a, b) => a.y.CompareTo(b.y));
+            foreach (var entry in stillFalling)
+            {
+                orderedUserIds.Add(entry.userId);
+            }
+            orderedUserIds.AddRange(left);
+
+            var outcome = new MatchOutcome();
+            for (int i = 0; i < orderedUserIds.Count; i++)
+            {
+                outcome.placements.Add(new MatchPlacement { userId = orderedUserIds[i], placement = i + 1 });
             }
 
             return outcome;

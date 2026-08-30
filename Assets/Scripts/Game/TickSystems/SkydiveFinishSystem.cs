@@ -5,12 +5,14 @@ namespace LOP
 {
     /// <summary>
     /// 누가 먼저 바닥에 닿았는지 매 틱 지켜보고 순서를 적어 둔다.
-    /// 룰(<see cref="SkydiveRuleSystem"/>)이 이걸 읽어 종료와 등수를 답한다 — 순서를 세는 일과
-    /// 판을 끝내는 일을 나눈 이유는 룰에는 틱이 없어서다(판치기의 룰/턴 짝과 같은 구조).
+    /// 룰(<see cref="SkydiveRuleSystem"/>)이 종료와 등수를 답할 때 이걸 읽게 될 것이다 — 순서를 세는 일과
+    /// 판을 끝내는 일을 나눈 이유는 룰에는 틱이 없어서다(판치기의 룰/턴 짝과 같은 구조). 그 연결은 아직
+    /// 없다: <see cref="Watch"/>/<see cref="FinishedOrder"/>를 부르는 곳이 다음 태스크에서 생긴다.
     /// </summary>
     public class SkydiveFinishSystem : GameFramework.Runner.ITickSystem
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly SkydiveConfig config;
 
         private readonly List<string> watched = new List<string>();
         private readonly List<string> finishedOrder = new List<string>();
@@ -20,9 +22,10 @@ namespace LOP
         // 첫 틱까지 미뤘다가 그때 한 번만 찾는다.
         private SkydiveProgress progress;
 
-        public SkydiveFinishSystem(GameFramework.World.EntityRegistry entityRegistry)
+        public SkydiveFinishSystem(GameFramework.World.EntityRegistry entityRegistry, SkydiveConfig config)
         {
             this.entityRegistry = entityRegistry;
+            this.config = config;
         }
 
         public IReadOnlyList<string> FinishedOrder => finishedOrder;
@@ -104,9 +107,12 @@ namespace LOP
             }
 
             // Flappy는 같은 상황에서 예외를 던지지만 여기서는 판이 이미 굴러가는 중이다 —
-            // 던지면 방 전체가 죽으므로, 크게 알리고 바닥을 결승선으로 삼아 판은 끝나게 둔다.
-            Debug.LogError($"[Skydive] 맵에 FinishLine 마커가 정확히 하나 있어야 한다 (발견: {markers.Length}개). 바닥(y=0)을 결승선으로 쓴다");
-            progress = new SkydiveProgress(0f);
+            // 던지면 방 전체가 죽으므로, 크게 알리고 시뮬이 실제로 클램프하는 바닥(config.GroundY)을
+            // 결승선으로 삼아 판은 끝나게 둔다. 리터럴 0을 쓰면 바닥 높이를 튜닝하는 순간 몰래
+            // 어긋난다(몸이 절대 그 y에 못 닿아 판이 시간 상한까지 안 끝남).
+            Debug.LogError($"[Skydive] 맵에 FinishLine 마커가 정확히 하나 있어야 한다 (발견: {markers.Length}개). " +
+                $"마커 없이는 결승선이 바닥(y={config.GroundY})으로 대체되어, 이 판은 몸이 바닥에 닿아야만 끝난다");
+            progress = new SkydiveProgress(config.GroundY);
         }
     }
 }

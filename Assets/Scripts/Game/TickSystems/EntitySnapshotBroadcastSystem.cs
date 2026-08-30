@@ -86,11 +86,19 @@ namespace LOP
                 }
 
                 //  Skydive 전용 필드. 이 컴포넌트가 없는 게임(Flappy·FlapWang·판치기)에서는
-                //  worldEntity.Get<Posture/Stamina>()가 null이라 기본값(0/false)이 나가고,
-                //  그 게임들은 이 필드를 읽지 않으므로 영향이 없다.
-                snap.PostureAxis = worldEntity.Get<Posture>()?.Axis ?? 0f;
-                snap.Gliding = worldEntity.Get<Posture>()?.Gliding ?? false;
-                snap.Stamina = worldEntity.Get<Stamina>()?.Current ?? 0f;
+                //  posture/stamina가 null이라 기본값(0/false)이 나가고, 그 게임들은 이 필드를
+                //  읽지 않으므로 영향이 없다. 두 번씩 읽던 걸 지역변수로 한 번만 조회하도록 정리.
+                var posture = worldEntity.Get<Posture>();
+                var stamina = worldEntity.Get<Stamina>();
+                snap.PostureAxis = posture?.Axis ?? 0f;
+                snap.Gliding = posture?.Gliding ?? false;
+                snap.Stamina = stamina?.Current ?? 0f;
+                //  비상 펼침(잔고 0에서의 마지막 구제 창)의 남은 초. 남에게는 InputBuffer가 없어
+                //  TryStartGlide가 절대 안 불려 EmergencyRemaining이 로컬에서 0에 묶여 있다 —
+                //  이 값을 안 실으면 서버가 비상 펼침 중인 순간, 다음 틱 StaminaSystem.Tick이
+                //  "잔고 0인데 EmergencyRemaining도 0"으로 보고 곧바로 접어 버려 남이 그 1초
+                //  구제 구간 내내 자유낙하로 보인다(다음 스냅이 와야 되돌아옴 = 러버밴딩).
+                snap.EmergencyRemaining = stamina?.EmergencyRemaining ?? 0f;
 
                 var statusEffects = worldEntity.Get<StatusEffects>();
                 if (statusEffects != null)

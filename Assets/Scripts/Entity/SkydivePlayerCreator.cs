@@ -6,6 +6,9 @@ namespace LOP
     /// <summary>Skydive의 플레이어 몸(서버). 체력·마나·레벨·어빌리티가 없다.</summary>
     public class SkydivePlayerCreator : ICharacterCreator
     {
+        // 몸 크기. 클라(SkydivePlayerCreator)도 같은 값을 상수로 든다 — 슬라이스 2에서
+        // TbSkydiveConfig로 옮길 때 한쪽만 옮기면 클·서 캡슐 크기가 갈라진다(컴파일도 테스트도
+        // 못 잡는다). 옮길 땐 반드시 같이 옮길 것.
         private const float BodyRadius = 0.4f;
         private const float BodyHeight = 1.8f;
 

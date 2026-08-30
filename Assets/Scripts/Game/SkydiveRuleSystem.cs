@@ -22,6 +22,8 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
 
+        // 슬라이스 3의 결승선 판정이 이 목록으로 레지스트리를 되짚는다 — 지금은 채우기만 하고
+        // 아직 아무도 읽지 않는다.
         private readonly List<string> bodyEntityIds = new List<string>();
 
         public SkydiveRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner)

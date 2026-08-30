@@ -85,6 +85,13 @@ namespace LOP
                     snap.AbilityEndTick = activation.Value.RecoveryEndTick;
                 }
 
+                //  Skydive 전용 필드. 이 컴포넌트가 없는 게임(Flappy·FlapWang·판치기)에서는
+                //  worldEntity.Get<Posture/Stamina>()가 null이라 기본값(0/false)이 나가고,
+                //  그 게임들은 이 필드를 읽지 않으므로 영향이 없다.
+                snap.PostureAxis = worldEntity.Get<Posture>()?.Axis ?? 0f;
+                snap.Gliding = worldEntity.Get<Posture>()?.Gliding ?? false;
+                snap.Stamina = worldEntity.Get<Stamina>()?.Current ?? 0f;
+
                 var statusEffects = worldEntity.Get<StatusEffects>();
                 if (statusEffects != null)
                 {

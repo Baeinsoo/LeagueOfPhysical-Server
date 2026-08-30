@@ -75,8 +75,8 @@ namespace LOP
                 var stun = worldEntity.Get<FlappyStun>();
                 //  남은 시간이 아니라 "끝나는 절대 틱"을 보낸다 — 받는 쪽이 자기 틱과 빼면 되고,
                 //  스냅이 늦게 도착해도 값이 낡지 않는다(어빌리티의 ability_end_tick과 같은 관례).
-                snap.StunEndTick = StunEndTick(stun?.StunRemaining ?? 0f, tick, deltaTime);
-                snap.InvulnEndTick = StunEndTick(stun?.InvulnRemaining ?? 0f, tick, deltaTime);
+                snap.StunEndTick = FlappyStunSystem.EndTick(stun?.StunRemaining ?? 0f, tick, deltaTime);
+                snap.InvulnEndTick = FlappyStunSystem.EndTick(stun?.InvulnRemaining ?? 0f, tick, deltaTime);
 
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)
@@ -123,13 +123,5 @@ namespace LOP
         }
 
         //  남은 시간(초) → 끝나는 절대 틱. 0 이하면 0(= 해당 상태 아님).
-        private static long StunEndTick(float remaining, long tick, float deltaTime)
-        {
-            if (remaining <= 0f || deltaTime <= 0f)
-            {
-                return 0;
-            }
-            return tick + (long)System.Math.Ceiling(remaining / deltaTime);
-        }
     }
 }

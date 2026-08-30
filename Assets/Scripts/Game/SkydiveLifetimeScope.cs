@@ -8,11 +8,17 @@ namespace LOP
     {
         protected override void ConfigureGame(IContainerBuilder builder)
         {
+            builder.Register<SkydiveConfigProvider>(Lifetime.Singleton);
+            builder.Register<SkydiveConfig>(c => c.Resolve<SkydiveConfigProvider>().Get(), Lifetime.Singleton);
+
             builder.Register<SkydiveMoveSystem>(Lifetime.Singleton);
+            builder.Register<StaminaSystem>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld>(c => new SkydiveWorld(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
-                c.Resolve<SkydiveMoveSystem>()), Lifetime.Singleton);
+                c.Resolve<SkydiveMoveSystem>(),
+                c.Resolve<StaminaSystem>(),
+                c.Resolve<SkydiveConfig>()), Lifetime.Singleton);
 
             builder.Register<ICharacterCreator, SkydivePlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, SkydiveRuleSystem>(Lifetime.Singleton);

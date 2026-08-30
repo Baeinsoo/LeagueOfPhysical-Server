@@ -60,6 +60,8 @@ namespace LOP
                 Vertical = inputCommand.Vertical,
                 Jump = inputCommand.Jump,
                 AbilityId = inputCommand.AbilityId,
+                Posture = inputCommand.Posture,
+                Glide = inputCommand.Glide,
             };
         }
     }

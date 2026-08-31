@@ -18,7 +18,10 @@ namespace LOP
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
                 c.Resolve<SkydiveMoveSystem>(),
                 c.Resolve<StaminaSystem>(),
-                c.Resolve<SkydiveConfig>()), Lifetime.Singleton);
+                c.Resolve<SkydiveConfig>(),
+                c.Resolve<GameFramework.Physics.ICollisionQuery>(),
+                // 클라와 같은 마스크여야 예측이 권위와 갈리지 않는다.
+                UnityEngine.LayerMask.GetMask("Default")), Lifetime.Singleton);
 
             builder.Register<ICharacterCreator, SkydivePlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, SkydiveRuleSystem>(Lifetime.Singleton);

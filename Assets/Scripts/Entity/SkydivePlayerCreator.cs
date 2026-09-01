@@ -40,6 +40,7 @@ namespace LOP
             }
             worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 몸을 시뮬한다
             worldEntity.Add(new Posture());
+            worldEntity.Add(new JumpState());
             worldEntity.Add(new Stamina { Current = config.StaminaMax });
             entityRegistry.Add(worldEntity);
 

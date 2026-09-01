@@ -62,6 +62,7 @@ namespace LOP
                 AbilityId = inputCommand.AbilityId,
                 Posture = inputCommand.Posture,
                 Glide = inputCommand.Glide,
+                Posing = inputCommand.Posing,
             };
         }
     }

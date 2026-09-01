@@ -79,8 +79,14 @@ namespace LOP
                     continue;   // 나간 사람의 몸은 이미 없다
                 }
 
-                tracker.Observe(entityId, tick,
-                    FinishLineOverlap.Past(body, lineBounds.Value, axis, increasing));
+                float past = FinishLineOverlap.Past(body, lineBounds.Value, axis, increasing);
+                tracker.Observe(entityId, tick, past);
+
+                //  [진단용 임시] 누가 언제 얼마나 깊이 닿았는지. 등수가 이 세 값으로만 정해진다.
+                if (tracker.HasFinished(entityId))
+                {
+                    Debug.Log($"[Finish] {entityId} tick={tick} 넘은깊이={past:F3}m");
+                }
             }
         }
 

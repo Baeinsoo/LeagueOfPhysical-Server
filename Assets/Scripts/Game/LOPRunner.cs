@@ -119,6 +119,17 @@ namespace LOP
             //  방이 닫히는 시점에는 이미 늦다. 보고는 LOPRoom이 방을 닫기 전에 한다.
             roomDataStore.outcome = gameRuleSystem.ResolveOutcome();
 
+            //  [진단용 임시] 등수가 실제로 어떻게 나왔는지 눈으로 볼 데가 없어서 남긴다.
+            //  결과 화면이 완주 시간까지 보여 주게 되면 지운다.
+            {
+                var parts = new System.Collections.Generic.List<string>();
+                foreach (var placement in roomDataStore.outcome.placements)
+                {
+                    parts.Add($"{placement.placement}위 {placement.userId}");
+                }
+                Debug.Log($"[Outcome] tick={tickUpdater.tick} " + string.Join(" · ", parts));
+            }
+
             matchStartSystem.Finish();
 
             gameState = RunnerState.GameOver;

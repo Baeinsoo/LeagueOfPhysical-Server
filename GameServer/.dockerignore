@@ -1,3 +1,9 @@
-Build/*_BackUpThisFolder_ButDontShipItWithYourGame/
-Build/*_BurstDebugInformation_DoNotShip/
-Build/.DS_Store
+# 유니티가 "배포하지 말라"고 이름에 써 둔 폴더들. 심볼만 1GB가 넘는데 Dockerfile이
+# COPY ${BUILD_DIR}/ 로 빌드 폴더를 통째로 담으므로 여기서 걸러야 한다.
+#
+# `**/`인 것이 핵심이다 — CI는 아치별로 이름을 다르게 굽는다(Build-x86_64 / Build-arm64).
+# 예전처럼 `Build/`로 적으면 그 이름의 폴더 하나만 걸려, 정작 배포되는 아치별 빌드는
+# 그대로 이미지에 실린다.
+**/*_BackUpThisFolder_ButDontShipItWithYourGame/
+**/*_BurstDebugInformation_DoNotShip/
+**/.DS_Store

@@ -83,11 +83,10 @@ namespace LOP
         /// <summary>남아 있는 사람이 전원 바닥에 닿으면 끝난다. 시간 상한은 러너가 따로 본다.</summary>
         public bool IsMatchOver => finishSystem.AllWatchedFinished;
 
-        // 50Hz × 100초. 코스가 3000m이고 종단속도를 젤다에 맞춰 올린 뒤라, 대자(60m/s)로 51초,
-        // 다이브(90m/s)로 35초다. 활공은 끝까지 붙들 수 없다 — 스태미나가 공중에선 안 차서
-        // 한 판에 15초(300÷20)뿐이고 그동안 90m를 간다. 발판에 서서 스태미나를 채우는 시간까지
-        // 감안해 대자 기준(51초)의 두 배쯤을 상한으로 둔다.
-        public long MatchDurationTicks => 5000;
+        // 50Hz × 300초. 대자(60m/s)로 3000m를 51초, 다이브(90m/s)로 35초에 내려온다.
+        // 그런데 패러세일은 6m/s라, 스태미나를 발판에서 채워 가며 타면 훨씬 오래 걸린다 —
+        // 지금은 그 조작을 시험하는 중이라 넉넉하게 둔다. 재미가 잡히면 다시 조인다.
+        public long MatchDurationTicks => 15000;
 
         /// <summary>
         /// 먼저 닿은 순서로 등수를 매긴다. 규칙 자체는 <see cref="FinishPlacements"/>에 있고 여기는

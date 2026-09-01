@@ -27,6 +27,18 @@ namespace LOP
                 LayerMask.GetMask("Default")), Lifetime.Singleton);
             builder.Register<ICharacterCreator, FlappyBirdCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, FlappyRaceRuleSystem>(Lifetime.Singleton);
+
+            //  새는 +x로 달리므로 x가 커지는 방향이다. 폴백 좌표를 주지 않는다 — 마커가 없으면
+            //  룰이 Initialize에서 이미 터뜨린다(짐작해 세우면 판이 엉뚱한 데서 끝난다).
+            builder.Register(c => new FinishLineTrackingSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<ActorRegistry>(),
+                FinishAxis.X, increasing: true), Lifetime.Singleton);
+            //  도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
+            //  러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다.
+            builder.RegisterBuildCallback(container =>
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<FinishLineTrackingSystem>()));
         }
     }
 }

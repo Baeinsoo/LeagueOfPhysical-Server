@@ -61,6 +61,36 @@ namespace LOP
         }
         #endregion
 
+        /// <summary>
+        /// 지연 시뮬레이터가 감싸고 있으면 벗겨 실제 트랜스포트를 돌려준다. 안 감싸고 있으면 그대로.
+        /// </summary>
+        public static Transport Unwrap(Transport configured)
+        {
+            return configured is LatencySimulation simulation && simulation.wrap != null
+                ? simulation.wrap
+                : configured;
+        }
+
+        /// <summary>
+        /// 빌드에서는 지연 시뮬레이터를 쓰지 않는다 — 씬에 켜 둔 채로 빌드하면 그 지연이 그대로
+        /// 실려 나간다. 클라에서 실제로 그렇게 편도 100ms가 실린 APK가 나갔다(2026-09-01).
+        ///
+        /// <para>지금 서버 씬에는 시뮬레이터가 없어 이 줄은 아무 일도 하지 않는다. 그럼에도 미리
+        /// 두는 이유: 클·서 양쪽에 지연을 걸어야 실제 환경과 같은 비대칭 없는 테스트가 되므로
+        /// 서버 씬에도 붙일 참이고, 게임서버는 라이브 클러스터에 배포되어 사고 범위가 훨씬 크다.</para>
+        ///
+        /// <para>시뮬레이터를 끄지는 않는다 — <c>LatencySimulation.OnDisable()</c>이 자기가 감싸던
+        /// 트랜스포트까지 같이 꺼서 진짜 통신이 죽는다. <c>base.Awake()</c>가
+        /// <c>InitializeSingleton()</c>에서 <c>Transport.active</c>를 굳히므로 그 전에 바꾼다.</para>
+        /// </summary>
+        public override void Awake()
+        {
+#if !UNITY_EDITOR
+            transport = Unwrap(transport);
+#endif
+            base.Awake();
+        }
+
         #region Start & Stop Callbacks
         /// <summary>
         /// This is invoked when a server is started - including when a host is started.

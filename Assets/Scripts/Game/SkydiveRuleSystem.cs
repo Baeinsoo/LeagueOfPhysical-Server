@@ -20,14 +20,14 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
-        private readonly SkydiveFinishSystem finishSystem;
+        private readonly FinishLineTrackingSystem finishSystem;
 
         // 도착 감시(entityId 기준)를 등수(userId)로 옮기려면 이 대응표가 있어야 한다.
         // 남아 있는 사람의 몸 위치를 다시 찾을 때(ResolveOutcome 2단계)도 이걸로 entityId를 얻는다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
         public SkydiveRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
-                                  GameFramework.World.EntityRegistry entityRegistry, SkydiveFinishSystem finishSystem)
+                                  GameFramework.World.EntityRegistry entityRegistry, FinishLineTrackingSystem finishSystem)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
@@ -89,62 +89,33 @@ namespace LOP
         // 감안해 대자 기준(51초)의 두 배쯤을 상한으로 둔다.
         public long MatchDurationTicks => 5000;
 
+        /// <summary>
+        /// 먼저 닿은 순서로 등수를 매긴다. 규칙 자체는 <see cref="FinishPlacements"/>에 있고 여기는
+        /// 이 게임의 진행도를 넘길 뿐이다 — 아래로 내려갈수록 앞선 것이라 부호를 뒤집어 준다.
+        /// </summary>
         public MatchOutcome ResolveOutcome()
         {
-            var orderedUserIds = new List<string>();
-            var finishedUserIds = new HashSet<string>();
-
-            // 1. 먼저 도착한 순서대로 1등부터 — FinishedOrder는 entityId라 대응표로 옮긴다.
-            foreach (string entityId in finishSystem.FinishedOrder)
-            {
-                if (entityIdToUserId.TryGetValue(entityId, out string userId) == false)
-                {
-                    continue;   // 대응표에 없는 entityId는 있을 수 없지만, 있어도 등수를 못 매길 뿐 판이 죽으면 안 된다
-                }
-                orderedUserIds.Add(userId);
-                finishedUserIds.Add(userId);
-            }
-
-            // 2. 도착 못 하고 남은 사람 — 몸이 있으면 더 낮게 내려간 사람(y 오름차순)이 앞,
-            //    몸이 사라진 사람(나간 사람)은 맨 뒤.
-            var stillFalling = new List<(string userId, float y)>();
+            var unfinished = new List<(string userId, float progress)>();
             var left = new List<string>();
 
             foreach (var pair in entityIdToUserId)
             {
-                string entityId = pair.Key;
-                string userId = pair.Value;
-                if (finishedUserIds.Contains(userId))
+                if (finishSystem.HasFinished(pair.Key))
                 {
                     continue;
                 }
-
-                var body = entityRegistry.Get(entityId);
-                var transform = body?.Get<GameFramework.World.Transform>();
-                if (transform == null)
+                var body = entityRegistry.Get(pair.Key)?.Get<GameFramework.World.Transform>();
+                if (body == null)
                 {
-                    left.Add(userId);
+                    left.Add(pair.Value);
                 }
                 else
                 {
-                    stillFalling.Add((userId, transform.Position.Y));
+                    unfinished.Add((pair.Value, -body.Position.Y));   // 낮을수록 앞섰다
                 }
             }
 
-            stillFalling.Sort((a, b) => a.y.CompareTo(b.y));
-            foreach (var entry in stillFalling)
-            {
-                orderedUserIds.Add(entry.userId);
-            }
-            orderedUserIds.AddRange(left);
-
-            var outcome = new MatchOutcome();
-            for (int i = 0; i < orderedUserIds.Count; i++)
-            {
-                outcome.placements.Add(new MatchPlacement { userId = orderedUserIds[i], placement = i + 1 });
-            }
-
-            return outcome;
+            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId, unfinished, left);
         }
     }
 }

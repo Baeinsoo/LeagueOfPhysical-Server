@@ -70,6 +70,10 @@ crashlytics-build.properties
 # Temporary auto-generated Android Assets
 /[Aa]ssets/[Ss]treamingAssets/aa.meta
 /[Aa]ssets/[Ss]treamingAssets/aa/*
+
+# Unity 빌드 산출물 (도커 이미지 재료). CI는 아치별로 굽는다.
+/GameServer/Build/
+/GameServer/Build-*/
 .vsconfig
 Assets/NuGetForUnity/Packages/
 ServerData/

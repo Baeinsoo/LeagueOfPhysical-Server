@@ -36,6 +36,7 @@ namespace LOP
             worldEntity.Add(new GameFramework.World.PhysicsConfig(
                 GameFramework.World.BodyKind.Kinematic, freezeRotation: true, isTrigger: false));
             worldEntity.Add(new FlappyStun());
+            worldEntity.Add(new FlappyDash());
 
             if (string.IsNullOrEmpty(creationData.userId) == false)
             {

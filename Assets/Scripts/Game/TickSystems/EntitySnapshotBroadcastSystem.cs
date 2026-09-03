@@ -78,6 +78,12 @@ namespace LOP
                 snap.StunEndTick = FlappyTickDuration.EndTick(stun?.StunRemaining ?? 0f, tick, deltaTime);
                 snap.InvulnEndTick = FlappyTickDuration.EndTick(stun?.InvulnRemaining ?? 0f, tick, deltaTime);
 
+                //  대시도 같은 관례로 "끝나는 절대 틱"을 보낸다. 게이지는 발동 자격의 권위라
+                //  함께 싣는다 — 이것이 없으면 클라만 가득 찼다고 믿는 상태가 고쳐지지 않는다.
+                var dash = worldEntity.Get<FlappyDash>();
+                snap.DashEndTick = FlappyTickDuration.EndTick(dash?.DashRemaining ?? 0f, tick, deltaTime);
+                snap.DashCharge = dash?.Charge ?? 0f;
+
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)
                 {

@@ -42,6 +42,7 @@ namespace LOP
             worldEntity.Add(new Posture());
             worldEntity.Add(new MotionState());
             worldEntity.Add(new Stamina { Current = config.StaminaMax });
+            worldEntity.Add(new WindDrift());
             entityRegistry.Add(worldEntity);
 
             Debug.Log($"[World] Registered skydive body {worldEntity.Id}");

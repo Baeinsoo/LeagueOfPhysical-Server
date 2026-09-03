@@ -47,10 +47,15 @@ namespace LOP
             return (entityIdCounter++).ToString();
         }
 
-        // userId→entityId. 순수 로직 사이트가 LOPActor를 거치지 않고 id만 얻는다.
+        /// <summary>
+        /// userId→entityId. 순수 로직 사이트가 LOPActor를 거치지 않고 id만 얻는다.
+        /// <b>몸이 없으면 null</b> — 접속한 채로 몸이 없는 사람이 정상 상태이기 때문이다
+        /// (Flappy에서 추격자에게 잡힌 사람은 남은 판을 관전한다). 예전엔 인덱서라 그 순간
+        /// 예외를 던졌고, 그게 매 틱 도는 스냅샷 시스템에서 터져 판 전체가 얼어붙었다.
+        /// </summary>
         public string GetEntityIdByUserId(string userId)
         {
-            return userEntityMap[userId];
+            return userId != null && userEntityMap.TryGetValue(userId, out string entityId) ? entityId : null;
         }
 
         public void Spawn(CharacterCreationData creationData)

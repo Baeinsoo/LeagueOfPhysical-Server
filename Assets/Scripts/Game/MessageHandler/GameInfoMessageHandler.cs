@@ -70,10 +70,15 @@ namespace LOP
 
                 var gameInfoToC = new GameInfoToC
                 {
-                    EntityId = entityId,
+                    //  관전 중(탈락)이면 조종할 몸이 없다. proto의 문자열 필드는 null을 거부하므로
+                    //  빈 값으로 보낸다 — 클라는 이 값을 비교에만 쓰므로 어떤 엔티티와도 안 맞아
+                    //  "내 몸 없음"이 그대로 표현된다. 세상 정보(다른 새들)는 그대로 보낸다,
+                    //  관전하려면 그게 필요하다.
+                    EntityId = entityId ?? string.Empty,
                     SessionId = session.sessionId,
                     // 판치기 등 입력을 안 보내는 모드는 InputBuffer가 없다 — 없는 게 정상이니 조회 실패를 감내한다.
-                    ExpectedNextSequence = entityRegistry.Get(entityId).Get<InputBuffer>()?.ExpectedNextSequence ?? 0,
+                    ExpectedNextSequence = (entityId == null
+                        ? null : entityRegistry.Get(entityId)?.Get<InputBuffer>())?.ExpectedNextSequence ?? 0,
                     GameInfo = new GameInfo
                     {
                         // Tick·ElapsedTime은 클라가 더 이상 시드로 쓰지 않는다(자기 시계에서 유도).

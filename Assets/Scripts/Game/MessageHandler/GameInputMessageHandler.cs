@@ -33,7 +33,9 @@ namespace LOP
             //  세션은 연결에서 이미 찾아 왔다 — 여기서 계정으로 다시 조회하지 않는다.
             ISession session = received.Session;
             string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
-            var buffer = entityRegistry.Get(entityId).Get<InputBuffer>();
+            //  관전 중(탈락)인 사람도 입력을 보낼 수 있다 — 몸이 없으면 그냥 버린다.
+            //  예전엔 여기서 예외가 나 Mirror가 그 사람의 연결을 끊었다.
+            var buffer = entityId == null ? null : entityRegistry.Get(entityId)?.Get<InputBuffer>();
             if (buffer == null)
             {
                 return;

@@ -131,7 +131,8 @@ namespace LOP
                 }
             }
 
-            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId, unfinished, left);
+            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId,
+                unfinished, System.Array.Empty<string>(), left);
         }
     }
 }

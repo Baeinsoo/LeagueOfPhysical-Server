@@ -114,7 +114,9 @@ namespace LOP
                 }
             }
 
-            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId, unfinished, left);
+            //  스카이다이브에는 탈락이 없다.
+            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId,
+                unfinished, System.Array.Empty<string>(), left);
         }
     }
 }

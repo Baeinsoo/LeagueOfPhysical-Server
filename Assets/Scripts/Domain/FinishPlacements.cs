@@ -6,8 +6,9 @@ namespace LOP
     /// 결승선 기록으로 등수를 매기는 규칙. 물리도 축도 게임도 모르는 순수 계산이라, 레이스형 게임이
     /// 모두 같은 답을 낸다(Flappy·Skydive가 이걸 공유한다).
     ///
-    /// <para>세 무리를 이 순서로 놓는다: <b>닿은 사람</b>(먼저 닿은 순, 완전히 같으면 공동 순위) →
-    /// <b>못 닿은 사람</b>(더 멀리 간 순) → <b>몸이 사라진 사람</b>(나간 사람).</para>
+    /// <para>네 무리를 이 순서로 놓는다: <b>닿은 사람</b>(먼저 닿은 순, 완전히 같으면 공동 순위) →
+    /// <b>못 닿은 사람</b>(더 멀리 간 순) → <b>잡힌 사람</b>(늦게 잡힌 순) →
+    /// <b>몸이 사라진 사람</b>(나간 사람).</para>
     /// </summary>
     public static class FinishPlacements
     {
@@ -15,11 +16,14 @@ namespace LOP
         /// <param name="entityIdToUserId">기록은 몸 id로 남으므로 사람 id로 옮길 대응표.</param>
         /// <param name="unfinished">못 닿은 사람과 그 진행도. <b>클수록 앞선 것</b>으로 본다
         /// (Flappy는 x 그대로, Skydive는 아래로 갈수록 앞서므로 −y를 넘긴다).</param>
+        /// <param name="eliminated">추격자에게 잡힌 사람. <b>먼저 잡힌 순</b>으로 넘긴다 —
+        /// 등수는 그 역순이다(오래 버틴 사람이 위). 탈락이 없는 게임은 빈 목록을 넘긴다.</param>
         /// <param name="left">몸이 이미 없는 사람(나간 사람).</param>
         public static MatchOutcome Resolve(
             IReadOnlyList<FinishRecord> finished,
             IReadOnlyDictionary<string, string> entityIdToUserId,
             IReadOnlyList<(string userId, float progress)> unfinished,
+            IReadOnlyList<string> eliminated,
             IReadOnlyList<string> left)
         {
             var outcome = new MatchOutcome();
@@ -50,6 +54,11 @@ namespace LOP
             for (int i = 0; i < sorted.Count; i++)
             {
                 outcome.placements.Add(new MatchPlacement { userId = sorted[i].userId, placement = next++ });
+            }
+            //  늦게 잡힌 사람이 위다 — 오래 버틴 것이 더 잘한 것이다(배틀로얄 표준).
+            for (int i = eliminated.Count - 1; i >= 0; i--)
+            {
+                outcome.placements.Add(new MatchPlacement { userId = eliminated[i], placement = next++ });
             }
             for (int i = 0; i < left.Count; i++)
             {

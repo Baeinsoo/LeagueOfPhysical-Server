@@ -36,11 +36,18 @@ namespace LOP
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<ActorRegistry>(),
                 FinishAxis.X, increasing: true), Lifetime.Singleton);
+            builder.Register<FlappyChaserSystem>(Lifetime.Singleton);
+
             //  도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
             //  러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다.
+            //  추격자는 그 뒤여야 한다 — 앞에 두면 같은 틱에 결승선을 넘은 새를 잡는다.
             builder.RegisterBuildCallback(container =>
+            {
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
-                    container.Resolve<FinishLineTrackingSystem>()));
+                    container.Resolve<FinishLineTrackingSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<FlappyChaserSystem>());
+            });
         }
     }
 }

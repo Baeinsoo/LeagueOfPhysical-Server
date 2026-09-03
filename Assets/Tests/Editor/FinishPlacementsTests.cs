@@ -21,9 +21,12 @@ namespace LOP.Tests
             IReadOnlyList<FinishRecord> finished,
             IReadOnlyDictionary<string, string> map,
             IReadOnlyList<(string, float)> unfinished = null,
+            IReadOnlyList<string> eliminated = null,
             IReadOnlyList<string> left = null)
             => FinishPlacements.Resolve(finished, map,
-                unfinished ?? new List<(string, float)>(), left ?? new List<string>());
+                unfinished ?? new List<(string, float)>(),
+                eliminated ?? new List<string>(),
+                left ?? new List<string>());
 
         static int PlacementOf(MatchOutcome outcome, string userId)
             => outcome.placements.Find(p => p.userId == userId).placement;
@@ -126,6 +129,56 @@ namespace LOP.Tests
             var outcome = Resolve(new FinishRecord[0], new Dictionary<string, string>());
 
             Assert.IsEmpty(outcome.placements);
+        }
+    
+        [Test]
+        public void 늦게_잡힌_사람이_위다()
+        {
+            //  오래 버틴 것이 곧 더 잘한 것이다. 목록은 먼저 잡힌 순으로 들어오므로 등수는 역순이다.
+            var outcome = Resolve(new FinishRecord[0], Map("a", "b", "c"),
+                eliminated: new List<string> { "user-a", "user-b", "user-c" });
+
+            Assert.AreEqual(1, PlacementOf(outcome, "user-c"));
+            Assert.AreEqual(2, PlacementOf(outcome, "user-b"));
+            Assert.AreEqual(3, PlacementOf(outcome, "user-a"));
+        }
+
+        [Test]
+        public void 탈락자는_아직_달리는_사람보다_아래다()
+        {
+            //  살아 있으면 나중에 잡히더라도 지금 잡힌 사람보다는 위다.
+            var outcome = Resolve(new FinishRecord[0], Map("a", "b"),
+                unfinished: new List<(string, float)> { ("user-a", 100f) },
+                eliminated: new List<string> { "user-b" });
+
+            Assert.AreEqual(1, PlacementOf(outcome, "user-a"));
+            Assert.AreEqual(2, PlacementOf(outcome, "user-b"));
+        }
+
+        [Test]
+        public void 탈락자는_나간_사람보다_위다()
+        {
+            //  끝까지 달리다 잡힌 것과 도중에 나간 것은 다르다.
+            var outcome = Resolve(new FinishRecord[0], Map("a", "b"),
+                eliminated: new List<string> { "user-a" },
+                left: new List<string> { "user-b" });
+
+            Assert.AreEqual(1, PlacementOf(outcome, "user-a"));
+            Assert.AreEqual(2, PlacementOf(outcome, "user-b"));
+        }
+
+        [Test]
+        public void 완주자_뒤에_탈락자가_붙는다()
+        {
+            //  전원이 잡히지 않은 흔한 판. 완주한 둘이 1·2등, 잡힌 둘이 늦게 잡힌 순으로 3·4등.
+            var outcome = Resolve(
+                new[] { Rec("a", 10, 0.5f), Rec("b", 12, 0.2f) }, Map("a", "b", "c", "d"),
+                eliminated: new List<string> { "user-c", "user-d" });
+
+            Assert.AreEqual(1, PlacementOf(outcome, "user-a"));
+            Assert.AreEqual(2, PlacementOf(outcome, "user-b"));
+            Assert.AreEqual(3, PlacementOf(outcome, "user-d"));
+            Assert.AreEqual(4, PlacementOf(outcome, "user-c"));
         }
     }
 }

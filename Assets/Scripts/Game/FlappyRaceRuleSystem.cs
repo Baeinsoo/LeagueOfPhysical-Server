@@ -21,18 +21,21 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
 
         private readonly FinishLineTrackingSystem finishSystem;
+        private readonly FlappyChaserSystem chaserSystem;
 
         //  등수를 답할 때 통과 기록(entityId)을 userId로 옮기고, 못 들어온 사람의 몸을 되찾는 데 쓴다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
         public FlappyRaceRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                     GameFramework.World.EntityRegistry entityRegistry,
-                                    FinishLineTrackingSystem finishSystem)
+                                    FinishLineTrackingSystem finishSystem,
+                                    FlappyChaserSystem chaserSystem)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.entityRegistry = entityRegistry;
             this.finishSystem = finishSystem;
+            this.chaserSystem = chaserSystem;
         }
 
         public void Initialize()
@@ -65,6 +68,7 @@ namespace LOP
                 string entityId = entitySpawner.GenerateEntityId();
                 entityIdToUserId[entityId] = playerList[i];
                 finishSystem.Watch(entityId);
+                chaserSystem.Watch(entityId);
 
                 entitySpawner.Spawn(new CharacterCreationData
                 {
@@ -96,10 +100,43 @@ namespace LOP
         {
             entityIdToUserId.Clear();
             finishSystem.Reset();
+            chaserSystem.Reset();
         }
 
-        /// <summary>남아 있는 새가 전원 결승선에 닿으면 끝난다. 시간 상한은 러너가 따로 본다.</summary>
-        public bool IsMatchOver => finishSystem.AllWatchedFinished;
+        /// <summary>
+        /// 남아 있는 새가 전원 결승선에 닿거나, 아무도 달리고 있지 않으면 끝난다.
+        /// 시간 상한은 러너가 따로 본다.
+        /// </summary>
+        public bool IsMatchOver => finishSystem.AllWatchedFinished || EveryoneAccountedFor;
+
+        //  전원이 잡히는 판을 위한 조건이다. 결승선 추적은 몸이 없는 사람을 세지 않는데
+        //  (나간 사람을 기다리면 판이 영영 안 끝난다), 전원이 잡히면 셀 사람이 하나도 없어져
+        //  "전원 통과"가 거짓이 된다. 그대로 두면 90초 상한까지 빈 화면을 기다린다.
+        //
+        //  탈락자가 한 명 이상일 때만 보는 이유는 스폰 직전이다 — 아직 몸이 하나도 없는 그
+        //  순간을 "전원 정리됨"으로 읽으면 시작하자마자 판이 끝난다.
+        private bool EveryoneAccountedFor
+        {
+            get
+            {
+                if (chaserSystem.EliminatedOrder.Count == 0)
+                {
+                    return false;
+                }
+                foreach (var pair in entityIdToUserId)
+                {
+                    if (finishSystem.HasFinished(pair.Key))
+                    {
+                        continue;
+                    }
+                    if (entityRegistry.Get(pair.Key) != null)
+                    {
+                        return false;   // 아직 달리는 새가 있다
+                    }
+                }
+                return true;
+            }
+        }
 
         //  50Hz × 90초. 전원이 결승선을 넘으면 그 전에 끝나고, 이건 아무도 못 들어왔을 때의 상한이다.
         //  코스 640m를 11m/s로 달리면 57.5초라, 스턴(0.8초)을 40번 먹어도 완주할 여유가 있다.
@@ -121,17 +158,30 @@ namespace LOP
                     continue;
                 }
                 var body = entityRegistry.Get(pair.Key)?.Get<GameFramework.World.Transform>();
-                if (body == null)
-                {
-                    left.Add(pair.Value);   // 나간 사람의 새는 이미 없다
-                }
-                else
+                if (body != null)
                 {
                     unfinished.Add((pair.Value, body.Position.X));   // +x로 달리므로 클수록 앞선다
+                    continue;
+                }
+                //  몸이 없는 사람은 둘이다 — 잡힌 사람과 그냥 나간 사람. 잡힌 쪽이 위다.
+                if (chaserSystem.IsEliminated(pair.Key) == false)
+                {
+                    left.Add(pair.Value);
                 }
             }
 
-            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId, unfinished, left);
+            //  잡힌 순서 그대로 옮긴다. 딕셔너리 순회 순서로 모으면 "늦게 잡힌 사람이 위"가 깨진다.
+            var eliminated = new List<string>();
+            foreach (string entityId in chaserSystem.EliminatedOrder)
+            {
+                if (entityIdToUserId.TryGetValue(entityId, out string userId))
+                {
+                    eliminated.Add(userId);
+                }
+            }
+
+            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId,
+                unfinished, eliminated, left);
         }
     }
 }

@@ -22,6 +22,10 @@ namespace LOP
             foreach (var session in sessionManager.GetAllSessions())
             {
                 string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
+                if (entityId == null)
+                {
+                    continue;   // 관전 중(탈락) — 보낼 몸이 없다
+                }
 
                 // HP/MP/Level/Exp/StatPoints 모두 World 코어에서 읽는다.
                 GameFramework.World.Entity worldEntity = entityRegistry.Get(entityId);

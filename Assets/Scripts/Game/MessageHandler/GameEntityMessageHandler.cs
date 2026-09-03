@@ -28,7 +28,8 @@ namespace LOP
         {
             ISession session = received.Session;
             string entityId = entitySpawner.GetEntityIdByUserId(session.userId);
-            GameFramework.World.Stats stats = entityRegistry.Get(entityId)?.Get<GameFramework.World.Stats>();
+            GameFramework.World.Stats stats = entityId == null
+                ? null : entityRegistry.Get(entityId)?.Get<GameFramework.World.Stats>();
             if (stats == null)
             {
                 UnityEngine.Debug.LogWarning($"[World] StatAllocation: Stats not found for entity {entityId}");

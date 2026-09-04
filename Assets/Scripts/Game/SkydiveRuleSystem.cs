@@ -20,14 +20,14 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
-        private readonly FinishLineTrackingSystem finishSystem;
+        private readonly FinishTrackingSystem finishSystem;
 
         // 도착 감시(entityId 기준)를 등수(userId)로 옮기려면 이 대응표가 있어야 한다.
         // 남아 있는 사람의 몸 위치를 다시 찾을 때(ResolveOutcome 2단계)도 이걸로 entityId를 얻는다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
         public SkydiveRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
-                                  GameFramework.World.EntityRegistry entityRegistry, FinishLineTrackingSystem finishSystem)
+                                  GameFramework.World.EntityRegistry entityRegistry, FinishTrackingSystem finishSystem)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;

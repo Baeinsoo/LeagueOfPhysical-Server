@@ -7,7 +7,7 @@ namespace LOP
 {
     /// <summary>
     /// Flappy Race 룰(서버). 참가자마다 새를 세우고, 전원이 결승선을 넘으면 판을 끝내고 등수를 답한다.
-    /// 누가 먼저 닿았는지 세는 일은 <see cref="FinishLineTrackingSystem"/>이 매 틱 한다 — 룰에는
+    /// 누가 먼저 닿았는지 세는 일은 <see cref="FinishTrackingSystem"/>이 매 틱 한다 — 룰에는
     /// 틱이 없어서 나눠 두었다(판치기의 룰/턴 짝과 같은 구조).
     /// </summary>
     public class FlappyRaceRuleSystem : IGameRuleSystem
@@ -20,7 +20,7 @@ namespace LOP
         private readonly EntitySpawner entitySpawner;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
 
-        private readonly FinishLineTrackingSystem finishSystem;
+        private readonly FinishTrackingSystem finishSystem;
         private readonly FlappyChaserSystem chaserSystem;
 
         //  등수를 답할 때 통과 기록(entityId)을 userId로 옮기고, 못 들어온 사람의 몸을 되찾는 데 쓴다.
@@ -28,7 +28,7 @@ namespace LOP
 
         public FlappyRaceRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                     GameFramework.World.EntityRegistry entityRegistry,
-                                    FinishLineTrackingSystem finishSystem,
+                                    FinishTrackingSystem finishSystem,
                                     FlappyChaserSystem chaserSystem)
         {
             this.roomDataStore = roomDataStore;

@@ -64,6 +64,14 @@ namespace LOP
                     previousPositions[diver.Id] = to;
                     continue;   // 첫 틱은 지나온 경로가 없다
                 }
+                //  틱 규약(캐시를 여기서 씀): 이번 틱이 끝난 지금 위치를 다음 틱의 "시작 위치"로
+                //  남긴다. 그래서 다음 틱에서 꺼내 쓰는 `from`은 "틱 tick이 시작할 때의 위치"이고
+                //  `to`는 "그 틱이 끝난(=지금) 위치"다. 한편 LaserGeometry.SegmentAt(laser, t)는 t를
+                //  "그 틱이 시작할 때의 자세"로 읽는다(AnyLaserHits가 tick + t로 넘긴다). 그래서 이
+                //  스윕(from→to)은 SegmentAt(tick)(시작 자세) ~ SegmentAt(tick+1)(다음 틱 시작 자세 =
+                //  이번 틱 끝난 자세)와 짝이 맞는다. 이 규약을 벗어나면(예: 나중에 뷰가 "지금 자세"를
+                //  SegmentAt(currentTick) 대신 다른 틱 값으로 그리면) 가장 빠른 문지기 빔 끝에서 한
+                //  틱(≈4.6m)만큼 어긋나 보인다.
                 previousPositions[diver.Id] = to;
 
                 if (invulnerableUntil.TryGetValue(diver.Id, out float until) && now < until)
@@ -83,10 +91,13 @@ namespace LOP
             float radius = config.BodyRadius;
             float height = config.BodyHeight;
 
-            var bottomFrom = new System.Numerics.Vector3(from.x, from.y, from.z);
-            var topFrom = new System.Numerics.Vector3(from.x, from.y + height, from.z);
-            var bottomTo = new System.Numerics.Vector3(to.x, to.y, to.z);
-            var topTo = new System.Numerics.Vector3(to.x, to.y + height, to.z);
+            //  이동이 쓰는 캡슐(KinematicMover.Cast)과 같은 규격이어야 한다 — 축을 반지름만큼
+            //  안으로 당기지 않으면 부풀린 뒤 키가 height + 2·radius가 되어, 실제 몸(height)보다
+            //  44% 큰 판정 캡슐이 된다. 그러면 억울한 죽음이 늘어 "애매하면 살려준다" 원칙에 어긋난다.
+            var bottomFrom = new System.Numerics.Vector3(from.x, from.y + radius, from.z);
+            var topFrom = new System.Numerics.Vector3(from.x, from.y + height - radius, from.z);
+            var bottomTo = new System.Numerics.Vector3(to.x, to.y + radius, to.z);
+            var topTo = new System.Numerics.Vector3(to.x, to.y + height - radius, to.z);
 
             IReadOnlyList<Laser> lasers = laserField.All;
             for (int i = 0; i < lasers.Count; i++)
@@ -149,7 +160,10 @@ namespace LOP
             Debug.Log($"[Laser] {diver.Id} 부활 — 죽은 고도 {deathY:F0} → 선반 {shelfY:F0}");
         }
 
-        //  SkydiveWorld.CollectDivers와 같은 기준이어야 한다 — 다른 집합을 보면 판정과 시뮬이 어긋난다.
+        //  걸러내는 기준(EntityKind=Character + Simulated)은 SkydiveWorld.CollectDivers와 같아야
+        //  한다 — 다른 집합을 보면 판정과 시뮬이 어긋난다. 다만 정렬은 하지 않는다: 여기는 각
+        //  diver를 독립적으로 판정만 할 뿐 서로 순서에 기대는 계산이 없어 순서가 결과에 영향을
+        //  주지 않는다(SkydiveWorld가 결정론을 위해 id로 정렬하는 것과는 이유가 다르다).
         private void CollectDivers()
         {
             divers.Clear();

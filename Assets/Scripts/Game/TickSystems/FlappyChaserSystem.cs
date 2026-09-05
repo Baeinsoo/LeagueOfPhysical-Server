@@ -16,6 +16,7 @@ namespace LOP
         private readonly GameFramework.World.IWorld world;
         private readonly FinishTrackingSystem finishSystem;
         private readonly EntitySpawner entitySpawner;
+        private readonly FinishLineBounds finishLine;
         private readonly FlappyConfig config;
 
         private readonly List<string> watched = new List<string>();
@@ -25,12 +26,14 @@ namespace LOP
                                   GameFramework.World.IWorld world,
                                   FinishTrackingSystem finishSystem,
                                   EntitySpawner entitySpawner,
+                                  FinishLineBounds finishLine,
                                   FlappyConfig config)
         {
             this.entityRegistry = entityRegistry;
             this.world = world;
             this.finishSystem = finishSystem;
             this.entitySpawner = entitySpawner;
+            this.finishLine = finishLine;
             this.config = config;
         }
 
@@ -56,7 +59,11 @@ namespace LOP
                 return;
             }
 
-            float wallX = FlappyChaserCurve.XAt(config, (tick - world.GameplayStartTick) * deltaTime);
+            //  벽은 결승선에서 멈춘다 — 그 너머엔 감속해 서 있는 완주자들이 있고,
+            //  벽이 지나가면 안 죽는데도 먹히는 것처럼 보인다.
+            float stopAtX = finishLine.TryGet(out var bounds) ? bounds.min.x : float.MaxValue;
+            float wallX = FlappyChaserCurve.XAt(
+                config, (tick - world.GameplayStartTick) * deltaTime, stopAtX);
 
             for (int i = 0; i < watched.Count; i++)
             {

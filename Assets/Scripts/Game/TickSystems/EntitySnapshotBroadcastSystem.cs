@@ -99,6 +99,8 @@ namespace LOP
                 snap.PostureAxis = posture?.Axis ?? 0f;
                 snap.Gliding = posture?.Gliding ?? false;
                 snap.Stamina = stamina?.Current ?? 0f;
+                //  텔레포트(레이저 피격 등) 여부를 클라가 구분하도록 카운터를 함께 싣는다.
+                snap.TeleportCount = worldEntity.Get<GameFramework.World.Transform>()?.TeleportCount ?? 0;
                 //  비상 펼침(잔고 0에서의 마지막 구제 창)의 남은 초. 남에게는 InputBuffer가 없어
                 //  TryStartGlide가 절대 안 불려 EmergencyRemaining이 로컬에서 0에 묶여 있다 —
                 //  이 값을 안 실으면 서버가 비상 펼침 중인 순간, 다음 틱 StaminaSystem.Tick이

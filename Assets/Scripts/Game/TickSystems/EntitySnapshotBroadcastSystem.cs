@@ -84,6 +84,10 @@ namespace LOP
                 snap.DashEndTick = FlappyTickDuration.EndTick(dash?.DashRemaining ?? 0f, tick, deltaTime);
                 snap.DashCharge = dash?.Charge ?? 0f;
 
+                //  결승선이 없는 게임에는 이 컴포넌트가 없다 — 그러면 0(아직)이 나간다.
+                //  아래 Skydive 전용 필드와 같은 방식이다.
+                snap.FinishPlacement = worldEntity.Get<FinishPlacement>()?.Value ?? 0;
+
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)
                 {

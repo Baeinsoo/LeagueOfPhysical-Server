@@ -180,5 +180,32 @@ namespace LOP.Tests
             Assert.AreEqual(3, PlacementOf(outcome, "user-d"));
             Assert.AreEqual(4, PlacementOf(outcome, "user-c"));
         }
+
+        [Test]
+        public void 순위를_하나만_뽑을_수도_있다()
+        {
+            var ordered = new[] { Rec("a", 10, 0.5f), Rec("b", 11, 0.2f), Rec("c", 12, 0.1f) };
+
+            Assert.AreEqual(1, FinishPlacements.PlacementIn(ordered, "a"));
+            Assert.AreEqual(2, FinishPlacements.PlacementIn(ordered, "b"));
+            Assert.AreEqual(3, FinishPlacements.PlacementIn(ordered, "c"));
+        }
+
+        [Test]
+        public void 하나만_뽑을_때도_동점은_공동_순위다()
+        {
+            var ordered = new[] { Rec("a", 10, 0.5f), Rec("b", 10, 0.5f), Rec("c", 11, 0.1f) };
+
+            Assert.AreEqual(1, FinishPlacements.PlacementIn(ordered, "a"));
+            Assert.AreEqual(1, FinishPlacements.PlacementIn(ordered, "b"));
+            Assert.AreEqual(3, FinishPlacements.PlacementIn(ordered, "c"));
+        }
+
+        [Test]
+        public void 아직_안_들어온_사람은_0이다()
+        {
+            //  0은 "아직"이다. proto3가 기본값을 안 실으므로 와이어 비용도 0이다.
+            Assert.AreEqual(0, FinishPlacements.PlacementIn(new[] { Rec("a", 10, 0.5f) }, "b"));
+        }
     }
 }

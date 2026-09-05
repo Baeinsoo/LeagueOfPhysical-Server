@@ -41,11 +41,21 @@ namespace LOP
         {
             for (int i = 0; i < watched.Count; i++)
             {
-                var state = entityRegistry.Get(watched[i])?.Get<FinishState>();
+                var entity = entityRegistry.Get(watched[i]);
+                var state = entity?.Get<FinishState>();
                 if (state != null && state.Finished)
                 {
                     //  이미 기록된 사람은 Observe가 알아서 무시한다.
                     tracker.Observe(watched[i], state.FinishedTick, state.Depth);
+                }
+
+                //  등수는 남들이 언제 들어왔는지에 달려 있어 서버만 안다. 스냅샷에 태우려고
+                //  컴포넌트에 적어 둔다 — 스냅샷을 만드는 코드는 게임을 안 가려서 이 시스템을
+                //  알 수 없다.
+                var placement = entity?.Get<FinishPlacement>();
+                if (placement != null)
+                {
+                    placement.Value = FinishPlacements.PlacementIn(tracker.Ordered, watched[i]);
                 }
             }
         }

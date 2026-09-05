@@ -67,5 +67,29 @@ namespace LOP
 
             return outcome;
         }
+
+        /// <summary>
+        /// 한 사람의 순위만 뽑는다(1부터). <b>아직 안 들어왔으면 0.</b>
+        /// 공동 순위 규칙은 <see cref="Resolve"/>와 같다 — 1·1·3.
+        ///
+        /// <para>달리는 중에 스냅샷으로 등수를 보내려고 있다. 판이 끝나야 나오는 값이 아니다 —
+        /// 통과한 순간 자기 등수는 이미 정해져 있다(아직 달리는 사람은 나보다 뒤에 들어온다).</para>
+        /// </summary>
+        public static int PlacementIn(IReadOnlyList<FinishRecord> ordered, string entityId)
+        {
+            int placement = 0;
+            for (int i = 0; i < ordered.Count; i++)
+            {
+                if (i == 0 || ordered[i].SameRankAs(ordered[i - 1]) == false)
+                {
+                    placement = i + 1;
+                }
+                if (ordered[i].EntityId == entityId)
+                {
+                    return placement;
+                }
+            }
+            return 0;
+        }
     }
 }

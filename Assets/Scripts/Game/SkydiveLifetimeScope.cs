@@ -31,6 +31,7 @@ namespace LOP
                 c.Resolve<WindField>(),
                 c.Resolve<SkydiveConfig>(),
                 c.Resolve<GameFramework.Physics.ICollisionQuery>(),
+                c.Resolve<GameFramework.World.IMotionBridge>(),
                 // 클라와 같은 마스크여야 예측이 권위와 갈리지 않는다.
                 UnityEngine.LayerMask.GetMask("Default")), Lifetime.Singleton);
 

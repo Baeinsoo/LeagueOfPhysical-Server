@@ -31,6 +31,8 @@ namespace LOP
                 c.Resolve<WindField>(),
                 c.Resolve<SkydiveConfig>(),
                 c.Resolve<GameFramework.Physics.ICollisionQuery>(),
+                c.Resolve<GameFramework.World.IMotionBridge>(),
+                c.Resolve<BladeField>(),
                 // 클라와 같은 마스크여야 예측이 권위와 갈리지 않는다.
                 UnityEngine.LayerMask.GetMask("Default")), Lifetime.Singleton);
 
@@ -39,6 +41,8 @@ namespace LOP
 
             //  맵 씬의 LaserVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
             builder.Register<LaserField>(Lifetime.Singleton);
+            //  ⚠ 실험용(스파이크) — 맵 씨의 SpinningBlade 마커가 여기에 자기를 넣는다.
+            builder.Register<BladeField>(Lifetime.Singleton);
             builder.Register(c => new SkydiveLaserSystem(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<LaserField>(),

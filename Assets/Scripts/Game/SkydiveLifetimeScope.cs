@@ -21,6 +21,8 @@ namespace LOP
                 FinishAxis.Y, c.Resolve<SkydiveConfig>().GroundY), Lifetime.Singleton);
             builder.Register(c => new FinishSystem(
                 c.Resolve<FinishLineBounds>(), FinishAxis.Y, increasing: false), Lifetime.Singleton);
+            // 맵 씬의 DoorVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
+            builder.Register<DoorField>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld>(c => new SkydiveWorld(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
@@ -29,6 +31,7 @@ namespace LOP
                 c.Resolve<WindDriftSystem>(),
                 c.Resolve<FinishSystem>(),
                 c.Resolve<WindField>(),
+                c.Resolve<DoorField>(),
                 c.Resolve<SkydiveConfig>(),
                 c.Resolve<GameFramework.Physics.ICollisionQuery>(),
                 c.Resolve<GameFramework.World.IMotionBridge>(),

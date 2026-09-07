@@ -21,6 +21,8 @@ namespace LOP
                 FinishAxis.Y, c.Resolve<SkydiveConfig>().GroundY), Lifetime.Singleton);
             builder.Register(c => new FinishSystem(
                 c.Resolve<FinishLineBounds>(), FinishAxis.Y, increasing: false), Lifetime.Singleton);
+            // 맵 씬의 DoorVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
+            builder.Register<DoorField>(Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld>(c => new SkydiveWorld(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
@@ -29,6 +31,7 @@ namespace LOP
                 c.Resolve<WindDriftSystem>(),
                 c.Resolve<FinishSystem>(),
                 c.Resolve<WindField>(),
+                c.Resolve<DoorField>(),
                 c.Resolve<SkydiveConfig>(),
                 c.Resolve<GameFramework.Physics.ICollisionQuery>(),
                 c.Resolve<GameFramework.World.IMotionBridge>(),
@@ -48,15 +51,25 @@ namespace LOP
                 SkydiveCourseLayout.SpawnY,
                 SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
 
+            builder.Register(c => new SkydiveDoorSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<DoorField>(),
+                c.Resolve<SkydiveConfig>(),
+                SkydiveCourseLayout.ShelfYs,
+                SkydiveCourseLayout.SpawnY,
+                SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
+
             builder.Register<FinishTrackingSystem>(Lifetime.Singleton);
             // 도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
             // 러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다.
-            // 레이저를 결승선보다 먼저 물려, 맞은 그 틱에 결승 통과로도 잡히지 않게 한다.
+            // 레이저·문을 결승선보다 먼저 물려, 맞은 그 틱에 결승 통과로도 잡히지 않게 한다.
             builder.RegisterBuildCallback(container =>
             {
-                //  레이저를 결승보다 먼저 문다 — 결승선에 닿는 그 틱에 맞았다면 완주가 아니라 피격이다.
+                //  레이저·문을 결승보다 먼저 문다 — 결승선에 닿는 그 틱에 맞았다면 완주가 아니라 피격이다.
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<SkydiveLaserSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<SkydiveDoorSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<FinishTrackingSystem>());
             });

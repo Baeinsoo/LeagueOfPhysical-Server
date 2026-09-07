@@ -12,12 +12,10 @@ namespace LOP
     /// </summary>
     public class SkydiveLaserSystem : GameFramework.Runner.ITickSystem
     {
-        //  부활 지점 근처를 지나는 빔에 즉시 다시 죽는 고리를 막는다.
+        //  부활 지점 근처를 지나는 빔에 즉시 다시 죽는 고리를 막는다. 이 무적 시간은 레이저
+        //  판정만의 것이다 — 문(SkydiveDoorSystem)과 공유하면 한쪽에서 죽었는데 다른 쪽 무적 때문에
+        //  안 죽는 이상한 결합이 생긴다(SkydiveRespawn 주석 참고).
         private const float InvulnerableSeconds = 2.0f;
-
-        //  같은 자리에 여러 명이 부활하면 서로 밀어낸다(캐릭터끼리는 단단한 벽이다).
-        private const float RespawnSpreadRadius = 2f;
-        private const int RespawnSpreadCount = 6;
 
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly LaserField laserField;
@@ -124,40 +122,15 @@ namespace LOP
 
         private void Respawn(GameFramework.World.Entity diver, float deathY, float now)
         {
+            //  respawnCounts는 선반별 부활 순번(spread용) — 레이저 자신의 상태다. SkydiveRespawn은
+            //  이 값을 읽어 각도를 정하고 하나 늘려 돌려줄 뿐, 저장은 하지 않는다.
             float shelfY = SkydiveCheckpoints.LastPassedShelfY(deathY, shelfYs, spawnY);
-
-            Vector3 basePoint = respawnPoints.TryGetValue(shelfY, out Vector3 point)
-                ? point
-                : new Vector3(0f, shelfY, 0f);
-
             respawnCounts.TryGetValue(shelfY, out int order);
-            respawnCounts[shelfY] = order + 1;
-            float angle = order % RespawnSpreadCount * (2f * Mathf.PI / RespawnSpreadCount);
-            var spread = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle)) * RespawnSpreadRadius;
+            SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order);
+            respawnCounts[shelfY] = order;
 
-            GameFramework.World.EntityMotionExtensions.Teleport(diver, basePoint + spread);
-            GameFramework.World.EntityMotionExtensions.SetVelocity(diver, Vector3.zero);
-            previousPositions[diver.Id] = basePoint + spread;
-
-            var stamina = diver.Get<Stamina>();
-            if (stamina != null)
-            {
-                stamina.Current = config.StaminaMax;
-                stamina.EmergencyUsed = false;
-                stamina.EmergencyRemaining = 0f;
-            }
-
-            //  펴진 채로 부활하면 조작이 끊긴 것처럼 보인다. 대자(Axis 0)로 되돌린다.
-            var posture = diver.Get<Posture>();
-            if (posture != null)
-            {
-                posture.Gliding = false;
-                posture.Axis = 0f;
-            }
-
+            previousPositions[diver.Id] = GameFramework.World.EntityMotionExtensions.GetPosition(diver);
             invulnerableUntil[diver.Id] = now + InvulnerableSeconds;
-
-            Debug.Log($"[Laser] {diver.Id} 부활 — 죽은 고도 {deathY:F0} → 선반 {shelfY:F0}");
         }
 
         //  걸러내는 기준(EntityKind=Character + Simulated)은 SkydiveWorld.CollectDivers와 같아야

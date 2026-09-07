@@ -48,11 +48,13 @@ namespace LOP.Tests
 
             System(registry).Tick(0, 0.02f);
 
-            float y = GameFramework.World.EntityMotionExtensions.GetPosition(diver).y;
-            Assert.Greater(y, 10f, "되돌리지 않았다 — 죽은 자리에 그대로 있다");
-            Assert.That(y, Is.EqualTo(SkydiveCourseLayout.ShelfYs[SkydiveCourseLayout.ShelfYs.Count - 1])
-                             .Within(50f),
-                        "마지막으로 지난 선반이 아니라 엉뚱한 자리로 갔다");
+            //  SkydiveDoorSystemTests.닫힌_문_안에_있으면_마지막_선반으로_되돌아간다와 같은 방식으로
+            //  기대 좌표를 구한다 — 부활 순번이 비어 있던 참이라 spread 각도는 0(=+X로 2m).
+            var transform = diver.Get<GameFramework.World.Transform>();
+            Vector3 expected = SkydiveCourseLayout.RespawnPoints[200f] + new Vector3(2f, 0f, 0f);
+            Assert.AreEqual(expected.x, transform.Position.X, 0.001f, "마지막으로 지난 선반이 아니라 엉뚱한 자리로 갔다(x)");
+            Assert.AreEqual(expected.y, transform.Position.Y, 0.001f, "마지막으로 지난 선반이 아니라 엉뚱한 자리로 갔다(y)");
+            Assert.AreEqual(expected.z, transform.Position.Z, 0.001f, "마지막으로 지난 선반이 아니라 엉뚱한 자리로 갔다(z)");
         }
 
         [Test]
@@ -76,6 +78,11 @@ namespace LOP.Tests
             var registry = new GameFramework.World.EntityRegistry();
             var diver = Diver("a", 10f);
             diver.Get<LandingImpact>().DownwardSpeed = 60f;
+            //  Diver()가 만드는 속도는 기본값(0,0,0)이라 "지워졌는지"를 못 잰다 — 지우기 전에도
+            //  이미 0이면 이 단언은 부활이 실제로 한 일이 없어도 통과해버린다. 그래서 죽음을
+            //  부를 만한 낙하 속도를 미리 넣어 둔다. 부활이 진짜로 지운 경우에만 아래 단언이
+            //  통과한다.
+            diver.Get<GameFramework.World.Velocity>().Linear = new Vector3(0f, -60f, 0f).ToNumerics();
             registry.Add(diver);
 
             var system = System(registry);

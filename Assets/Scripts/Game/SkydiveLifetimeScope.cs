@@ -59,10 +59,17 @@ namespace LOP
                 SkydiveCourseLayout.SpawnY,
                 SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
 
+            builder.Register(c => new SkydiveLandingSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<SkydiveConfig>(),
+                SkydiveCourseLayout.ShelfYs,
+                SkydiveCourseLayout.SpawnY,
+                SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
+
             builder.Register<FinishTrackingSystem>(Lifetime.Singleton);
             // 도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
             // 러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다.
-            // 레이저·문을 결승선보다 먼저 물려, 맞은 그 틱에 결승 통과로도 잡히지 않게 한다.
+            // 레이저·문·착지를 결승선보다 먼저 물려, 맞은 그 틱에 결승 통과로도 잡히지 않게 한다.
             builder.RegisterBuildCallback(container =>
             {
                 //  레이저·문을 결승보다 먼저 문다 — 결승선에 닿는 그 틱에 맞았다면 완주가 아니라 피격이다.
@@ -70,6 +77,12 @@ namespace LOP
                     container.Resolve<SkydiveLaserSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<SkydiveDoorSystem>());
+                //  착지도 결승보다 먼저 물어야 한다 — LandingImpact는 착지한 그 틱에만 값이 있고
+                //  다음 틱은 0으로 비므로, 결승 판정(Task 4)이 치명 착지를 봐주는 유일한 이유는
+                //  "그 틱 안에 이미 되돌려졌다"는 것뿐이다. 여기서 순서가 밀리면 죽어야 할
+                //  착지가 그대로 완주로 인정된다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<SkydiveLandingSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<FinishTrackingSystem>());
             });

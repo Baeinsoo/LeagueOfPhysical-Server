@@ -59,17 +59,37 @@ namespace LOP
                 SkydiveCourseLayout.SpawnY,
                 SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
 
+            builder.Register(c => new SkydiveLandingSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<SkydiveConfig>(),
+                SkydiveCourseLayout.ShelfYs,
+                SkydiveCourseLayout.SpawnY,
+                SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
+
             builder.Register<FinishTrackingSystem>(Lifetime.Singleton);
             // 도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
             // 러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다.
-            // 레이저·문을 결승선보다 먼저 물려, 맞은 그 틱에 결승 통과로도 잡히지 않게 한다.
+            //
+            // 아래 네 시스템끼리의 등록 순서는 결승 판정에는 영향이 없다 — FinishState는
+            // world.Tick(러너가 이 End 페이즈보다 먼저 부른다) 안의 SkydiveWorld.Detection이
+            // 이미 확정해 두고, FinishTrackingSystem은 그 결과를 옮겨 담을 뿐 스스로 판정하지
+            // 않는다(FinishSystem.cs 참고). 그래서 레이저·문·착지가 End 안에서 FinishTrackingSystem보다
+            // 앞이든 뒤든 결승 통과 여부는 달라지지 않는다.
+            //
+            // 진짜 지켜야 하는 불변식은 "부활은 다음 틱의 world.Tick보다 먼저 끝나 있어야 한다"이다.
+            // LandingImpact는 착지한 바로 그 틱에만 값이 있고, 다음 틱 이동이 자동으로 0으로 비운다
+            // (SkydiveWorld.MoveBlockedByMap) — 부활이 프레임을 하나라도 건너뛰어 미뤄지면, 다음
+            // world.Tick의 Detection이 이미 비어 버린 충격값과 죽은 자리(아직 안 되돌려진 위치)를
+            // 보고 치명 착지를 완주로 잘못 인정한다. Update.End 안 어디에 물려 있든 이 조건은
+            // 지켜진다 — 프레임을 건너 미루는 실수만 이 조건을 깬다.
             builder.RegisterBuildCallback(container =>
             {
-                //  레이저·문을 결승보다 먼저 문다 — 결승선에 닿는 그 틱에 맞았다면 완주가 아니라 피격이다.
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<SkydiveLaserSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<SkydiveDoorSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<SkydiveLandingSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<FinishTrackingSystem>());
             });

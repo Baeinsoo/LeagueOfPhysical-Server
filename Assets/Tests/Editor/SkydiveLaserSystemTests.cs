@@ -17,7 +17,8 @@ namespace LOP.Tests
                 bodyRadius: 0.4f, bodyHeight: 1.8f, groundY: 0f,
                 staminaMax: 100f, glideDrain: 20f, groundRecover: 40f, emergencyGlideTime: 1f,
                 groundMoveSpeed: 4f, groundAccel: 100f, jumpPower: 11f, poseClearance: 5f, fallBrake: 150f,
-                glideWindLag: 0.2f, spreadWindLag: 2.06f, diveWindLag: 3.1f);
+                glideWindLag: 0.2f, spreadWindLag: 2.06f, diveWindLag: 3.1f,
+                landingLethalSpeed: 15f);
 
         //  선반 1800과 1400 사이, x축을 따라 통로를 가로지르는 고정 빔.
         static Laser CrossingLaser()

@@ -89,11 +89,45 @@ namespace LOP.Tests
             system.Tick(0, 0.02f);
             Vector3 afterRespawn = GameFramework.World.EntityMotionExtensions.GetPosition(diver);
 
-            //  다음 틱: 이동이 아직 안 돌아 충격 값은 그대로다. 그래도 두 번 되돌리면 안 된다는
-            //  뜻이 아니라, 부활이 속도를 지웠는지를 본다 — 그것이 죽음 반복 루프를 막는 유일한 장치다.
+            //  다음 틱: 이동이 아직 안 돌아 충격 값은 그대로다. 죽음 반복을 막는 주된 장치는 사실
+            //  따로 있다 — 다음 틱 이동(SkydiveWorld.MoveBlockedByMap)이 "이미 서 있던" 다이버의
+            //  LandingImpact를 자동으로 0으로 비운다. 여기서 보는 속도 지우기는 그와 별개의
+            //  보조 장치다: 부활 직후에도 치명 낙하 속도가 그대로 남아 있으면 물리 팔로워·스냅샷이
+            //  잠깐이라도 그 속도를 그대로 비추기 때문에 지운다.
             Assert.That(GameFramework.World.EntityMotionExtensions.GetVelocity(diver).magnitude,
                         Is.EqualTo(0f).Within(1e-3f), "부활이 속도를 안 지웠다 — 다음 틱에 또 죽는다");
             Assert.That(afterRespawn.y, Is.GreaterThan(10f));
+        }
+
+        /// <summary>
+        /// 같은 틱에 레이저·문이 먼저 이 다이버를 부활시켜 놓은 경우를 흉내낸다. 착지 충격은
+        /// 그 사고와 무관하게(이동이 이미 이 틱에 적어 둔 값이라) 남아 있는데, 그걸 그대로 두면
+        /// SkydiveLandingSystem이 "방금 부활한 자리"를 죽은 자리로 알고 선반을 한 번 더 되돌려
+        /// 한 사고에 두 구간을 잃는다. 한 사고는 한 구간만 잃어야 한다.
+        /// </summary>
+        [Test]
+        public void 같은_틱에_먼저_부활했으면_착지가_두_번_되돌리지_않는다()
+        {
+            var registry = new GameFramework.World.EntityRegistry();
+            //  1000과 1400 사이(800)에서 죽었다고 하면 마지막으로 지난 선반은 1000이다.
+            var diver = Diver("a", 800f);
+            diver.Get<LandingImpact>().DownwardSpeed = 60f;
+            registry.Add(diver);
+
+            //  이 틱의 더 앞선 시스템(레이저/문)이 다른 사고로 이미 부활시켰다고 가정한다.
+            int order = 0;
+            SkydiveRespawn.To(diver, 800f, Config(),
+                              SkydiveCourseLayout.ShelfYs, SkydiveCourseLayout.SpawnY,
+                              SkydiveCourseLayout.RespawnPoints, ref order);
+            float shelfYAfterFirstRespawn = GameFramework.World.EntityMotionExtensions.GetPosition(diver).y;
+
+            //  착지 충격은 그 부활과 무관하게 아직 60으로 남아 있을 수 있다(고치기 전 코드) —
+            //  이 시스템이 그 낡은 값을 보고 또 되돌리면 안 된다.
+            System(registry).Tick(0, 0.02f);
+
+            float shelfYAfterLandingTick = GameFramework.World.EntityMotionExtensions.GetPosition(diver).y;
+            Assert.AreEqual(shelfYAfterFirstRespawn, shelfYAfterLandingTick, 0.001f,
+                "같은 사고인데 착지 판정이 선반을 한 번 더 되돌렸다 — 한 사고에 두 구간을 잃었다");
         }
     }
 }

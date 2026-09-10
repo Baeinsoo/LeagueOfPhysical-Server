@@ -23,6 +23,13 @@ namespace LOP
                 c.Resolve<FinishLineBounds>(), FinishAxis.Y, increasing: false), Lifetime.Singleton);
             // 맵 씬의 DoorVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
             builder.Register<DoorField>(Lifetime.Singleton);
+            //  전 축으로 밀린다 — 사람이 옆으로도 밀려나는 게임이다(Flappy는 세로만).
+            //  값은 클라와 반드시 같아야 한다. 다르면 예측이 권위와 갈려 러버밴딩이 난다.
+            builder.Register(c => new BodyCollisionSystem(
+                c.Resolve<SkydiveConfig>().BodyRadius,
+                c.Resolve<SkydiveConfig>().BodyHeight,
+                c.Resolve<SkydiveConfig>().Restitution,
+                UnityEngine.Vector3.one), Lifetime.Singleton);
             builder.Register<GameFramework.World.IWorld>(c => new SkydiveWorld(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
@@ -32,6 +39,7 @@ namespace LOP
                 c.Resolve<FinishSystem>(),
                 c.Resolve<WindField>(),
                 c.Resolve<DoorField>(),
+                c.Resolve<BodyCollisionSystem>(),
                 c.Resolve<SkydiveConfig>(),
                 c.Resolve<GameFramework.Physics.ICollisionQuery>(),
                 c.Resolve<GameFramework.World.IMotionBridge>(),
@@ -77,8 +85,8 @@ namespace LOP
             // 앞이든 뒤든 결승 통과 여부는 달라지지 않는다.
             //
             // 진짜 지켜야 하는 불변식은 "부활은 다음 틱의 world.Tick보다 먼저 끝나 있어야 한다"이다.
-            // LandingImpact는 착지한 바로 그 틱에만 값이 있고, 다음 틱 이동이 자동으로 0으로 비운다
-            // (SkydiveWorld.MoveBlockedByMap) — 부활이 프레임을 하나라도 건너뛰어 미뤄지면, 다음
+            // LandingImpact는 착지한 바로 그 틱에만 값이 있고, 다음 틱에 접지를 다시 확정하는 단계가
+            // 0으로 비운다(SkydiveWorld.SettleGroundAndImpact) — 부활이 프레임을 하나라도 건너뛰어 미뤄지면, 다음
             // world.Tick의 Detection이 이미 비어 버린 충격값과 죽은 자리(아직 안 되돌려진 위치)를
             // 보고 치명 착지를 완주로 잘못 인정한다. Update.End 안 어디에 물려 있든 이 조건은
             // 지켜진다 — 프레임을 건너 미루는 실수만 이 조건을 깬다.

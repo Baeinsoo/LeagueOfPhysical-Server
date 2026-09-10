@@ -18,7 +18,8 @@ namespace LOP.Tests
                 staminaMax: 100f, glideDrain: 20f, groundRecover: 40f, emergencyGlideTime: 1f,
                 groundMoveSpeed: 4f, groundAccel: 100f, jumpPower: 11f, poseClearance: 5f, fallBrake: 150f,
                 glideWindLag: 0.2f, spreadWindLag: 2.06f, diveWindLag: 3.1f,
-                landingLethalSpeed: 15f);
+                landingLethalSpeed: 15f,
+                restitution: 0.35f);
 
         //  문 중심(0,100,0), HalfWidth/HalfDepth=5, Thickness=0.5. 몸(반지름 0.4, 키 1.8)이
         //  y=99.8에 있으면 캡슐이 [100.2, 101.2]가 되어 패널(99.75~100.25)에 걸린다 —

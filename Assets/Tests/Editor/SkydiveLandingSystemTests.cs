@@ -16,7 +16,8 @@ namespace LOP.Tests
                 staminaMax: 100f, glideDrain: 20f, groundRecover: 40f, emergencyGlideTime: 1f,
                 groundMoveSpeed: 4f, groundAccel: 100f, jumpPower: 11f, poseClearance: 5f, fallBrake: 150f,
                 glideWindLag: 0.2f, spreadWindLag: 2.06f, diveWindLag: 3.1f,
-                landingLethalSpeed: 15f);
+                landingLethalSpeed: 15f,
+                restitution: 0.35f);
 
         //  SkydiveDoorSystemTests의 조립을 그대로 따른다 — 판정 대상 집합이 어긋나면 안 되므로
         //  다이버를 만드는 방식도 같아야 한다.

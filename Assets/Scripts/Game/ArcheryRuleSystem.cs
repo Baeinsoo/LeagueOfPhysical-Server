@@ -31,6 +31,10 @@ namespace LOP
             // 사대 위치는 맵이 정한다 — 룰이 좌표를 들고 있으면 맵을 새로 만들 때마다 룰을 고쳐야 한다.
             var slots = SpawnPlacement.Arrange(
                 UnityEngine.Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None));
+            if (slots.Count == 0)
+            {
+                Debug.LogWarning("[Archery] 맵에 SpawnPoint가 없다 — 원 둘레에 등간격으로 세운다");
+            }
 
             var playerList = roomDataStore.match.playerList;
             for (int i = 0; i < playerList.Length; i++)

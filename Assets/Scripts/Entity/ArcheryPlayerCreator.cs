@@ -30,6 +30,14 @@ namespace LOP
             worldEntity.Add(new ArcheryAim());
             worldEntity.Add(new InputBuffer());
             worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 몸을 시뮬한다
+
+            // 걷지는 않지만 EntityBinder가 모든 엔티티에 물리 몸을 붙인다 — 모양과 종류가 없으면
+            // PhysicsBodyFactory가 거기서 예외를 던진다. 클라와 같은 치수를 써야 예측이 안 어긋난다.
+            worldEntity.Add(new GameFramework.World.CapsuleShape(
+                BodySizes.CharacterRadius, BodySizes.CharacterHeight));
+            worldEntity.Add(new GameFramework.World.PhysicsConfig(
+                GameFramework.World.BodyKind.Kinematic, freezeRotation: true, isTrigger: false));
+
             entityRegistry.Add(worldEntity);
 
             Debug.Log($"[World] Registered archer {worldEntity.Id}");

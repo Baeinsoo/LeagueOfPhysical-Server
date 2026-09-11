@@ -99,6 +99,12 @@ namespace LOP
                 Vertical = command.Vertical,
                 Jump = command.Jump,
                 AbilityId = command.AbilityId,
+                // 발사는 이산 사건이라 스냅샷 표본으로는 놓친다 — 조준·당김은 입력 채널로
+                // 나른다(자세·대시는 EntitySnap 소관이라 여기서 옮기지 않는다).
+                AimYaw = command.AimYaw,
+                AimPitch = command.AimPitch,
+                Drawing = command.Drawing,
+                Release = command.Release,
             };
         }
     }

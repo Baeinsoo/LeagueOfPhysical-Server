@@ -1,0 +1,253 @@
+using System.Collections.Generic;
+using GameFramework.World;
+using NUnit.Framework;
+using UnityEngine;
+
+namespace LOP.Tests
+{
+    public class ArcheryHitSystemTests
+    {
+        const float TickInterval = 0.02f;
+        const long StartTick = 1000;
+        const ulong Seed = 0xABCDEFUL;
+
+        sealed class FixedSeed : IMatchSeed
+        {
+            public ulong Value { get; set; }
+        }
+
+        static ArcheryConfig Config()
+            => new ArcheryConfig(
+                wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
+                spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.4f,
+                kinds: new[]
+                {
+                    new ArcheryTargetKind(0.60f, 1, 50),
+                    new ArcheryTargetKind(0.40f, 2, 35),
+                    new ArcheryTargetKind(0.25f, 4, 15),
+                });
+
+        sealed class Fixture
+        {
+            public ArcheryHitSystem System;
+            public EntityRegistry Registry;
+            public ArcheryWorld World;
+            public ArcheryConfig Config;
+            public ArcheryWaveState WaveState;
+
+            public Entity Archer(string id)
+            {
+                var entity = new Entity(id);
+                entity.Add(new GameFramework.World.Transform());
+                entity.Add(new Velocity());
+                entity.Add(new ArcheryScore());
+                Registry.Add(entity);
+                return entity;
+            }
+
+            public int ScoreOf(string id) => Registry.Get(id).Get<ArcheryScore>().Value;
+
+            public List<ArcheryTarget> TargetsOfWave(int wave)
+            {
+                var targets = new List<ArcheryTarget>();
+                ArcheryWaveGenerator.Fill(targets, Seed, wave, Config);
+                return targets;
+            }
+
+            public int HitEventCount()
+            {
+                int count = 0;
+                foreach (var e in World.EventBuffer.Snapshot)
+                {
+                    if (e is ArcheryTargetHitEvent) { count++; }
+                }
+                return count;
+            }
+        }
+
+        static Fixture Build(long startTick)
+        {
+            var registry = new EntityRegistry();
+            var config = Config();
+            var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(), TickInterval);
+            world.GameplayStartTick = startTick;
+            var waveState = new ArcheryWaveState();
+
+            return new Fixture
+            {
+                Registry = registry,
+                World = world,
+                Config = config,
+                WaveState = waveState,
+                System = new ArcheryHitSystem(
+                    world, registry, world.EventBuffer, config,
+                    new FixedSeed { Value = Seed }, waveState, TickInterval),
+            };
+        }
+
+        /// <summary>
+        /// 과녁 한가운데를 정확히 지나가는 화살 한 발. 한 틱(0.02초)에 정확히 <paramref name="distance"/>
+        /// 만큼 나아가게 속도를 잡아, 그 틱의 선분이 −z 쪽 <paramref name="distance"/>에서 시작해
+        /// 과녁 중심에서 끝나게 한다. 멀리서 출발할수록 선분 위에서 늦게 닿는다.
+        /// </summary>
+        static ArcheryShot ShotThrough(string shooterId, long fireTick, ArcheryTarget target, float distance)
+        {
+            Vector3 origin = target.Center + new Vector3(0f, 0f, -distance);
+            return new ArcheryShot(shooterId, fireTick, origin, new Vector3(0f, 0f, distance / TickInterval));
+        }
+
+        [Test]
+        public void 과녁을_지나간_화살은_점수가_된다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(target.Points, f.ScoreOf("a"));
+        }
+
+        [Test]
+        public void 적중은_사건으로도_남는다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(1, f.HitEventCount());
+        }
+
+        [Test]
+        public void 먹힌_과녁은_웨이브_상태에_남는다()
+        {
+            //  이 마스크가 곧 클라에 나가는 값이다 — 사건을 놓친(재접속한) 사람은 이것만 보고
+            //  어느 과녁이 사라졌는지 안다.
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(0, f.WaveState.WaveIndex);
+            Assert.IsTrue(f.WaveState.IsConsumed(target.SlotIndex));
+        }
+
+        [Test]
+        public void 웨이브가_넘어가면_먹힌_기록이_비워진다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+            //  다음 웨이브로 넘긴다(주기 88틱).
+            f.System.Tick(StartTick + 88, TickInterval);
+
+            Assert.AreEqual(1, f.WaveState.WaveIndex);
+            Assert.AreEqual(0, f.WaveState.ConsumedMask);
+        }
+
+        [Test]
+        public void 먹힌_과녁은_두_번_먹히지_않는다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            f.Archer("b");
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            //  b가 한 틱 뒤에 같은 자리를 지나가도 이미 사라진 과녁이다.
+            f.World.IngestRemoteShot(ShotThrough("b", StartTick + 1, target, 1.0f));
+            f.System.Tick(StartTick + 2, TickInterval);
+
+            Assert.AreEqual(target.Points, f.ScoreOf("a"));
+            Assert.AreEqual(0, f.ScoreOf("b"));
+        }
+
+        [Test]
+        public void 같은_틱에_두_발이_닿으면_먼저_닿은_쪽이_먹는다()
+        {
+            var f = Build(StartTick);
+            f.Archer("near");
+            f.Archer("far");
+            var target = f.TargetsOfWave(0)[0];
+
+            //  둘 다 이번 틱에 과녁 중심에서 끝나지만, 가까이서 출발한 쪽이 선분 위에서 먼저 닿는다
+            //  (1 − r/d 가 d가 커질수록 크다).
+            f.World.IngestRemoteShot(ShotThrough("far", StartTick, target, 2.0f));
+            f.World.IngestRemoteShot(ShotThrough("near", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(target.Points, f.ScoreOf("near"));
+            Assert.AreEqual(0, f.ScoreOf("far"));
+        }
+
+        [Test]
+        public void 맞은_화살은_다른_과녁을_또_맞히지_않는다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var targets = f.TargetsOfWave(0);
+
+            //  첫 과녁을 먹은 화살이, 다음 틱에 둘째 과녁 자리에 있어도 다시 먹지 않는다.
+            //  (실제로 두 과녁을 잇는 궤적을 만들기 어려우므로, 같은 화살을 두 틱 굴려
+            //   점수가 한 번만 오르는 것으로 확인한다.)
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, targets[0], 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+            f.System.Tick(StartTick + 2, TickInterval);
+
+            Assert.AreEqual(targets[0].Points, f.ScoreOf("a"));
+        }
+
+        [Test]
+        public void 빗나간_화살은_아무_일도_안_만든다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            //  과녁보다 100m 위를 지나간다.
+            var origin = target.Center + new Vector3(0f, 100f, -1f);
+            f.World.IngestRemoteShot(new ArcheryShot("a", StartTick, origin, new Vector3(0f, 0f, 50f)));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(0, f.ScoreOf("a"));
+            Assert.AreEqual(0, f.HitEventCount());
+        }
+
+        [Test]
+        public void 출발_전에는_판정하지_않는다()
+        {
+            var f = Build(long.MaxValue);       // 아직 출발 틱을 모른다
+            f.Archer("a");
+
+            //  웨이브가 없으므로 과녁 자리도 없다 — 원점을 지나는 화살을 넣어 본다.
+            f.World.IngestRemoteShot(new ArcheryShot("a", 0, new Vector3(0f, 3f, -1f), new Vector3(0f, 0f, 50f)));
+            f.System.Tick(10, TickInterval);
+
+            Assert.AreEqual(0, f.ScoreOf("a"));
+            Assert.AreEqual(0, f.HitEventCount());
+        }
+
+        [Test]
+        public void 몸이_사라진_사람의_화살도_판을_죽이지_않는다()
+        {
+            var f = Build(StartTick);           // 쏜 사람을 등록하지 않는다(나간 사람)
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("gone", StartTick, target, 1.0f));
+
+            Assert.DoesNotThrow(() => f.System.Tick(StartTick + 1, TickInterval));
+            Assert.AreEqual(1, f.HitEventCount());   // 과녁은 먹힌다 — 점수만 갈 데가 없을 뿐
+        }
+    }
+}

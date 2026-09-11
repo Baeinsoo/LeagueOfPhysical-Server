@@ -11,12 +11,16 @@ namespace LOP
 
         protected override void ConfigureGame(IContainerBuilder builder)
         {
+            builder.Register<ArcheryConfigProvider>(Lifetime.Singleton);
+            builder.Register<ArcheryConfig>(c => c.Resolve<ArcheryConfigProvider>().Get(), Lifetime.Singleton);
+
             builder.Register<ArcheryAimSystem>(Lifetime.Singleton);
-            builder.Register<GameFramework.World.IWorld>(c => new ArcheryWorld(
+            builder.Register<ArcheryWorld>(c => new ArcheryWorld(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
                 c.Resolve<ArcheryAimSystem>(),
-                TickInterval), Lifetime.Singleton);
+                TickInterval), Lifetime.Singleton)
+                .As<GameFramework.World.IWorld>().AsSelf();
 
             builder.Register<ICharacterCreator, ArcheryPlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, ArcheryRuleSystem>(Lifetime.Singleton);

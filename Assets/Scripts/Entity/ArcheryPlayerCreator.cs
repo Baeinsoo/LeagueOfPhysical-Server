@@ -28,6 +28,7 @@ namespace LOP
             worldEntity.Add(new EntityKind(EntityType.Character));
             worldEntity.Add(new Appearance(creationData.visualId));
             worldEntity.Add(new ArcheryAim());
+            worldEntity.Add(new ArcheryScore());
             // 이 몸이 누구 것인지. 서버 공용 시스템들이 이걸로 엔티티→유저→세션을 찾는다 —
             // 없으면 InputTimingFeedbackSystem이 null을 키로 조회하다 터지고, 그 예외가 틱 루프를
             // 통째로 죽인다(실측: 틱 360에서 시뮬 정지).

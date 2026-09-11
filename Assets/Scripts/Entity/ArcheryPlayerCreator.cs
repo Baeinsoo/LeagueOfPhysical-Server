@@ -28,6 +28,13 @@ namespace LOP
             worldEntity.Add(new EntityKind(EntityType.Character));
             worldEntity.Add(new Appearance(creationData.visualId));
             worldEntity.Add(new ArcheryAim());
+            // 이 몸이 누구 것인지. 서버 공용 시스템들이 이걸로 엔티티→유저→세션을 찾는다 —
+            // 없으면 InputTimingFeedbackSystem이 null을 키로 조회하다 터지고, 그 예외가 틱 루프를
+            // 통째로 죽인다(실측: 틱 360에서 시뮬 정지).
+            if (string.IsNullOrEmpty(creationData.userId) == false)
+            {
+                worldEntity.Add(new GameFramework.World.Ownership(creationData.userId));
+            }
             worldEntity.Add(new InputBuffer());
             worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 몸을 시뮬한다
 

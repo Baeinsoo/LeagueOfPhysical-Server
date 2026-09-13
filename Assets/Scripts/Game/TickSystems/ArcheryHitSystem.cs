@@ -155,7 +155,7 @@ namespace LOP
                 var score = entityRegistry.Get(candidate.ShooterId)?.Get<ArcheryScore>();
                 if (score != null)
                 {
-                    score.Value += points;
+                    score.Gained += points;
                 }
 
                 eventBuffer.Append(new ArcheryTargetHitEvent(

@@ -368,11 +368,23 @@ namespace LOP
 
             foreach (var participant in confirmed)
             {
-                message.Placements.Add(new MatchPlacementInfo
+                var info = new MatchPlacementInfo
                 {
                     UserId = participant.userId,
                     Placement = participant.placement,
-                });
+                };
+
+                //  자루는 점수 개념이 없는 모드에선 null로 온다 — 그때는 빈 map을 그대로 내보낸다.
+                //  proto의 map 필드는 대입이 아니라 Add로만 채울 수 있다.
+                if (participant.stats != null)
+                {
+                    foreach (var pair in participant.stats)
+                    {
+                        info.Stats.Add(pair.Key, pair.Value);
+                    }
+                }
+
+                message.Placements.Add(info);
 
                 if (participant.userId == userId)
                 {

@@ -8,9 +8,11 @@ namespace LOP
     /// </summary>
     public static class ScorePlacements
     {
-        public static MatchOutcome Resolve(IReadOnlyList<(string userId, int score)> scores)
+        //  stats는 등수와 무관한 곁다리 짐이다 — 정렬 기준(score)에 안 끼워 넣어야
+        //  기존 등수 규칙(공동 순위·id tie-break)이 그대로 유지된다.
+        public static MatchOutcome Resolve(IReadOnlyList<(string userId, int score, Dictionary<string, int> stats)> scores)
         {
-            var sorted = new List<(string userId, int score)>(scores);
+            var sorted = new List<(string userId, int score, Dictionary<string, int> stats)>(scores);
             //  점수가 같으면 사람 id로 갈라 순서를 못박는다 — 안 그러면 목록에 담긴 차례(딕셔너리
             //  순회 순서)가 결과 화면의 줄 순서를 정해 판마다 달라진다.
             sorted.Sort((a, b) =>
@@ -27,7 +29,12 @@ namespace LOP
                 {
                     placement = i + 1;
                 }
-                outcome.placements.Add(new MatchPlacement { userId = sorted[i].userId, placement = placement });
+                outcome.placements.Add(new MatchPlacement
+                {
+                    userId = sorted[i].userId,
+                    placement = placement,
+                    stats = sorted[i].stats,
+                });
             }
             return outcome;
         }

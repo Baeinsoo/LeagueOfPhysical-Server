@@ -88,6 +88,9 @@ namespace LOP
                 //  아래 Skydive 전용 필드와 같은 방식이다.
                 snap.FinishPlacement = worldEntity.Get<FinishPlacement>()?.Value ?? 0;
 
+                //  이 컴포넌트가 없는 게임에는 0이 나가고 아무도 안 읽는다(finish_placement와 같은 방식).
+                snap.Score = worldEntity.Get<ArcheryScore>()?.Value ?? 0;
+
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)
                 {

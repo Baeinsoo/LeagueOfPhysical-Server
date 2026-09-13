@@ -5,7 +5,7 @@ namespace LOP
 {
     /// <summary>
     /// Archery 룰(서버). 참가자를 사대에 세우고 60초 뒤 판을 끝낸다.
-    /// <b>점수는 슬라이스 2가 여기에 붙는다</b> — 지금은 순위를 가릴 근거가 없어 전원 동순위다.
+    /// 등수는 <see cref="ArcheryScore"/>로 가린다 — 점수가 높은 사람이 앞이고 동점은 공동 순위다.
     /// </summary>
     public class ArcheryRuleSystem : IGameRuleSystem
     {
@@ -16,12 +16,14 @@ namespace LOP
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
+        private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
-        public ArcheryRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner)
+        public ArcheryRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, GameFramework.World.EntityRegistry entityRegistry)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
+            this.entityRegistry = entityRegistry;
         }
 
         public void Initialize()
@@ -77,21 +79,17 @@ namespace LOP
         /// <summary>50Hz × 60초.</summary>
         public long MatchDurationTicks => 3000;
 
-        /// <summary>
-        /// 점수가 없으므로 전원 동순위다. 슬라이스 2가 점수를 진행도로 넘긴다.
-        /// </summary>
+        /// <summary>점수가 높은 사람이 앞이다. 동점은 공동 순위.</summary>
         public MatchOutcome ResolveOutcome()
         {
-            var unfinished = new List<(string userId, float progress)>();
+            var scores = new List<(string userId, int score)>();
             foreach (var pair in entityIdToUserId)
             {
-                unfinished.Add((pair.Value, 0f));
+                //  판이 끝나기 전에 몸이 사라진 사람(나간 사람)은 점수를 0으로 본다.
+                int score = entityRegistry.Get(pair.Key)?.Get<ArcheryScore>()?.Value ?? 0;
+                scores.Add((pair.Value, score));
             }
-
-            // 첫 인자는 도착 기록 목록(FinishRecord)이다 — 문자열이 아니다. 이 게임엔 결승선이 없어 빈 목록.
-            return FinishPlacements.Resolve(
-                System.Array.Empty<FinishRecord>(), entityIdToUserId,
-                unfinished, System.Array.Empty<string>(), new List<string>());
+            return ScorePlacements.Resolve(scores);
         }
     }
 }

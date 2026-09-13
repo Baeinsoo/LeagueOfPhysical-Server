@@ -78,7 +78,7 @@ namespace LOP
             }
 
             CollectCandidates(tick);
-            ApplyCandidates(wave);
+            ApplyCandidates();
             ForgetOldArrows(tick);
         }
 
@@ -121,7 +121,7 @@ namespace LOP
             }
         }
 
-        private void ApplyCandidates(int wave)
+        private void ApplyCandidates()
         {
             if (candidates.Count == 0)
             {

@@ -76,12 +76,23 @@ namespace LOP.Tests
                 }
                 return count;
             }
+
+            public int LastHitPoints()
+            {
+                int points = 0;
+                foreach (var e in World.EventBuffer.Snapshot)
+                {
+                    if (e is ArcheryTargetHitEvent hit) { points = hit.points; }
+                }
+                return points;
+            }
         }
 
-        static Fixture Build(long startTick)
+        static Fixture Build(long startTick) => Build(startTick, Config());
+
+        static Fixture Build(long startTick, ArcheryConfig config)
         {
             var registry = new EntityRegistry();
-            var config = Config();
             var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(), TickInterval);
             world.GameplayStartTick = startTick;
             var waveState = new ArcheryWaveState();
@@ -107,6 +118,18 @@ namespace LOP.Tests
         {
             Vector3 origin = target.Center + new Vector3(0f, 0f, -distance);
             return new ArcheryShot(shooterId, fireTick, origin, new Vector3(0f, 0f, distance / TickInterval));
+        }
+
+        //  함정만 든 판. 비율을 1로 두고 함정 종류를 하나만 넣으면 뜨는 과녁이 전부 그것이다.
+        static ArcheryConfig TrapOnlyConfig()
+        {
+            var kinds = new[] { new ArcheryTargetKind(0.50f, -5, 100, true) };
+            return new ArcheryConfig(
+                wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
+                spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
+                trapRatioMin: 1f, trapRatioMax: 1f,
+                shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
+                kinds: kinds);
         }
 
         [Test]
@@ -261,6 +284,53 @@ namespace LOP.Tests
 
             Assert.DoesNotThrow(() => f.System.Tick(StartTick + 1, TickInterval));
             Assert.AreEqual(1, f.HitEventCount());   // 과녁은 먹힌다 — 점수만 갈 데가 없을 뿐
+        }
+
+        [Test]
+        public void 함정을_맞히면_점수가_깎인다()
+        {
+            var f = Build(StartTick, TrapOnlyConfig());
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+            Assert.IsTrue(target.IsTrap, "함정만 든 설정인데 성한 과녁이 떴다");
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(-5, f.ScoreOf("a"));
+            Assert.AreEqual(0, f.Registry.Get("a").Get<ArcheryScore>().Gained);
+            Assert.AreEqual(5, f.Registry.Get("a").Get<ArcheryScore>().Lost);
+        }
+
+        //  연출용 값도 부호가 맞아야 화면에 "-5"로 뜬다.
+        [Test]
+        public void 함정_적중_사건은_음수를_싣는다()
+        {
+            var f = Build(StartTick, TrapOnlyConfig());
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(1, f.HitEventCount());
+            Assert.AreEqual(-5, f.LastHitPoints());
+        }
+
+        //  성한 과녁은 예전 그대로여야 한다 — 규칙 함수를 끼우면서 획득이 벌점 칸으로 새면
+        //  합계는 맞고 결과 화면의 내역만 틀린다(눈에 안 띈다).
+        [Test]
+        public void 성한_과녁은_획득_칸에만_쌓인다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(target.Points, f.Registry.Get("a").Get<ArcheryScore>().Gained);
+            Assert.AreEqual(0, f.Registry.Get("a").Get<ArcheryScore>().Lost);
         }
     }
 }

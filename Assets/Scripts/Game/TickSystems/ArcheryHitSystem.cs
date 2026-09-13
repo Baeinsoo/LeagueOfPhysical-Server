@@ -149,30 +149,32 @@ namespace LOP
                     continue;
                 }
 
-                int points = PointsOfSlot(candidate.Slot);
+                //  무슨 일이 일어나는지는 여기서 정하지 않는다 — 공유 규칙 함수 하나가 정한다.
+                var outcome = ArcheryHitRules.Resolve(TargetOfSlot(candidate.Slot));
                 spentArrows.Add((candidate.ShooterId, candidate.FireTick));
 
                 var score = entityRegistry.Get(candidate.ShooterId)?.Get<ArcheryScore>();
                 if (score != null)
                 {
-                    score.Gained += points;
+                    score.Gained += outcome.Gained;
+                    score.Lost += outcome.Lost;
                 }
 
                 eventBuffer.Append(new ArcheryTargetHitEvent(
-                    candidate.ShooterId, candidate.FireTick, points));
+                    candidate.ShooterId, candidate.FireTick, outcome.Delta));
             }
         }
 
-        private int PointsOfSlot(int slot)
+        private ArcheryTarget TargetOfSlot(int slot)
         {
             for (int i = 0; i < targets.Count; i++)
             {
                 if (targets[i].SlotIndex == slot)
                 {
-                    return targets[i].Points;
+                    return targets[i];
                 }
             }
-            return 0;
+            return default;
         }
 
         // 수명이 다한 화살은 목록에서도 사라지므로 기록을 들고 있을 이유가 없다.

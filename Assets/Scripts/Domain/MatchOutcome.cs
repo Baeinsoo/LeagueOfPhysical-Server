@@ -14,5 +14,8 @@ namespace LOP
     {
         public string userId;
         public int placement;
+
+        // 모드별 결과 지표. 키는 모드가 정한다(활쏘기: ArcheryStatKeys). 점수 개념이 없는 모드는 비운다.
+        public Dictionary<string, int> stats;
     }
 }

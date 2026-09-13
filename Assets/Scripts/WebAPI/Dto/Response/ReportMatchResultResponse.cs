@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace LOP
 {
     public class ReportMatchResultResponse : HttpResponse
@@ -11,5 +13,6 @@ namespace LOP
         public int placement;
         public int mmrBefore;
         public int mmrAfter;
+        public Dictionary<string, int> stats;
     }
 }

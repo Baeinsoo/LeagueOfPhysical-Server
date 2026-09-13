@@ -82,12 +82,23 @@ namespace LOP
         /// <summary>점수가 높은 사람이 앞이다. 동점은 공동 순위.</summary>
         public MatchOutcome ResolveOutcome()
         {
-            var scores = new List<(string userId, int score)>();
+            var scores = new List<(string userId, int score, Dictionary<string, int> stats)>();
             foreach (var pair in entityIdToUserId)
             {
-                //  판이 끝나기 전에 몸이 사라진 사람(나간 사람)은 점수를 0으로 본다.
-                int score = entityRegistry.Get(pair.Key)?.Get<ArcheryScore>()?.Value ?? 0;
-                scores.Add((pair.Value, score));
+                //  판이 끝나기 전에 몸이 사라진 사람(나간 사람)은 전부 0으로 본다.
+                var archeryScore = entityRegistry.Get(pair.Key)?.Get<ArcheryScore>();
+                int gained = archeryScore?.Gained ?? 0;
+                int lost = archeryScore?.Lost ?? 0;
+                int value = archeryScore?.Value ?? 0;
+
+                var stats = new Dictionary<string, int>
+                {
+                    [ArcheryStatKeys.Score] = value,
+                    [ArcheryStatKeys.Gained] = gained,
+                    [ArcheryStatKeys.Lost] = lost,
+                };
+
+                scores.Add((pair.Value, value, stats));
             }
             return ScorePlacements.Resolve(scores);
         }

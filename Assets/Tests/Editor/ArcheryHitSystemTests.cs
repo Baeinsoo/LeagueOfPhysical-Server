@@ -16,16 +16,27 @@ namespace LOP.Tests
             public ulong Value { get; set; }
         }
 
+        //  간격을 숫자로 적어 넣으면 배포 데이터와 조용히 어긋난다(전에 1.4였는데 데이터는 1.2였다).
+        //  기준은 종류에서 뽑는다 — 가장 큰 과녁 둘이 딱 맞닿는 거리 = 최대 반경 x 2.
         static ArcheryConfig Config()
+        {
+            var kinds = new[]
+            {
+                new ArcheryTargetKind(0.60f, 1, 50),
+                new ArcheryTargetKind(0.40f, 2, 35),
+                new ArcheryTargetKind(0.25f, 4, 15),
+            };
+
+            //  최대 반경은 설정이 스스로 계산한다 — 간격을 0으로 둔 설정을 한 번 만들어 빌려 온다.
+            float touching = Build(kinds, 0f).MaxTargetRadius * 2f;
+            return Build(kinds, touching);
+        }
+
+        static ArcheryConfig Build(ArcheryTargetKind[] kinds, float minSeparation)
             => new ArcheryConfig(
                 wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
-                spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.4f,
-                kinds: new[]
-                {
-                    new ArcheryTargetKind(0.60f, 1, 50),
-                    new ArcheryTargetKind(0.40f, 2, 35),
-                    new ArcheryTargetKind(0.25f, 4, 15),
-                });
+                spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: minSeparation,
+                kinds: kinds);
 
         sealed class Fixture
         {

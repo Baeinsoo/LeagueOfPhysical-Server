@@ -22,9 +22,9 @@ namespace LOP.Tests
         {
             var kinds = new[]
             {
-                new ArcheryTargetKind(0.60f, 1, 50),
-                new ArcheryTargetKind(0.40f, 2, 35),
-                new ArcheryTargetKind(0.25f, 4, 15),
+                new ArcheryTargetKind(0.60f, 1, 50, false),
+                new ArcheryTargetKind(0.40f, 2, 35, false),
+                new ArcheryTargetKind(0.25f, 4, 15, false),
             };
 
             //  최대 반경은 설정이 스스로 계산한다 — 간격을 0으로 둔 설정을 한 번 만들어 빌려 온다.

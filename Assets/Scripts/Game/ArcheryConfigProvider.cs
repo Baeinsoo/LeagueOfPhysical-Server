@@ -35,7 +35,8 @@ namespace LOP
             //  같은 이름과 겹쳐서, 이름을 적는 순간 늘 풀네임으로 구분해야 한다.
             foreach (var row in System.Linq.Enumerable.OrderBy(md.Tables.TbArcheryTarget.DataList, x => x.Id))
             {
-                kinds.Add(new ArcheryTargetKind(row.Radius, row.Points, row.Weight));
+                //  아직 마스터데이터에 함정 칸이 없다 — Task 2에서 실제 컬럼으로 바꾼다.
+                kinds.Add(new ArcheryTargetKind(row.Radius, row.Points, row.Weight, false));
             }
             if (kinds.Count == 0)
             {

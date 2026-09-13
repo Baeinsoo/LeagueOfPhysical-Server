@@ -36,6 +36,8 @@ namespace LOP.Tests
             => new ArcheryConfig(
                 wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: minSeparation,
+                trapRatioMin: 0f, trapRatioMax: 0f,
+                shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
                 kinds: kinds);
 
         sealed class Fixture

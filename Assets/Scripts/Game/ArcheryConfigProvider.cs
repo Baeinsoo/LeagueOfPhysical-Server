@@ -47,6 +47,9 @@ namespace LOP
             return new ArcheryConfig(
                 r.WavePeriodTicks, r.MinTargets, r.MaxTargets,
                 r.SpawnRadius, r.SpawnMinY, r.SpawnMaxY, r.MinSeparation,
+                //  아직 데이터에 칸이 없다 — Task 4에서 마스터데이터를 구운 뒤 실제 컬럼으로 바꾼다.
+                trapRatioMin: 0f, trapRatioMax: 0f,
+                shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
                 kinds);
         }
     }

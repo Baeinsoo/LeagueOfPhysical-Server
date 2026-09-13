@@ -132,6 +132,20 @@ namespace LOP.Tests
                 kinds: kinds);
         }
 
+        //  함정 점수를 양수로 적어 둔 데이터. ArcheryHitRules가 부호를 정규화하므로 결과는
+        //  음수로 적었을 때와 같아야 한다 — 이 설정이 "그냥 Points를 그대로 싣는" 옛 방식과
+        //  진짜 위임을 갈라 준다(음수 데이터로는 둘이 같은 값을 내서 안 갈린다).
+        static ArcheryConfig PositiveTrapConfig()
+        {
+            var kinds = new[] { new ArcheryTargetKind(0.50f, 5, 100, true) };
+            return new ArcheryConfig(
+                wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
+                spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
+                trapRatioMin: 1f, trapRatioMax: 1f,
+                shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
+                kinds: kinds);
+        }
+
         [Test]
         public void 과녁을_지나간_화살은_점수가_된다()
         {
@@ -314,6 +328,24 @@ namespace LOP.Tests
             f.System.Tick(StartTick + 1, TickInterval);
 
             Assert.AreEqual(1, f.HitEventCount());
+            Assert.AreEqual(-5, f.LastHitPoints());
+        }
+
+        [Test]
+        public void 함정_점수를_양수로_적어도_벌점이_되고_사건은_음수를_싣는다()
+        {
+            var f = Build(StartTick, PositiveTrapConfig());
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+            Assert.IsTrue(target.IsTrap, "함정만 든 설정인데 성한 과녁이 떴다");
+            Assert.AreEqual(5, target.Points, "이 판의 함정은 점수를 양수로 적어 둔 것이어야 한다");
+
+            f.World.IngestRemoteShot(ShotThrough("a", StartTick, target, 1.0f));
+            f.System.Tick(StartTick + 1, TickInterval);
+
+            Assert.AreEqual(-5, f.ScoreOf("a"));
+            Assert.AreEqual(0, f.Registry.Get("a").Get<ArcheryScore>().Gained);
+            Assert.AreEqual(5, f.Registry.Get("a").Get<ArcheryScore>().Lost);
             Assert.AreEqual(-5, f.LastHitPoints());
         }
 

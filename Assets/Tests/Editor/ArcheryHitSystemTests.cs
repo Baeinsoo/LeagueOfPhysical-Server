@@ -38,6 +38,7 @@ namespace LOP.Tests
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: minSeparation,
                 trapRatioMin: 0f, trapRatioMax: 0f,
                 shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
+                riseHeightMin: 1.2f, riseHeightMax: 2.4f, staggerTicks: 12, restTicks: 20,
                 kinds: kinds);
 
         sealed class Fixture
@@ -129,6 +130,7 @@ namespace LOP.Tests
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
                 trapRatioMin: 1f, trapRatioMax: 1f,
                 shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
+                riseHeightMin: 1.2f, riseHeightMax: 2.4f, staggerTicks: 12, restTicks: 20,
                 kinds: kinds);
         }
 
@@ -143,6 +145,7 @@ namespace LOP.Tests
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
                 trapRatioMin: 1f, trapRatioMax: 1f,
                 shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
+                riseHeightMin: 1.2f, riseHeightMax: 2.4f, staggerTicks: 12, restTicks: 20,
                 kinds: kinds);
         }
 

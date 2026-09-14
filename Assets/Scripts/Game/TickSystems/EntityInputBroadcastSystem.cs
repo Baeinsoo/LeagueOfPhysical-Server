@@ -105,6 +105,7 @@ namespace LOP
                 AimPitch = command.AimPitch,
                 Drawing = command.Drawing,
                 Release = command.Release,
+                DrawRatio = command.DrawRatio,
             };
         }
     }

@@ -399,21 +399,23 @@ namespace LOP.Tests
             Assert.AreEqual(target.Points, f.ScoreOf("a"));
         }
 
-        //  솟기 전 과녁은 무대 아래에 있다 — 그 자리를 쏴도 맞으면 안 된다.
+        //  솟기 전 과녁은 아직 무대에 박혀 있다 — 그 자리를 쏴도 맞으면 안 된다.
+        //
+        //  **첫 슬롯으로는 이걸 잴 수 없다.** 슬롯 0은 웨이브가 시작하는 그 틱에 솟으므로
+        //  "솟기 전"이라는 시점 자체가 없다. 뒤 슬롯은 12틱씩 밀려 솟으니 그 사이를 노린다.
         [Test]
         public void 솟기_전_과녁은_못_맞힌다()
         {
             var f = Build(StartTick);
             f.Archer("a");
-            var target = f.TargetsOfWave(0)[0];
+            var targets = f.TargetsOfWave(0);
+            Assert.Greater(targets.Count, 1, "뒤 슬롯이 있어야 '솟기 전'을 잴 수 있다");
 
-            //  아직 안 솟은 시점. 출발점을 정확히 지나가게 쏜다.
+            var target = targets[1];
             long earlyTick = target.SpawnTick - 5;
-            if (earlyTick <= StartTick)
-            {
-                Assert.Ignore("첫 슬롯은 웨이브 시작과 동시에 솟아 '솟기 전'이 없다");
-            }
+            Assert.Greater(earlyTick, StartTick, "노린 시점이 웨이브 시작보다 앞서면 안 된다");
 
+            //  아직 안 솟았으므로 과녁은 출발점에 있다. 그 자리를 정확히 지나가게 쏜다.
             f.World.IngestRemoteShot(ShotThrough("a", earlyTick - 1, target, 1.0f));
             f.System.Tick(earlyTick, TickInterval);
 

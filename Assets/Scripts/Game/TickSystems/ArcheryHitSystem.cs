@@ -72,7 +72,7 @@ namespace LOP
 
             if (wave != waveState.WaveIndex)
             {
-                ArcheryWaveGenerator.Fill(targets, matchSeed.Value, wave, config);
+                ArcheryWaveGenerator.Fill(targets, matchSeed.Value, wave, config, world.GameplayStartTick);
                 // 지난 웨이브의 과녁은 이미 사라졌다 — 기록을 들고 있을 이유가 없다.
                 waveState.BeginWave(wave);
             }
@@ -113,7 +113,25 @@ namespace LOP
                     {
                         continue;
                     }
-                    if (ArcheryHitTest.SegmentHitsSphere(from, to, targets[i].Center, targets[i].Radius, out float t))
+
+                    //  화살 선분은 [tick-1, tick] 구간이다. 과녁을 tick에서만 재면 반 틱 어긋나므로
+                    //  구간 가운데를 그 구간의 대표 시각으로 삼는다. 한 틱에 과녁이 자기 반지름보다
+                    //  적게 움직이므로 그 사이 정지한 것으로 봐도 된다(테스트가 그 조건을 지킨다).
+                    //
+                    //  있는 자리와 살아 있는지를 **같은 시각**으로 묻는다. 다른 시각으로 물으면
+                    //  뜨고 지는 경계에서 "자리는 여기인데 이미 죽었다"가 되어, 반 틱(10ms)만큼
+                    //  맞았는데 점수가 안 나는 구간이 생긴다.
+                    double at = tick - 0.5;
+
+                    //  아직 안 솟았거나 이미 떨어진 과녁은 없는 것이다.
+                    if (ArcheryTargetMotion.IsAlive(targets[i], at, tickInterval) == false)
+                    {
+                        continue;
+                    }
+
+                    Vector3 targetAt = ArcheryTargetMotion.PositionAt(targets[i], at, tickInterval);
+
+                    if (ArcheryHitTest.SegmentHitsSphere(from, to, targetAt, targets[i].Radius, out float t))
                     {
                         candidates.Add(new Candidate(t, shot.ShooterId, shot.FireTick, targets[i].SlotIndex));
                     }

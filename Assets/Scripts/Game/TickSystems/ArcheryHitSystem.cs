@@ -72,7 +72,7 @@ namespace LOP
 
             if (wave != waveState.WaveIndex)
             {
-                ArcheryWaveGenerator.Fill(targets, matchSeed.Value, wave, config);
+                ArcheryWaveGenerator.Fill(targets, matchSeed.Value, wave, config, world.GameplayStartTick);
                 // 지난 웨이브의 과녁은 이미 사라졌다 — 기록을 들고 있을 이유가 없다.
                 waveState.BeginWave(wave);
             }

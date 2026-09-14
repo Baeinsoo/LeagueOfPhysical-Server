@@ -64,7 +64,7 @@ namespace LOP.Tests
             public List<ArcheryTarget> TargetsOfWave(int wave)
             {
                 var targets = new List<ArcheryTarget>();
-                ArcheryWaveGenerator.Fill(targets, Seed, wave, Config);
+                ArcheryWaveGenerator.Fill(targets, Seed, wave, Config, World.GameplayStartTick);
                 return targets;
             }
 

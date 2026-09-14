@@ -18,13 +18,15 @@ namespace LOP.Tests
 
         //  간격을 숫자로 적어 넣으면 배포 데이터와 조용히 어긋난다(전에 1.4였는데 데이터는 1.2였다).
         //  기준은 종류에서 뽑는다 — 가장 큰 과녁 둘이 딱 맞닿는 거리 = 최대 반경 x 2.
+        //  가장 작은 종류의 반지름(0.20)도 배포 `#ArcheryTarget.xlsx`의 최솟값과 같아야 한다 —
+        //  안 맞으면 "한 틱에 반지름보다 적게 움직인다" 뚫림 검사가 실제보다 늦게 울린다.
         static ArcheryConfig Config()
         {
             var kinds = new[]
             {
                 new ArcheryTargetKind(0.60f, 1, 50, false),
                 new ArcheryTargetKind(0.40f, 2, 35, false),
-                new ArcheryTargetKind(0.25f, 4, 15, false),
+                new ArcheryTargetKind(0.20f, 4, 15, false),
             };
 
             //  최대 반경은 설정이 스스로 계산한다 — 간격을 0으로 둔 설정을 한 번 만들어 빌려 온다.

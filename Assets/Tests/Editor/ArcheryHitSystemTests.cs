@@ -116,7 +116,7 @@ namespace LOP.Tests
         /// </summary>
         static ArcheryShot ShotThrough(string shooterId, long fireTick, ArcheryTarget target, float distance)
         {
-            Vector3 origin = target.Center + new Vector3(0f, 0f, -distance);
+            Vector3 origin = target.Origin + new Vector3(0f, 0f, -distance);
             return new ArcheryShot(shooterId, fireTick, origin, new Vector3(0f, 0f, distance / TickInterval));
         }
 
@@ -266,7 +266,7 @@ namespace LOP.Tests
             var target = f.TargetsOfWave(0)[0];
 
             //  과녁보다 100m 위를 지나간다.
-            var origin = target.Center + new Vector3(0f, 100f, -1f);
+            var origin = target.Origin + new Vector3(0f, 100f, -1f);
             f.World.IngestRemoteShot(new ArcheryShot("a", StartTick, origin, new Vector3(0f, 0f, 50f)));
             f.System.Tick(StartTick + 1, TickInterval);
 

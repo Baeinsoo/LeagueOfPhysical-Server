@@ -113,7 +113,7 @@ namespace LOP
                     {
                         continue;
                     }
-                    if (ArcheryHitTest.SegmentHitsSphere(from, to, targets[i].Center, targets[i].Radius, out float t))
+                    if (ArcheryHitTest.SegmentHitsSphere(from, to, targets[i].Origin, targets[i].Radius, out float t))
                     {
                         candidates.Add(new Candidate(t, shot.ShooterId, shot.FireTick, targets[i].SlotIndex));
                     }

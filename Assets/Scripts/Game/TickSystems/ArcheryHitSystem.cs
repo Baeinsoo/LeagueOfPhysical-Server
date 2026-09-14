@@ -113,7 +113,19 @@ namespace LOP
                     {
                         continue;
                     }
-                    if (ArcheryHitTest.SegmentHitsSphere(from, to, targets[i].Origin, targets[i].Radius, out float t))
+
+                    //  아직 안 솟았거나 이미 떨어진 과녁은 없는 것이다.
+                    if (ArcheryTargetMotion.IsAlive(targets[i], tick, tickInterval) == false)
+                    {
+                        continue;
+                    }
+
+                    //  화살 선분은 [tick-1, tick] 구간인데 과녁을 tick에서만 재면 반 틱 어긋난다 —
+                    //  구간 가운데의 자리를 쓴다. 한 틱에 과녁이 자기 반지름보다 적게 움직이므로
+                    //  그 사이 정지한 것으로 봐도 된다(테스트가 그 조건을 지킨다).
+                    Vector3 targetAt = ArcheryTargetMotion.PositionAt(targets[i], tick - 0.5, tickInterval);
+
+                    if (ArcheryHitTest.SegmentHitsSphere(from, to, targetAt, targets[i].Radius, out float t))
                     {
                         candidates.Add(new Candidate(t, shot.ShooterId, shot.FireTick, targets[i].SlotIndex));
                     }

@@ -121,6 +121,21 @@ namespace LOP.Tests
             return new ArcheryShot(shooterId, fireTick, origin, new Vector3(0f, 0f, distance / TickInterval));
         }
 
+        /// <summary>
+        /// 그 틱에 과녁이 있을 자리를 정확히 지나가는 화살. 과녁이 움직이므로 "어디로 쏘나"가
+        /// 아니라 "언제 어디에 있을 것인가"를 먼저 풀어야 한다.
+        /// </summary>
+        static ArcheryShot ShotThroughMoving(string shooterId, long fireTick, in ArcheryTarget target,
+                                             long hitTick, float distance)
+        {
+            //  판정이 재는 것과 같은 시각(구간 가운데)의 자리를 노린다.
+            Vector3 at = ArcheryTargetMotion.PositionAt(target, hitTick - 0.5, TickInterval);
+            Vector3 origin = at + new Vector3(0f, 0f, -distance);
+            float seconds = (hitTick - fireTick) * TickInterval;
+            //  한 틱 만에 닿게 잡으면 위 선분이 정확히 그 자리에서 끝난다.
+            return new ArcheryShot(shooterId, fireTick, origin, new Vector3(0f, 0f, distance / seconds));
+        }
+
         //  함정만 든 판. 비율을 1로 두고 함정 종류를 하나만 넣으면 뜨는 과녁이 전부 그것이다.
         static ArcheryConfig TrapOnlyConfig()
         {
@@ -366,6 +381,79 @@ namespace LOP.Tests
 
             Assert.AreEqual(target.Points, f.Registry.Get("a").Get<ArcheryScore>().Gained);
             Assert.AreEqual(0, f.Registry.Get("a").Get<ArcheryScore>().Lost);
+        }
+
+        //  과녁이 움직이므로 "지금 있는 자리"로 쏘면 빗나간다 — 닿을 때 있을 자리를 노려야 한다.
+        [Test]
+        public void 움직이는_과녁도_맞힐_수_있다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            //  솟는 도중의 한 시점을 노린다.
+            long hitTick = target.SpawnTick + 20;
+            f.World.IngestRemoteShot(ShotThroughMoving("a", hitTick - 1, target, hitTick, 1.0f));
+            f.System.Tick(hitTick, TickInterval);
+
+            Assert.AreEqual(target.Points, f.ScoreOf("a"));
+        }
+
+        //  솟기 전 과녁은 무대 아래에 있다 — 그 자리를 쏴도 맞으면 안 된다.
+        [Test]
+        public void 솟기_전_과녁은_못_맞힌다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            //  아직 안 솟은 시점. 출발점을 정확히 지나가게 쏜다.
+            long earlyTick = target.SpawnTick - 5;
+            if (earlyTick <= StartTick)
+            {
+                Assert.Ignore("첫 슬롯은 웨이브 시작과 동시에 솟아 '솟기 전'이 없다");
+            }
+
+            f.World.IngestRemoteShot(ShotThrough("a", earlyTick - 1, target, 1.0f));
+            f.System.Tick(earlyTick, TickInterval);
+
+            Assert.AreEqual(0, f.ScoreOf("a"));
+        }
+
+        //  떨어진 과녁도 마찬가지다. 수명이 지나면 무대 아래로 사라진 것이다.
+        [Test]
+        public void 떨어진_과녁은_못_맞힌다()
+        {
+            var f = Build(StartTick);
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            long lateTick = target.SpawnTick + Mathf.CeilToInt(target.LifetimeSeconds / TickInterval) + 5;
+            f.World.IngestRemoteShot(ShotThroughMoving("a", lateTick - 1, target, lateTick, 1.0f));
+            f.System.Tick(lateTick, TickInterval);
+
+            Assert.AreEqual(0, f.ScoreOf("a"));
+        }
+
+        //  "한 틱 동안 과녁이 정지한 것으로 봐도 된다"는 근사에 기대고 있다. 그 전제는
+        //  과녁이 한 틱에 자기 반지름보다 적게 움직인다는 것이다 — 높이를 올리면 깨진다.
+        //  가장 높이 솟는 경우로 재야 한다(그게 제일 빠르다).
+        [Test]
+        public void 과녁은_한_틱에_자기_반지름보다_적게_움직인다()
+        {
+            var config = Config();
+            float perTick = ArcheryTargetMotion.RiseSpeedFor(config.RiseHeightMax) * TickInterval;
+
+            float smallest = float.MaxValue;
+            for (int i = 0; i < config.Kinds.Count; i++)
+            {
+                smallest = Mathf.Min(smallest, config.Kinds[i].Radius);
+            }
+
+            Assert.Less(perTick, smallest,
+                $"가장 높이 솟는 과녁이 한 틱에 {perTick:F3}m 움직이는데 가장 작은 과녁 반지름이 "
+                + $"{smallest:F3}m다 — 판정이 과녁을 뚫고 지나갈 수 있다. rise_height_max를 낮추거나 "
+                + "가장 작은 과녁을 키워야 한다");
         }
     }
 }

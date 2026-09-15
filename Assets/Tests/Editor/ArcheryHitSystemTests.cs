@@ -24,9 +24,9 @@ namespace LOP.Tests
         {
             var kinds = new[]
             {
-                new ArcheryTargetKind(0.60f, 1, 50, false),
-                new ArcheryTargetKind(0.40f, 2, 35, false),
-                new ArcheryTargetKind(0.20f, 4, 15, false),
+                new ArcheryTargetKind(0.60f, 1, 50, false, ArcheryTargetShape.Sphere, null),
+                new ArcheryTargetKind(0.40f, 2, 35, false, ArcheryTargetShape.Sphere, null),
+                new ArcheryTargetKind(0.20f, 4, 15, false, ArcheryTargetShape.Sphere, null),
             };
 
             //  최대 반경은 설정이 스스로 계산한다 — 간격을 0으로 둔 설정을 한 번 만들어 빌려 온다.
@@ -141,7 +141,7 @@ namespace LOP.Tests
         //  함정만 든 판. 비율을 1로 두고 함정 종류를 하나만 넣으면 뜨는 과녁이 전부 그것이다.
         static ArcheryConfig TrapOnlyConfig()
         {
-            var kinds = new[] { new ArcheryTargetKind(0.50f, -5, 100, true) };
+            var kinds = new[] { new ArcheryTargetKind(0.50f, -5, 100, true, ArcheryTargetShape.Sphere, null) };
             return new ArcheryConfig(
                 wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
@@ -156,7 +156,7 @@ namespace LOP.Tests
         //  진짜 위임을 갈라 준다(음수 데이터로는 둘이 같은 값을 내서 안 갈린다).
         static ArcheryConfig PositiveTrapConfig()
         {
-            var kinds = new[] { new ArcheryTargetKind(0.50f, 5, 100, true) };
+            var kinds = new[] { new ArcheryTargetKind(0.50f, 5, 100, true, ArcheryTargetShape.Sphere, null) };
             return new ArcheryConfig(
                 wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,

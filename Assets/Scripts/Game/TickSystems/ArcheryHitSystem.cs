@@ -168,7 +168,8 @@ namespace LOP
                 }
 
                 //  무슨 일이 일어나는지는 여기서 정하지 않는다 — 공유 규칙 함수 하나가 정한다.
-                var outcome = ArcheryHitRules.Resolve(TargetOfSlot(candidate.Slot));
+                //  맞은 자리를 실제로 넘기는 것은 Task 4 — 지금은 컴파일만 맞춘다.
+                var outcome = ArcheryHitRules.Resolve(TargetOfSlot(candidate.Slot), 0f);
                 spentArrows.Add((candidate.ShooterId, candidate.FireTick));
 
                 var score = entityRegistry.Get(candidate.ShooterId)?.Get<ArcheryScore>();

@@ -24,9 +24,9 @@ namespace LOP.Tests
         {
             var kinds = new[]
             {
-                new ArcheryTargetKind(0.60f, 1, 50, false),
-                new ArcheryTargetKind(0.40f, 2, 35, false),
-                new ArcheryTargetKind(0.20f, 4, 15, false),
+                new ArcheryTargetKind(0.60f, 1, 50, false, ArcheryTargetShape.Sphere, null),
+                new ArcheryTargetKind(0.40f, 2, 35, false, ArcheryTargetShape.Sphere, null),
+                new ArcheryTargetKind(0.20f, 4, 15, false, ArcheryTargetShape.Sphere, null),
             };
 
             //  최대 반경은 설정이 스스로 계산한다 — 간격을 0으로 둔 설정을 한 번 만들어 빌려 온다.
@@ -141,7 +141,7 @@ namespace LOP.Tests
         //  함정만 든 판. 비율을 1로 두고 함정 종류를 하나만 넣으면 뜨는 과녁이 전부 그것이다.
         static ArcheryConfig TrapOnlyConfig()
         {
-            var kinds = new[] { new ArcheryTargetKind(0.50f, -5, 100, true) };
+            var kinds = new[] { new ArcheryTargetKind(0.50f, -5, 100, true, ArcheryTargetShape.Sphere, null) };
             return new ArcheryConfig(
                 wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
@@ -156,7 +156,7 @@ namespace LOP.Tests
         //  진짜 위임을 갈라 준다(음수 데이터로는 둘이 같은 값을 내서 안 갈린다).
         static ArcheryConfig PositiveTrapConfig()
         {
-            var kinds = new[] { new ArcheryTargetKind(0.50f, 5, 100, true) };
+            var kinds = new[] { new ArcheryTargetKind(0.50f, 5, 100, true, ArcheryTargetShape.Sphere, null) };
             return new ArcheryConfig(
                 wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
                 spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
@@ -458,6 +458,69 @@ namespace LOP.Tests
                 $"가장 높이 솟는 과녁이 한 틱에 {perTick:F3}m 움직이는데 가장 작은 과녁 반지름이 "
                 + $"{smallest:F3}m다 — 판정이 과녁을 뚫고 지나갈 수 있다. rise_height_max를 낮추거나 "
                 + "가장 작은 과녁을 키워야 한다");
+        }
+
+        //  판정이 "어디에 맞았나"를 채점까지 흘려보내야 동심원 과녁의 띠가 갈린다.
+        //  지금 배포 과녁은 띠가 하나라 점수가 안 바뀌므로, 여기서만 판 과녁을 만들어 확인한다.
+        [Test]
+        public void 판_과녁은_맞은_자리에_따라_점수가_갈린다()
+        {
+            var bands = new System.Collections.Generic.List<ArcheryRingBand>
+            {
+                new ArcheryRingBand(0.25f, 10),
+                new ArcheryRingBand(1.0f, 3),
+            };
+
+            var target = new ArcheryTarget(
+                waveIndex: 0, slotIndex: 0,
+                origin: Vector3.zero, riseSpeed: 0f, spawnTick: 0L,
+                radius: 0.4f, points: 0, isTrap: false,
+                shape: ArcheryTargetShape.Face, bands: bands,
+                facing: new Vector3(0f, 0f, -1f));
+
+            //  정중앙을 지나는 선분과, 가장자리 쪽을 지나는 선분.
+            ArcheryHitTest.SegmentHitsTarget(
+                new Vector3(0f, 0f, -1f), new Vector3(0f, 0f, 1f),
+                Vector3.zero, target, out _, out float centerOffset);
+            ArcheryHitTest.SegmentHitsTarget(
+                new Vector3(0.3f, 0f, -1f), new Vector3(0.3f, 0f, 1f),
+                Vector3.zero, target, out _, out float edgeOffset);
+
+            Assert.AreEqual(10, ArcheryHitRules.Resolve(target, centerOffset).Gained);
+            Assert.AreEqual(3, ArcheryHitRules.Resolve(target, edgeOffset).Gained);
+        }
+
+        //  판정이 구한 '맞은 자리'가 채점까지 실제로 흘러가는지를 **시스템을 지나가며** 잰다.
+        //  다른 테스트들은 판정 함수와 채점 함수를 각각 직접 불러서, 둘이 배선됐는지는 못 본다.
+        //
+        //  공은 겉면에 맞으므로 맞은 자리가 늘 가장자리(1에 가깝다)다. 그래서 띠를 둘 주면
+        //  **바깥 띠**가 나와야 한다 — 배선이 끊겨 0이 넘어가면 안쪽 띠가 나온다.
+        [Test]
+        public void 시스템이_맞은_자리를_채점까지_넘긴다()
+        {
+            const int Inner = 100;   // 배선이 끊기면 이 값이 나온다
+            const int Outer = 7;     // 제대로 흘러가면 이 값이 나온다
+
+            var bands = new List<ArcheryRingBand>
+            {
+                new ArcheryRingBand(0.5f, Inner),
+                new ArcheryRingBand(1.0f, Outer),
+            };
+            var kinds = new[]
+            {
+                new ArcheryTargetKind(0.5f, Inner, 100, false, ArcheryTargetShape.Sphere, bands),
+            };
+
+            var f = Build(StartTick, Build(kinds, minSeparation: 1.5f));
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            long hitTick = target.SpawnTick + 10;
+            f.World.IngestRemoteShot(ShotThroughMoving("a", hitTick - 1, target, hitTick, 1.0f));
+            f.System.Tick(hitTick, TickInterval);
+
+            Assert.AreEqual(Outer, f.ScoreOf("a"),
+                            "안쪽 띠 점수가 나오면 맞은 자리가 채점에 안 넘어간 것이다");
         }
     }
 }

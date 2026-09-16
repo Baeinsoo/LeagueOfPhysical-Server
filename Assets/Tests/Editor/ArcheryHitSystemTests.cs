@@ -489,5 +489,38 @@ namespace LOP.Tests
             Assert.AreEqual(10, ArcheryHitRules.Resolve(target, centerOffset).Gained);
             Assert.AreEqual(3, ArcheryHitRules.Resolve(target, edgeOffset).Gained);
         }
+
+        //  판정이 구한 '맞은 자리'가 채점까지 실제로 흘러가는지를 **시스템을 지나가며** 잰다.
+        //  다른 테스트들은 판정 함수와 채점 함수를 각각 직접 불러서, 둘이 배선됐는지는 못 본다.
+        //
+        //  공은 겉면에 맞으므로 맞은 자리가 늘 가장자리(1에 가깝다)다. 그래서 띠를 둘 주면
+        //  **바깥 띠**가 나와야 한다 — 배선이 끊겨 0이 넘어가면 안쪽 띠가 나온다.
+        [Test]
+        public void 시스템이_맞은_자리를_채점까지_넘긴다()
+        {
+            const int Inner = 100;   // 배선이 끊기면 이 값이 나온다
+            const int Outer = 7;     // 제대로 흘러가면 이 값이 나온다
+
+            var bands = new List<ArcheryRingBand>
+            {
+                new ArcheryRingBand(0.5f, Inner),
+                new ArcheryRingBand(1.0f, Outer),
+            };
+            var kinds = new[]
+            {
+                new ArcheryTargetKind(0.5f, Inner, 100, false, ArcheryTargetShape.Sphere, bands),
+            };
+
+            var f = Build(StartTick, Build(kinds, minSeparation: 1.5f));
+            f.Archer("a");
+            var target = f.TargetsOfWave(0)[0];
+
+            long hitTick = target.SpawnTick + 10;
+            f.World.IngestRemoteShot(ShotThroughMoving("a", hitTick - 1, target, hitTick, 1.0f));
+            f.System.Tick(hitTick, TickInterval);
+
+            Assert.AreEqual(Outer, f.ScoreOf("a"),
+                            "안쪽 띠 점수가 나오면 맞은 자리가 채점에 안 넘어간 것이다");
+        }
     }
 }

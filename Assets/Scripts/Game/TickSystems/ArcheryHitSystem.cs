@@ -35,13 +35,17 @@ namespace LOP
         private readonly struct Candidate
         {
             public readonly float T;
+
+            /// <summary>맞은 자리가 중심에서 얼마나 벗어났나(0~1). 채점이 띠를 찾는 데 쓴다.</summary>
+            public readonly float Offset;
+
             public readonly string ShooterId;
             public readonly long FireTick;
             public readonly int Slot;
 
-            public Candidate(float t, string shooterId, long fireTick, int slot)
+            public Candidate(float t, float offset, string shooterId, long fireTick, int slot)
             {
-                T = t; ShooterId = shooterId; FireTick = fireTick; Slot = slot;
+                T = t; Offset = offset; ShooterId = shooterId; FireTick = fireTick; Slot = slot;
             }
         }
 
@@ -131,9 +135,11 @@ namespace LOP
 
                     Vector3 targetAt = ArcheryTargetMotion.PositionAt(targets[i], at, tickInterval);
 
-                    if (ArcheryHitTest.SegmentHitsSphere(from, to, targetAt, targets[i].Radius, out float t))
+                    if (ArcheryHitTest.SegmentHitsTarget(from, to, targetAt, targets[i],
+                                                         out float t, out float offset))
                     {
-                        candidates.Add(new Candidate(t, shot.ShooterId, shot.FireTick, targets[i].SlotIndex));
+                        candidates.Add(new Candidate(t, offset, shot.ShooterId, shot.FireTick,
+                                                     targets[i].SlotIndex));
                     }
                 }
             }
@@ -168,8 +174,7 @@ namespace LOP
                 }
 
                 //  무슨 일이 일어나는지는 여기서 정하지 않는다 — 공유 규칙 함수 하나가 정한다.
-                //  맞은 자리를 실제로 넘기는 것은 Task 4 — 지금은 컴파일만 맞춘다.
-                var outcome = ArcheryHitRules.Resolve(TargetOfSlot(candidate.Slot), 0f);
+                var outcome = ArcheryHitRules.Resolve(TargetOfSlot(candidate.Slot), candidate.Offset);
                 spentArrows.Add((candidate.ShooterId, candidate.FireTick));
 
                 var score = entityRegistry.Get(candidate.ShooterId)?.Get<ArcheryScore>();

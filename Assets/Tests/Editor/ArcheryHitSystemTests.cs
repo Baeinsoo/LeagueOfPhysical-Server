@@ -459,5 +459,35 @@ namespace LOP.Tests
                 + $"{smallest:F3}m다 — 판정이 과녁을 뚫고 지나갈 수 있다. rise_height_max를 낮추거나 "
                 + "가장 작은 과녁을 키워야 한다");
         }
+
+        //  판정이 "어디에 맞았나"를 채점까지 흘려보내야 동심원 과녁의 띠가 갈린다.
+        //  지금 배포 과녁은 띠가 하나라 점수가 안 바뀌므로, 여기서만 판 과녁을 만들어 확인한다.
+        [Test]
+        public void 판_과녁은_맞은_자리에_따라_점수가_갈린다()
+        {
+            var bands = new System.Collections.Generic.List<ArcheryRingBand>
+            {
+                new ArcheryRingBand(0.25f, 10),
+                new ArcheryRingBand(1.0f, 3),
+            };
+
+            var target = new ArcheryTarget(
+                waveIndex: 0, slotIndex: 0,
+                origin: Vector3.zero, riseSpeed: 0f, spawnTick: 0L,
+                radius: 0.4f, points: 0, isTrap: false,
+                shape: ArcheryTargetShape.Face, bands: bands,
+                facing: new Vector3(0f, 0f, -1f));
+
+            //  정중앙을 지나는 선분과, 가장자리 쪽을 지나는 선분.
+            ArcheryHitTest.SegmentHitsTarget(
+                new Vector3(0f, 0f, -1f), new Vector3(0f, 0f, 1f),
+                Vector3.zero, target, out _, out float centerOffset);
+            ArcheryHitTest.SegmentHitsTarget(
+                new Vector3(0.3f, 0f, -1f), new Vector3(0.3f, 0f, 1f),
+                Vector3.zero, target, out _, out float edgeOffset);
+
+            Assert.AreEqual(10, ArcheryHitRules.Resolve(target, centerOffset).Gained);
+            Assert.AreEqual(3, ArcheryHitRules.Resolve(target, edgeOffset).Gained);
+        }
     }
 }

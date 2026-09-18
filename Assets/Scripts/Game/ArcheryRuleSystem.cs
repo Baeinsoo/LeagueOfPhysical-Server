@@ -17,34 +17,71 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly ArcheryConfig config;
+        private readonly ArcheryCourse course;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
-        public ArcheryRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, GameFramework.World.EntityRegistry entityRegistry)
+        public ArcheryRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
+                                 GameFramework.World.EntityRegistry entityRegistry,
+                                 ArcheryConfig config, ArcheryCourse course)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.entityRegistry = entityRegistry;
+            this.config = config;
+            this.course = course;
         }
 
         public void Initialize()
         {
             entityIdToUserId.Clear();
 
+            var playerList = roomDataStore.match.playerList;
+
+            //  사거리 맵은 사대가 레인 위에 있다. 원형 맵은 예전처럼 SpawnPoint를 쓴다 —
+            //  맵이 값으로 방식을 고르고, 룰은 맵 이름을 모른다.
+            var lanes = config.CourseKind == ArcheryCourseKind.Range
+                ? ArcheryRangeLayout.FromOpenScenes()
+                : null;
+
+            if (lanes != null)
+            {
+                string problem = ArcheryRangeValidation.Check(lanes, config.Range, playerList.Length);
+                if (problem != null)
+                {
+                    //  조용히 이상한 판을 시작하느니 여기서 끊는다 — 원인이 바로 보인다.
+                    throw new System.InvalidOperationException("[Archery] " + problem);
+                }
+            }
+
             // 사대 위치는 맵이 정한다 — 룰이 좌표를 들고 있으면 맵을 새로 만들 때마다 룰을 고쳐야 한다.
-            var slots = SpawnPlacement.Arrange(
-                UnityEngine.Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None));
-            if (slots.Count == 0)
+            var slots = lanes == null
+                ? SpawnPlacement.Arrange(UnityEngine.Object.FindObjectsByType<SpawnPoint>(
+                      FindObjectsInactive.Include, FindObjectsSortMode.None))
+                : null;
+            if (slots != null && slots.Count == 0)
             {
                 Debug.LogWarning("[Archery] 맵에 SpawnPoint가 없다 — 원 둘레에 등간격으로 세운다");
             }
 
-            var playerList = roomDataStore.match.playerList;
             for (int i = 0; i < playerList.Length; i++)
             {
-                Vector3 position = slots.Count > 0 ? slots[i % slots.Count] : RingSlot(i, playerList.Length);
+                Vector3 position;
+                Vector3 rotation;
 
-                // 가운데를 바라보게 세운다 — 사대는 원의 안쪽을 본다.
-                Vector3 lookAtCenter = new Vector3(0f, Mathf.Atan2(-position.x, -position.z) * Mathf.Rad2Deg, 0f);
+                if (lanes != null)
+                {
+                    //  자기 레인 사대에 서서 과녁 쪽을 본다.
+                    position = lanes.Lanes[i].ShooterPosition;
+                    var forward = lanes.Lanes[i].Forward;
+                    rotation = new Vector3(0f, Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg, 0f);
+                }
+                else
+                {
+                    position = slots.Count > 0 ? slots[i % slots.Count] : RingSlot(i, playerList.Length);
+                    // 가운데를 바라보게 세운다 — 사대는 원의 안쪽을 본다.
+                    rotation = new Vector3(0f, Mathf.Atan2(-position.x, -position.z) * Mathf.Rad2Deg, 0f);
+                }
 
                 string entityId = entitySpawner.GenerateEntityId();
                 entityIdToUserId[entityId] = playerList[i];
@@ -56,7 +93,7 @@ namespace LOP
                     visualId = BodyVisualId,
                     characterCode = "",
                     position = position,
-                    rotation = lookAtCenter,
+                    rotation = rotation,
                     velocity = Vector3.zero,
                 });
             }
@@ -76,8 +113,11 @@ namespace LOP
         /// <summary>이 슬라이스에는 끝낼 조건이 없다 — 시간만으로 끝난다.</summary>
         public bool IsMatchOver => false;
 
-        /// <summary>50Hz × 60초.</summary>
-        public long MatchDurationTicks => 3000;
+        /// <summary>
+        /// 이 판의 길이. <b>맵이 정한다</b> — 원형 맵은 데이터에 적힌 60초(3000틱),
+        /// 사거리 맵은 순서가 다 지나가는 데 걸리는 시간이다(화살이 남아도 거기서 끝난다).
+        /// </summary>
+        public long MatchDurationTicks => course.MatchDurationTicks;
 
         /// <summary>점수가 높은 사람이 앞이다. 동점은 공동 순위.</summary>
         public MatchOutcome ResolveOutcome()

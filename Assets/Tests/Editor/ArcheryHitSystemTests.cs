@@ -165,7 +165,7 @@ namespace LOP.Tests
                              System.Func<ArcheryRangeLayout> layoutSource = null)
         {
             var registry = new EntityRegistry();
-            var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(), TickInterval);
+            var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(config), TickInterval);
             world.GameplayStartTick = startTick;
             var waveState = new ArcheryWaveState();
             var course = new ArcheryCourse(

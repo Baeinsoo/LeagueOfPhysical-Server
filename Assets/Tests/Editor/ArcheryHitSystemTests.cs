@@ -49,6 +49,7 @@ namespace LOP.Tests
             public EntityRegistry Registry;
             public ArcheryWorld World;
             public ArcheryConfig Config;
+            public ArcheryCourse Course;
             public ArcheryWaveState WaveState;
 
             public Entity Archer(string id)
@@ -66,7 +67,7 @@ namespace LOP.Tests
             public List<ArcheryTarget> TargetsOfWave(int wave)
             {
                 var targets = new List<ArcheryTarget>();
-                ArcheryWaveGenerator.Fill(targets, Seed, wave, Config, World.GameplayStartTick);
+                Course.Fill(targets, wave, World.GameplayStartTick);
                 return targets;
             }
 
@@ -93,22 +94,28 @@ namespace LOP.Tests
 
         static Fixture Build(long startTick) => Build(startTick, Config());
 
-        static Fixture Build(long startTick, ArcheryConfig config)
+        static Fixture Build(long startTick, ArcheryConfig config,
+                             string[] owners = null,
+                             System.Func<ArcheryRangeLayout> layoutSource = null)
         {
             var registry = new EntityRegistry();
             var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(), TickInterval);
             world.GameplayStartTick = startTick;
             var waveState = new ArcheryWaveState();
+            var course = new ArcheryCourse(
+                config, new FixedSeed { Value = Seed },
+                owners ?? new[] { "user-a" }, TickInterval,
+                //  웨이브 판은 레인이 없다 — 빈 레이아웃이 정상이다.
+                layoutSource ?? (() => ArcheryRangeLayout.From(new ArcheryLane[0])));
 
             return new Fixture
             {
                 Registry = registry,
                 World = world,
                 Config = config,
+                Course = course,
                 WaveState = waveState,
-                System = new ArcheryHitSystem(
-                    world, registry, world.EventBuffer, config,
-                    new FixedSeed { Value = Seed }, waveState, TickInterval),
+                System = new ArcheryHitSystem(world, registry, world.EventBuffer, course, waveState, TickInterval),
             };
         }
 

@@ -113,9 +113,21 @@ namespace LOP
                 Vector3 from = ArcheryTrajectory.PositionAt(shot, fromSeconds);
                 Vector3 to = ArcheryTrajectory.PositionAt(shot, toSeconds);
 
+                //  누가 쏜 화살인가. 예약된 과녁은 주인만 가져간다 —
+                //  엔티티 id가 아니라 userId로 비교한다(과녁은 매치 시작 명단으로 예약되므로).
+                string shooterUserId = entityRegistry.Get(shot.ShooterId)
+                    ?.Get<GameFramework.World.Ownership>()?.OwnerId ?? string.Empty;
+
                 for (int i = 0; i < targets.Count; i++)
                 {
                     if (waveState.IsConsumed(targets[i].SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    //  남의 과녁이면 여기서 끝난다 — 점수도 없고 과녁도 안 사라진다.
+                    //  (사라지게 두면 남의 과녁을 태워 버리는 방해가 열린다.)
+                    if (ArcheryHitRules.CanTake(targets[i], shooterUserId) == false)
                     {
                         continue;
                     }

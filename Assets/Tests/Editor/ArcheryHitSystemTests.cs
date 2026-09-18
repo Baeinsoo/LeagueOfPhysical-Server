@@ -62,6 +62,14 @@ namespace LOP.Tests
                 return entity;
             }
 
+            //  사거리 판은 "누가 쏜 화살인가"를 userId로 가린다 — 몸에 주인을 박아 둬야 한다.
+            public Entity Archer(string id, string userId)
+            {
+                var entity = Archer(id);
+                entity.Add(new Ownership(userId));
+                return entity;
+            }
+
             public int ScoreOf(string id) => Registry.Get(id).Get<ArcheryScore>().Value;
 
             public List<ArcheryTarget> TargetsOfWave(int wave)
@@ -90,6 +98,64 @@ namespace LOP.Tests
                 }
                 return points;
             }
+        }
+
+        //  레인 몇 개와 그 앞 과녁 자리 하나로 이루어진 임시 씬. EditMode에서도 GameObject는 만들 수 있다.
+        sealed class RangeScene : System.IDisposable
+        {
+            private readonly List<GameObject> spawned = new List<GameObject>();
+
+            public ArcheryRangeLayout Layout { get; }
+
+            public RangeScene(int laneCount, float distance)
+            {
+                var lanes = new List<ArcheryLane>();
+                for (int i = 0; i < laneCount; i++)
+                {
+                    var root = new GameObject("lane" + i);
+                    spawned.Add(root);
+                    //  레인을 10m씩 떼어 놓는다 — 옆 레인 과녁이 실수로 선분에 걸리지 않게.
+                    root.transform.position = new Vector3(i * 10f, 0f, 0f);
+
+                    var lane = root.AddComponent<ArcheryLane>();
+                    lane.Order = i;
+
+                    var stand = new GameObject("stand0");
+                    stand.transform.SetParent(root.transform);
+                    stand.transform.localPosition = new Vector3(0f, 1.3f, distance);
+                    lane.Stands = new[] { stand.transform };
+
+                    lanes.Add(lane);
+                }
+                Layout = ArcheryRangeLayout.From(lanes);
+            }
+
+            public void Dispose()
+            {
+                foreach (var go in spawned) { Object.DestroyImmediate(go); }
+            }
+        }
+
+        //  자리 하나짜리 사거리 설정. 과녁은 제자리에 서 있으므로(솟지 않으므로) 쏘기가 쉽다.
+        static ArcheryConfig RangeConfig()
+        {
+            var face = new ArcheryTargetKind(0.61f, 5, 0, false, ArcheryTargetShape.Face, null);
+            var stands = new[] { new ArcheryRangeStand(0, 20f, 200) };
+
+            return new ArcheryConfig(
+                wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
+                spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
+                trapRatioMin: 0f, trapRatioMax: 0f,
+                shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
+                riseHeightMin: 1.2f, riseHeightMax: 2.4f, staggerTicks: 12, restTicks: 20,
+                kinds: new[] { face },
+                courseKind: ArcheryCourseKind.Range, matchDurationTicks: 0,
+                range: new ArcheryRangeSettings(face, stands, 25));
+        }
+
+        static Fixture BuildRange(long startTick, RangeScene scene, params string[] owners)
+        {
+            return Build(startTick, RangeConfig(), owners, () => scene.Layout);
         }
 
         static Fixture Build(long startTick) => Build(startTick, Config());
@@ -529,6 +595,43 @@ namespace LOP.Tests
 
             Assert.AreEqual(Outer, f.ScoreOf("a"),
                             "안쪽 띠 점수가 나오면 맞은 자리가 채점에 안 넘어간 것이다");
+        }
+
+        [Test]
+        public void 남의_과녁은_맞혀도_아무_일이_없다()
+        {
+            using (var scene = new RangeScene(laneCount: 2, distance: 20f))
+            {
+                var f = BuildRange(StartTick, scene, "user-a", "user-b");
+                f.Archer("e-a", "user-a");
+
+                //  슬롯 1은 user-b의 과녁이다. user-a의 화살이 한가운데를 지나가게 쏜다.
+                var theirs = f.TargetsOfWave(0)[1];
+                f.World.IngestRemoteShot(ShotThrough("e-a", StartTick, theirs, 1.0f));
+                f.System.Tick(StartTick + 1, TickInterval);
+
+                Assert.AreEqual(0, f.ScoreOf("e-a"), "남의 과녁으로 점수가 났다");
+                Assert.IsFalse(f.WaveState.IsConsumed(theirs.SlotIndex),
+                    "남의 화살에 과녁이 사라졌다 — 태워 버리는 방해가 열린다");
+            }
+        }
+
+        [Test]
+        public void 주인이_맞히면_점수가_나고_과녁이_사라진다()
+        {
+            using (var scene = new RangeScene(laneCount: 2, distance: 20f))
+            {
+                var f = BuildRange(StartTick, scene, "user-a", "user-b");
+                f.Archer("e-b", "user-b");
+
+                //  바로 위 시험과 **같은 판, 같은 과녁, 같은 화살**이고 쏜 사람만 다르다.
+                var theirs = f.TargetsOfWave(0)[1];
+                f.World.IngestRemoteShot(ShotThrough("e-b", StartTick, theirs, 1.0f));
+                f.System.Tick(StartTick + 1, TickInterval);
+
+                Assert.Greater(f.ScoreOf("e-b"), 0, "주인이 맞혔는데 점수가 안 났다");
+                Assert.IsTrue(f.WaveState.IsConsumed(theirs.SlotIndex));
+            }
         }
     }
 }

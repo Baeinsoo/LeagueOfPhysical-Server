@@ -18,8 +18,7 @@ namespace LOP
         private readonly ArcheryWorld world;
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly GameFramework.World.WorldEventBuffer eventBuffer;
-        private readonly ArcheryConfig config;
-        private readonly IMatchSeed matchSeed;
+        private readonly ArcheryCourse course;
         private readonly float tickInterval;
 
         private readonly ArcheryWaveState waveState;
@@ -52,33 +51,36 @@ namespace LOP
         public ArcheryHitSystem(ArcheryWorld world,
                                 GameFramework.World.EntityRegistry entityRegistry,
                                 GameFramework.World.WorldEventBuffer eventBuffer,
-                                ArcheryConfig config,
-                                IMatchSeed matchSeed,
+                                ArcheryCourse course,
                                 ArcheryWaveState waveState,
                                 float tickInterval)
         {
             this.world = world;
             this.entityRegistry = entityRegistry;
             this.eventBuffer = eventBuffer;
-            this.config = config;
-            this.matchSeed = matchSeed;
+            this.course = course;
             this.waveState = waveState;
             this.tickInterval = tickInterval;
         }
 
         public void Tick(long tick, float deltaTime)
         {
-            int wave = ArcheryWaveGenerator.WaveIndexAt(tick, world.GameplayStartTick, config);
-            if (wave < 0)
+            int step = course.IndexAt(tick, world.GameplayStartTick);
+            if (step < 0)
             {
                 return;   // 아직 출발 전
             }
-
-            if (wave != waveState.WaveIndex)
+            //  사거리 코스는 순서가 끝나면 더 이상 과녁이 없다(웨이브 맵은 StepCount가 0이라 안 걸린다).
+            if (course.StepCount > 0 && step >= course.StepCount)
             {
-                ArcheryWaveGenerator.Fill(targets, matchSeed.Value, wave, config, world.GameplayStartTick);
-                // 지난 웨이브의 과녁은 이미 사라졌다 — 기록을 들고 있을 이유가 없다.
-                waveState.BeginWave(wave);
+                return;
+            }
+
+            if (step != waveState.WaveIndex)
+            {
+                course.Fill(targets, step, world.GameplayStartTick);
+                // 지난 묶음의 과녁은 이미 사라졌다 — 기록을 들고 있을 이유가 없다.
+                waveState.BeginWave(step);
             }
 
             CollectCandidates(tick);
@@ -111,9 +113,21 @@ namespace LOP
                 Vector3 from = ArcheryTrajectory.PositionAt(shot, fromSeconds);
                 Vector3 to = ArcheryTrajectory.PositionAt(shot, toSeconds);
 
+                //  누가 쏜 화살인가. 예약된 과녁은 주인만 가져간다 —
+                //  엔티티 id가 아니라 userId로 비교한다(과녁은 매치 시작 명단으로 예약되므로).
+                string shooterUserId = entityRegistry.Get(shot.ShooterId)
+                    ?.Get<GameFramework.World.Ownership>()?.OwnerId ?? string.Empty;
+
                 for (int i = 0; i < targets.Count; i++)
                 {
                     if (waveState.IsConsumed(targets[i].SlotIndex))
+                    {
+                        continue;
+                    }
+
+                    //  남의 과녁이면 여기서 끝난다 — 점수도 없고 과녁도 안 사라진다.
+                    //  (사라지게 두면 남의 과녁을 태워 버리는 방해가 열린다.)
+                    if (ArcheryHitRules.CanTake(targets[i], shooterUserId) == false)
                     {
                         continue;
                     }

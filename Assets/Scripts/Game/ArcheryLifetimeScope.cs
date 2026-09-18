@@ -14,6 +14,14 @@ namespace LOP
             builder.Register<ArcheryConfigProvider>(Lifetime.Singleton);
             builder.Register<ArcheryConfig>(c => c.Resolve<ArcheryConfigProvider>().Get(), Lifetime.Singleton);
 
+            //  과녁이 언제 어디 서는지를 정하는 한 곳. 명단은 매치 시작 시점의 것을 그대로 쓴다 —
+            //  중간에 나간 사람이 있어도 과녁 주인이 밀리지 않게(스펙 6.2절).
+            builder.Register<ArcheryCourse>(c => new ArcheryCourse(
+                c.Resolve<ArcheryConfig>(),
+                c.Resolve<IMatchSeed>(),
+                c.Resolve<IRoomDataStore>().match.playerList,
+                TickInterval), Lifetime.Singleton);
+
             builder.Register<ArcheryAimSystem>(Lifetime.Singleton);
             builder.Register<ArcheryWorld>(c => new ArcheryWorld(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
@@ -30,8 +38,7 @@ namespace LOP
                 c.Resolve<ArcheryWorld>(),
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
-                c.Resolve<ArcheryConfig>(),
-                c.Resolve<IMatchSeed>(),
+                c.Resolve<ArcheryCourse>(),
                 c.Resolve<ArcheryWaveState>(),
                 TickInterval), Lifetime.Singleton);
             builder.Register<ArcheryStateBroadcastSystem>(Lifetime.Singleton);

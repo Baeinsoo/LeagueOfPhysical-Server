@@ -140,7 +140,7 @@ namespace LOP.Tests
         static ArcheryConfig RangeConfig()
         {
             var face = new ArcheryTargetKind(0.61f, 5, 0, false, ArcheryTargetShape.Face, null);
-            var stands = new[] { new ArcheryRangeStand(0, 20f, 200) };
+            var stands = new[] { new ArcheryRangeStand(0, 20f, 200, 0f, 0f) };
 
             return new ArcheryConfig(
                 wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
@@ -550,7 +550,8 @@ namespace LOP.Tests
                 radius: 0.4f, points: 0, isTrap: false,
                 shape: ArcheryTargetShape.Face, bands: bands,
                 facing: new Vector3(0f, 0f, -1f),
-                lifetimeSeconds: 10f, ownerUserId: string.Empty);
+                lifetimeSeconds: 10f, ownerUserId: string.Empty,
+                lateralSpan: 0f, lateralPeriod: 0f);
 
             //  정중앙을 지나는 선분과, 가장자리 쪽을 지나는 선분.
             ArcheryHitTest.SegmentHitsTarget(

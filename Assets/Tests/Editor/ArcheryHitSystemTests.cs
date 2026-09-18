@@ -476,7 +476,8 @@ namespace LOP.Tests
                 origin: Vector3.zero, riseSpeed: 0f, spawnTick: 0L,
                 radius: 0.4f, points: 0, isTrap: false,
                 shape: ArcheryTargetShape.Face, bands: bands,
-                facing: new Vector3(0f, 0f, -1f));
+                facing: new Vector3(0f, 0f, -1f),
+                lifetimeSeconds: 10f, ownerUserId: string.Empty);
 
             //  정중앙을 지나는 선분과, 가장자리 쪽을 지나는 선분.
             ArcheryHitTest.SegmentHitsTarget(

@@ -4,7 +4,9 @@ using UnityEngine;
 namespace LOP
 {
     /// <summary>
-    /// Archery 룰(서버). 참가자를 사대에 세우고 60초 뒤 판을 끝낸다.
+    /// Archery 룰(서버). 참가자를 사대에 세운다 — 원형 맵은 SpawnPoint 둘레에 등간격으로,
+    /// 사거리 맵은 자기 레인 위에. 판 길이도 맵이 고른다(<see cref="ArcheryCourse.MatchDurationTicks"/>
+    /// 로 위임) — 원형 맵은 마스터데이터에 적힌 시간, 사거리 맵은 코스(순서)가 다 지나가는 시간이다.
     /// 등수는 <see cref="ArcheryScore"/>로 가린다 — 점수가 높은 사람이 앞이고 동점은 공동 순위다.
     /// </summary>
     public class ArcheryRuleSystem : IGameRuleSystem

@@ -181,14 +181,21 @@ namespace LOP
                 {
                     continue;   // 이 화살은 이 틱에 이미 다른 과녁을 먹었다
                 }
-                //  TryConsume이 거짓이면 이 틱에 더 먼저 닿은 화살이 이미 먹은 것이다.
-                if (waveState.TryConsume(candidate.Slot) == false)
+                var target = TargetOfSlot(candidate.Slot);
+
+                //  사라지는 과녁만 여기서 자리를 잡는다. TryConsume이 거짓이면 이 틱에 더 먼저
+                //  닿은 화살이 이미 먹은 것이다.
+                //
+                //  <b>주인 있는 과녁(사거리)은 안 사라진다</b> — 자리마다 여러 발을 **같은 과녁에**
+                //  꽂는 것이 실제 양궁의 모양이고, 사라지게 두면 첫 발이 맞는 순간 남은 화살이
+                //  쏠 곳을 잃는다. 훔쳐 갈 사람은 CanTake가 이미 막았고, 무한 득점은 화살 수가 막는다.
+                if (ArcheryHitRules.ConsumedOnHit(target) && waveState.TryConsume(candidate.Slot) == false)
                 {
                     continue;
                 }
 
                 //  무슨 일이 일어나는지는 여기서 정하지 않는다 — 공유 규칙 함수 하나가 정한다.
-                var outcome = ArcheryHitRules.Resolve(TargetOfSlot(candidate.Slot), candidate.Offset);
+                var outcome = ArcheryHitRules.Resolve(target, candidate.Offset);
                 spentArrows.Add((candidate.ShooterId, candidate.FireTick));
 
                 var score = entityRegistry.Get(candidate.ShooterId)?.Get<ArcheryScore>();

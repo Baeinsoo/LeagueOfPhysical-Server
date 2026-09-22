@@ -7,6 +7,14 @@ namespace LOP.Tests
 {
     public class ArcheryHitSystemTests
     {
+        //  ArcheryWorld가 "자리마다 화살 다시 채우기"를 위해 코스를 묻는다. 여기 시험들은
+        //  **웨이브(원형) 설정**이라 StepCount가 0이고 ArrowsPerStand도 0이라 리필이 통째로
+        //  건너뛰어진다 — 즉 이 코스는 시험 내용을 바꾸지 않는다.
+        private sealed class ZeroSeed : IMatchSeed { public ulong Value => 1UL; }
+
+        private static ArcheryCourse WaveCourse(ArcheryConfig config)
+            => new ArcheryCourse(config, new ZeroSeed(), new string[0], TickInterval, () => null);
+
         const float TickInterval = 0.02f;
         const long StartTick = 1000;
         const ulong Seed = 0xABCDEFUL;
@@ -165,7 +173,7 @@ namespace LOP.Tests
                              System.Func<ArcheryRangeLayout> layoutSource = null)
         {
             var registry = new EntityRegistry();
-            var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(config), TickInterval);
+            var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(config), WaveCourse(config), TickInterval);
             world.GameplayStartTick = startTick;
             var waveState = new ArcheryWaveState();
             var course = new ArcheryCourse(

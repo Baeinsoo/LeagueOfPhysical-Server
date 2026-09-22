@@ -7,6 +7,30 @@ namespace LOP.Tests
 {
     public class ArcheryHitSystemTests
     {
+        /// <summary>물리 바디가 없는 EditMode 시험이라 아무 일도 하지 않는 빈 구현.</summary>
+        private sealed class NoopMotionBridge : GameFramework.World.IMotionBridge
+        {
+            public void SyncTransforms() { }
+            public System.Numerics.Vector3 Depenetrate(Entity entity) => System.Numerics.Vector3.Zero;
+            public void Separate(Entity entity) { }
+            public void PushMotion(Entity entity) { }
+        }
+
+        /// <summary>맵이 없는 시험 — 아무것도 안 맞는다.</summary>
+        private sealed class NeverHit : GameFramework.Physics.ICollisionQuery
+        {
+            public GameFramework.Physics.CollisionHit CapsuleCast(Vector3 p1, Vector3 p2, float radius,
+                Vector3 direction, float distance, int layerMask)
+                => GameFramework.Physics.CollisionHit.None;
+
+            public GameFramework.Physics.CollisionHit Raycast(Vector3 origin, Vector3 direction,
+                float distance, int layerMask)
+                => GameFramework.Physics.CollisionHit.None;
+
+            public GameFramework.Physics.CollisionHit[] OverlapSphere(Vector3 center, float radius, int layerMask)
+                => System.Array.Empty<GameFramework.Physics.CollisionHit>();
+        }
+
         //  ArcheryWorld가 "자리마다 화살 다시 채우기"를 위해 코스를 묻는다. 여기 시험들은
         //  **웨이브(원형) 설정**이라 StepCount가 0이고 ArrowsPerStand도 0이라 리필이 통째로
         //  건너뛰어진다 — 즉 이 코스는 시험 내용을 바꾸지 않는다.
@@ -173,7 +197,13 @@ namespace LOP.Tests
                              System.Func<ArcheryRangeLayout> layoutSource = null)
         {
             var registry = new EntityRegistry();
-            var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(config), WaveCourse(config), TickInterval);
+            var world = new ArcheryWorld(registry, new WorldEventBuffer(), new ArcheryAimSystem(config),
+                                         WaveCourse(config), TickInterval,
+                                         //  이 판은 웨이브(원형)라 걷는 속도가 0이다 — 이동 부품을
+                                         //  넘기긴 하지만 월드가 통째로 건너뛰므로 한 줄도 안 돈다.
+                                         new MovementSystem(new StatsSystem(), new MotionContributionSystem()),
+                                         new KinematicMoveSystem(new NeverHit(), 0),
+                                         new NoopMotionBridge());
             world.GameplayStartTick = startTick;
             var waveState = new ArcheryWaveState();
             var course = new ArcheryCourse(
@@ -625,8 +655,12 @@ namespace LOP.Tests
             }
         }
 
+        //  ⚠️ 이 시험은 "과녁이 사라진다"를 재고 있었는데, 2026-09-22에 **사거리 과녁은 맞아도
+        //  안 사라지게** 바뀌었다(자리마다 3발을 같은 과녁에 꽂기 위해 — ArcheryHitRules.ConsumedOnHit).
+        //  그때 이 시험을 같이 안 고쳐서 main이 깨진 채로 있었다. 클라 에디터만 돌리고 서버
+        //  시험을 안 돌린 것이 원인이다.
         [Test]
-        public void 주인이_맞히면_점수가_나고_과녁이_사라진다()
+        public void 주인이_맞히면_점수가_나고_과녁은_남는다()
         {
             using (var scene = new RangeScene(laneCount: 2, distance: 20f))
             {
@@ -639,7 +673,10 @@ namespace LOP.Tests
                 f.System.Tick(StartTick + 1, TickInterval);
 
                 Assert.Greater(f.ScoreOf("e-b"), 0, "주인이 맞혔는데 점수가 안 났다");
-                Assert.IsTrue(f.WaveState.IsConsumed(theirs.SlotIndex));
+                //  주인 있는 과녁(사거리)은 소비되지 않는다 — 사라지면 같은 자리에서 둘째·셋째
+                //  화살을 쏠 과녁이 없어져 "자리마다 3발"이 성립하지 않는다.
+                Assert.IsFalse(f.WaveState.IsConsumed(theirs.SlotIndex),
+                    "맞았다고 사라졌다 — 그러면 그 자리의 남은 화살을 쏠 곳이 없다");
             }
         }
     }

@@ -138,6 +138,14 @@ namespace LOP
                         continue;
                     }
 
+                    //  한 발 승부: 그 라운드에 쏜 화살만 그 라운드 과녁에 맞는다. 간격이나 판 시작 전에
+                    //  쏜 화살이 다음 과녁에 닿으면 바람도 엉뚱한 라운드 것이고, 리필 뒤 한 발을 더 쏘게 된다.
+                    if (targets[i].IsShared
+                        && course.IndexAt(shot.FireTick, world.GameplayStartTick) != targets[i].WaveIndex)
+                    {
+                        continue;
+                    }
+
                     //  화살 선분은 [tick-1, tick] 구간이다. 과녁을 tick에서만 재면 반 틱 어긋나므로
                     //  구간 가운데를 그 구간의 대표 시각으로 삼는다. 한 틱에 과녁이 자기 반지름보다
                     //  적게 움직이므로 그 사이 정지한 것으로 봐도 된다(테스트가 그 조건을 지킨다).

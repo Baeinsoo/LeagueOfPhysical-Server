@@ -86,9 +86,13 @@ jobs:
           #  도커 이미지를 푸시하기 *전에* 멈춰야 의미가 있다 — 여기서 도는 시험은 맞았는지·몇
           #  점인지·몇 등인지를 정하는 권위 판정이라, 틀린 채 나가면 결과 자체가 틀린다.
           #
-          #  클라와 달리 -buildTarget을 주지 않는다. 이 프로젝트는 Linux IL2CPP sysroot 임포트가
-          #  예민해서(아래 워밍업 주석 참고) 플랫폼을 건드리지 않는 편이 안전하다. EditMode 시험은
-          #  활성 타깃과 무관하다.
+          #  -buildTarget을 주지 않는다. 이 프로젝트는 Linux IL2CPP sysroot 임포트가 예민해서
+          #  (워밍업 스텝 주석 참고) 플랫폼을 건드리지 않는 편이 안전하다.
+          #
+          #  ⚠️ 클라(client-ci)는 반대로 iOS를 고정한다 — 거기엔 `#if UNITY_IOS`로 감싼 시험이
+          #  있어 타깃에 따라 돌아가는 개수가 달라졌기 때문이다. 이 레포엔 지금 플랫폼 조건이
+          #  걸린 시험이 하나도 없어서 타깃과 무관하게 같은 집합이 돈다. **조건부 시험을 새로
+          #  들이면 이 전제가 깨지므로** 그때는 클라처럼 타깃을 고정해야 한다.
           "$UNITY" -batchmode -nographics -projectPath . \
             -runTests -testPlatform EditMode \
             -testResults test-results.xml -logFile - > unity-tests.log 2>&1 && RC=0 || RC=$?

@@ -13,6 +13,10 @@ on:
         required: false
         default: main
         type: string
+      skip_tests:
+        description: '시험을 건너뛴다 (시험이 깨졌는데 급히 내보내야 할 때만)'
+        type: boolean
+        default: false
       upload_symbols:
         description: "크래시 심볼을 아티팩트로 남긴다 (약 1.9GB — 네이티브 크래시를 조사할 때만)"
         required: false
@@ -74,6 +78,39 @@ jobs:
           dotnet tool run nugetforunity restore .
           test -f Assets/NuGetForUnity/Packages/AutoMapper.11.0.0/lib/netstandard2.1/AutoMapper.dll
 
+      - name: EditMode 시험 (실패하면 배포를 멈춘다)
+        if: ${{ !inputs.skip_tests }}
+        run: |
+          set -o pipefail
+          UNITY="/Applications/Unity/Hub/Editor/6000.3.16f1/Unity.app/Contents/MacOS/Unity"
+          #  도커 이미지를 푸시하기 *전에* 멈춰야 의미가 있다 — 여기서 도는 시험은 맞았는지·몇
+          #  점인지·몇 등인지를 정하는 권위 판정이라, 틀린 채 나가면 결과 자체가 틀린다.
+          #
+          #  클라와 달리 -buildTarget을 주지 않는다. 이 프로젝트는 Linux IL2CPP sysroot 임포트가
+          #  예민해서(아래 워밍업 주석 참고) 플랫폼을 건드리지 않는 편이 안전하다. EditMode 시험은
+          #  활성 타깃과 무관하다.
+          "$UNITY" -batchmode -nographics -projectPath . \
+            -runTests -testPlatform EditMode \
+            -testResults test-results.xml -logFile - > unity-tests.log 2>&1 && RC=0 || RC=$?
+          python3 - <<'PY'
+          import os, sys, xml.etree.ElementTree as ET
+          if not os.path.exists("test-results.xml"):
+              print("::error::시험 결과 파일이 없다 — 유니티가 시험을 시작조차 못했다")
+              sys.exit(0)
+          r = ET.parse("test-results.xml").getroot()
+          print("시험: total=%s passed=%s failed=%s skipped=%s"
+                % (r.get("total"), r.get("passed"), r.get("failed"), r.get("skipped")))
+          for tc in r.iter("test-case"):
+              if tc.get("result") not in ("Passed", "Skipped"):
+                  msg = (tc.findtext("failure/message") or "").strip().replace("\n", " ")[:300]
+                  print("::error::%s — %s" % (tc.get("fullname"), msg))
+          PY
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::EditMode 시험 실패 — 배포를 멈춘다 (유니티 종료코드 $RC)"
+            tail -40 unity-tests.log
+            exit 1
+          fi
+
       # Linux IL2CPP의 sysroot·툴체인은 스텁 패키지(com.unity.sdk.linux-*, com.unity.toolchain.*)의
       # 임포트·설치가 끝나야 빌드 파이프라인에 등록된다. 그런데 그 임포트가 *빌드를 실행하는 같은*
       # 배치 세션에서는 제때 끝나지 않아, Library/가 없는 콜드 실행의 첫 빌드가
@@ -123,6 +160,7 @@ jobs:
           name: unity-build-logs
           path: |
             unity-*.log
+            test-results.xml
           if-no-files-found: warn
           retention-days: 14
 

@@ -1,0 +1,93 @@
+name: server-ci
+
+#  배포 워크플로는 수동 실행 전용이라, 그것만으로는 깨진 코드가 main에 들어가는 것을 막지 못한다
+#  — 다음에 뭔가 배포하려는 순간에야 처음 실패한다. 이 워크플로가 푸시 시점에 먼저 잡는다.
+#  (백엔드의 backend-ci, 클라의 client-ci와 같은 자리.)
+#
+#  ⚠️ 이 프로젝트는 GitHub PR을 쓰지 않는다 — 로컬에서 `--no-ff` 머지 후 main을 푸시한다.
+#  그래서 여기서 할 수 있는 것은 "들어가기 전에 막는" 것이 아니라 "들어간 직후에 알리는" 것이다.
+#
+#  ⚠️ 구멍: 형제 패키지 레포(GameFramework / Shared / MasterData-Server)에 푸시해도 이
+#  워크플로는 뜨지 않는다. 메꾸려면 그 레포들에서 원격으로 깨워야 하고 PAT이 필요하다.
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: server-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: self-hosted      # 맥 러너 (Unity 라이선스 ambient)
+    steps:
+      #  clean: false — 배포 워크플로와 같은 이유다. 기본값은 ignored 파일까지 지워 Library를
+      #  날리고, 그러면 매 실행이 콜드 임포트가 된다.
+      - uses: actions/checkout@v4
+        with:
+          clean: false
+
+      - name: 의존 UPM 패키지 레포 체크아웃 (file:../../ 형제 위치)
+        run: |
+          set -e
+          cd "$GITHUB_WORKSPACE/.."
+          for r in GameFramework LeagueOfPhysical-Shared LeagueOfPhysical-MasterData-Server; do
+            if [ ! -d "$r/.git" ]; then
+              git clone --depth 1 "https://github.com/Baeinsoo/$r" "$r"
+            fi
+            git -C "$r" fetch --depth 1 origin main
+            git -C "$r" checkout -q -B ci-build FETCH_HEAD
+            echo "$r @ $(git -C "$r" rev-parse --short HEAD)"
+          done
+
+      - name: NuGet 패키지 복원 (NuGetForUnity CLI, packages.config 기반)
+        run: |
+          set -e
+          dotnet tool restore
+          dotnet tool run nugetforunity restore .
+          test -f Assets/NuGetForUnity/Packages/AutoMapper.11.0.0/lib/netstandard2.1/AutoMapper.dll
+
+      - name: EditMode 시험
+        run: |
+          set -o pipefail
+          UNITY="/Applications/Unity/Hub/Editor/6000.3.16f1/Unity.app/Contents/MacOS/Unity"
+          #  -buildTarget을 주지 않는다. 이 프로젝트는 Linux IL2CPP sysroot 임포트가 예민하고
+          #  (배포 워크플로의 워밍업 주석 참고), EditMode 시험은 활성 타깃과 무관하다.
+          "$UNITY" -batchmode -nographics -projectPath . \
+            -runTests -testPlatform EditMode \
+            -testResults test-results.xml -logFile - > unity-tests.log 2>&1 && RC=0 || RC=$?
+          python3 - <<'PY'
+          import os, sys, xml.etree.ElementTree as ET
+          if not os.path.exists("test-results.xml"):
+              print("::error::시험 결과 파일이 없다 — 유니티가 시험을 시작조차 못했다")
+              sys.exit(0)
+          r = ET.parse("test-results.xml").getroot()
+          print("시험: total=%s passed=%s failed=%s skipped=%s"
+                % (r.get("total"), r.get("passed"), r.get("failed"), r.get("skipped")))
+          for tc in r.iter("test-case"):
+              if tc.get("result") not in ("Passed", "Skipped"):
+                  msg = (tc.findtext("failure/message") or "").strip().replace("\n", " ")[:300]
+                  print("::error::%s — %s" % (tc.get("fullname"), msg))
+          PY
+          if [ "$RC" -ne 0 ]; then
+            echo "::error::EditMode 시험 실패 (유니티 종료코드 $RC)"
+            tail -40 unity-tests.log
+            exit 1
+          fi
+
+      - name: 시험 결과 업로드
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: server-test-results
+          path: |
+            test-results.xml
+            unity-tests.log
+          if-no-files-found: warn
+          retention-days: 14

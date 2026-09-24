@@ -40,15 +40,16 @@ namespace LOP
 
             var playerList = roomDataStore.match.playerList;
 
-            //  사거리 맵은 사대가 레인 위에 있다. 원형 맵은 예전처럼 SpawnPoint를 쓴다 —
+            //  사거리 맵·한 발 승부는 사대가 레인 위에 있다. 원형 맵은 예전처럼 SpawnPoint를 쓴다 —
             //  맵이 값으로 방식을 고르고, 룰은 맵 이름을 모른다.
-            var lanes = config.CourseKind == ArcheryCourseKind.Range
-                ? ArcheryRangeLayout.FromOpenScenes()
-                : null;
+            bool laned = config.CourseKind == ArcheryCourseKind.Range
+                      || config.CourseKind == ArcheryCourseKind.ShootOff;
+            var lanes = laned ? ArcheryRangeLayout.FromOpenScenes() : null;
 
             if (lanes != null)
             {
-                string problem = ArcheryRangeValidation.Check(lanes, config.Range, playerList.Length);
+                string problem = ArcheryRangeValidation.Check(lanes, config.Range, playerList.Length,
+                                                              config.CourseKind);
                 if (problem != null)
                 {
                     //  조용히 이상한 판을 시작하느니 여기서 끊는다 — 원인이 바로 보인다.
@@ -73,10 +74,10 @@ namespace LOP
 
                 if (lanes != null)
                 {
-                    //  자기 레인 사대에 서서 과녁 쪽을 본다.
-                    position = lanes.Lanes[i].ShooterPosition;
-                    var forward = lanes.Lanes[i].Forward;
-                    rotation = new Vector3(0f, Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg, 0f);
+                    //  한 발 승부는 모두 레인 0 사대에 선다 — 누구 화면에서나 과녁이 똑같이 보이게.
+                    var lane = lanes.Lanes[config.CourseKind == ArcheryCourseKind.ShootOff ? 0 : i];
+                    position = lane.ShooterPosition;
+                    rotation = new Vector3(0f, Mathf.Atan2(lane.Forward.x, lane.Forward.z) * Mathf.Rad2Deg, 0f);
                 }
                 else
                 {

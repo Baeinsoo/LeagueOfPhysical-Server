@@ -22,6 +22,7 @@ namespace LOP
         private readonly float tickInterval;
 
         private readonly ArcheryWaveState waveState;
+        private readonly ArcheryRoundLog roundLog;
 
         // 이미 무언가를 맞힌 화살. 서버는 되감지 않으므로 그냥 필드다
         // (월드의 저장/복원에 넣으면 서버가 확정한 사실이 되감기에 되살아난다).
@@ -42,9 +43,12 @@ namespace LOP
             public readonly long FireTick;
             public readonly int Slot;
 
-            public Candidate(float t, float offset, string shooterId, long fireTick, int slot)
+            /// <summary>맞은 자리 − 과녁 중심(미터). 한 발 승부가 착탄 기록에 쓴다.</summary>
+            public readonly Vector3 Impact;
+
+            public Candidate(float t, float offset, string shooterId, long fireTick, int slot, Vector3 impact)
             {
-                T = t; Offset = offset; ShooterId = shooterId; FireTick = fireTick; Slot = slot;
+                T = t; Offset = offset; ShooterId = shooterId; FireTick = fireTick; Slot = slot; Impact = impact;
             }
         }
 
@@ -53,7 +57,8 @@ namespace LOP
                                 GameFramework.World.WorldEventBuffer eventBuffer,
                                 ArcheryCourse course,
                                 ArcheryWaveState waveState,
-                                float tickInterval)
+                                float tickInterval,
+                                ArcheryRoundLog roundLog)
         {
             this.world = world;
             this.entityRegistry = entityRegistry;
@@ -61,6 +66,7 @@ namespace LOP
             this.course = course;
             this.waveState = waveState;
             this.tickInterval = tickInterval;
+            this.roundLog = roundLog;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -132,6 +138,14 @@ namespace LOP
                         continue;
                     }
 
+                    //  한 발 승부: 그 라운드에 쏜 화살만 그 라운드 과녁에 맞는다. 간격이나 판 시작 전에
+                    //  쏜 화살이 다음 과녁에 닿으면 바람도 엉뚱한 라운드 것이고, 리필 뒤 한 발을 더 쏘게 된다.
+                    if (targets[i].IsShared
+                        && course.IndexAt(shot.FireTick, world.GameplayStartTick) != targets[i].WaveIndex)
+                    {
+                        continue;
+                    }
+
                     //  화살 선분은 [tick-1, tick] 구간이다. 과녁을 tick에서만 재면 반 틱 어긋나므로
                     //  구간 가운데를 그 구간의 대표 시각으로 삼는다. 한 틱에 과녁이 자기 반지름보다
                     //  적게 움직이므로 그 사이 정지한 것으로 봐도 된다(테스트가 그 조건을 지킨다).
@@ -153,7 +167,8 @@ namespace LOP
                                                          out float t, out float offset))
                     {
                         candidates.Add(new Candidate(t, offset, shot.ShooterId, shot.FireTick,
-                                                     targets[i].SlotIndex));
+                                                     targets[i].SlotIndex,
+                                                     Vector3.Lerp(from, to, t) - targetAt));
                     }
                 }
             }
@@ -197,6 +212,17 @@ namespace LOP
                 //  무슨 일이 일어나는지는 여기서 정하지 않는다 — 공유 규칙 함수 하나가 정한다.
                 var outcome = ArcheryHitRules.Resolve(target, candidate.Offset);
                 spentArrows.Add((candidate.ShooterId, candidate.FireTick));
+
+                if (target.IsShared)
+                {
+                    //  한 발 승부: 점수는 라운드 마감에 순위로 준다. 여기선 어디를 맞혔는지만 적는다.
+                    //  사건의 points는 띠 점수 — 해설이 "10점!"을 고르는 데만 쓴다.
+                    Vector2 face = ArcheryFaceCoords.ToFaceOffset(candidate.Impact, target.Facing, 1f);
+                    roundLog.Record(target.WaveIndex, candidate.ShooterId, face, face.magnitude);
+                    eventBuffer.Append(new ArcheryTargetHitEvent(
+                        candidate.ShooterId, candidate.FireTick, outcome.Gained));
+                    continue;
+                }
 
                 var score = entityRegistry.Get(candidate.ShooterId)?.Get<ArcheryScore>();
                 if (score != null)

@@ -40,13 +40,26 @@ namespace LOP
             builder.Register<IGameRuleSystem, ArcheryRuleSystem>(Lifetime.Singleton);
 
             builder.Register<ArcheryWaveState>(Lifetime.Singleton);
+            builder.Register<ArcheryRoundLog>(Lifetime.Singleton);
             builder.Register(c => new ArcheryHitSystem(
                 c.Resolve<ArcheryWorld>(),
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
                 c.Resolve<ArcheryCourse>(),
                 c.Resolve<ArcheryWaveState>(),
-                TickInterval), Lifetime.Singleton);
+                TickInterval,
+                c.Resolve<ArcheryRoundLog>()), Lifetime.Singleton);
+            builder.Register(c =>
+            {
+                //  틱마다 컨테이너를 부르지 않게 월드는 한 번만 꺼내 둔다.
+                var world = c.Resolve<ArcheryWorld>();
+                return new ArcheryRoundSystem(
+                    () => world.GameplayStartTick,
+                    c.Resolve<GameFramework.World.EntityRegistry>(),
+                    c.Resolve<GameFramework.World.WorldEventBuffer>(),
+                    c.Resolve<ArcheryCourse>(),
+                    c.Resolve<ArcheryRoundLog>());
+            }, Lifetime.Singleton);
             builder.Register<ArcheryStateBroadcastSystem>(Lifetime.Singleton);
 
             // 화살이 생긴 *뒤*에 판정해야 하므로 world.Tick 다음인 End에 문다. 그러면 여기서 쌓은
@@ -56,6 +69,9 @@ namespace LOP
             {
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<ArcheryHitSystem>());
+                //  같은 틱에 맞은 화살까지 셈에 넣으려고 판정 다음에 라운드를 닫는다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<ArcheryRoundSystem>());
                 //  판정 다음에 내보낸다 — 같은 틱의 결과가 그 틱에 나간다.
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<ArcheryStateBroadcastSystem>());

@@ -83,6 +83,7 @@ namespace LOP.Tests
             public ArcheryConfig Config;
             public ArcheryCourse Course;
             public ArcheryWaveState WaveState;
+            public ArcheryRoundLog RoundLog;
 
             public Entity Archer(string id)
             {
@@ -185,6 +186,43 @@ namespace LOP.Tests
                 range: new ArcheryRangeSettings(face, stands, 25));
         }
 
+        //  한 발 승부: 레인 하나에 모두가 같은 과녁을 쏜다. 가운데 띠 10점, 바깥 띠 3점.
+        static ArcheryConfig ShootOffConfig() => ShootOffConfig(1);
+
+        //  라운드 수를 고를 수 있는 한 발 승부. 라운드마다 쏘기 250틱, 사이 간격 200틱.
+        static ArcheryConfig ShootOffConfig(int rounds)
+        {
+            var bands = new List<ArcheryRingBand>
+            {
+                new ArcheryRingBand(0.25f, 10),
+                new ArcheryRingBand(1.0f, 3),
+            };
+            var face = new ArcheryTargetKind(0.61f, 5, 0, false, ArcheryTargetShape.Face, bands);
+            var stands = new ArcheryRangeStand[rounds];
+            for (int i = 0; i < rounds; i++)
+            {
+                stands[i] = new ArcheryRangeStand(0, 20f, 250, 0f, 0f);
+            }
+
+            return new ArcheryConfig(
+                wavePeriodTicks: 88, minTargets: 2, maxTargets: 3,
+                spawnRadius: 2f, spawnMinY: 2f, spawnMaxY: 6f, minSeparation: 1.0f,
+                trapRatioMin: 0f, trapRatioMax: 0f,
+                shakeFreeSeconds: 1f, shakeRampSeconds: 2f, shakeMaxDegrees: 3f,
+                riseHeightMin: 1.2f, riseHeightMax: 2.4f, staggerTicks: 12, restTicks: 20,
+                kinds: new[] { face },
+                courseKind: ArcheryCourseKind.ShootOff, matchDurationTicks: 0,
+                range: new ArcheryRangeSettings(face, stands, 200));
+        }
+
+        /// <summary>과녁 중심에서 옆(x)으로 <paramref name="lateral"/>만큼 비껴 지나가는 화살.</summary>
+        static ArcheryShot ShotBeside(string shooterId, long fireTick, ArcheryTarget target,
+                                      float lateral, float distance)
+        {
+            Vector3 origin = target.Origin + new Vector3(lateral, 0f, -distance);
+            return new ArcheryShot(shooterId, fireTick, origin, new Vector3(0f, 0f, distance / TickInterval));
+        }
+
         static Fixture BuildRange(long startTick, RangeScene scene, params string[] owners)
         {
             return Build(startTick, RangeConfig(), owners, () => scene.Layout);
@@ -206,6 +244,7 @@ namespace LOP.Tests
                                          new NoopMotionBridge());
             world.GameplayStartTick = startTick;
             var waveState = new ArcheryWaveState();
+            var roundLog = new ArcheryRoundLog();
             var course = new ArcheryCourse(
                 config, new FixedSeed { Value = Seed },
                 owners ?? new[] { "user-a" }, TickInterval,
@@ -219,7 +258,9 @@ namespace LOP.Tests
                 Config = config,
                 Course = course,
                 WaveState = waveState,
-                System = new ArcheryHitSystem(world, registry, world.EventBuffer, course, waveState, TickInterval),
+                RoundLog = roundLog,
+                System = new ArcheryHitSystem(world, registry, world.EventBuffer, course, waveState, TickInterval,
+                                              roundLog),
             };
         }
 
@@ -677,6 +718,120 @@ namespace LOP.Tests
                 //  화살을 쏠 과녁이 없어져 "자리마다 3발"이 성립하지 않는다.
                 Assert.IsFalse(f.WaveState.IsConsumed(theirs.SlotIndex),
                     "맞았다고 사라졌다 — 그러면 그 자리의 남은 화살을 쏠 곳이 없다");
+            }
+        }
+
+        [Test]
+        public void 공유_과녁은_점수_대신_착탄_자리를_기록한다()
+        {
+            using (var scene = new RangeScene(laneCount: 1, distance: 20f))
+            {
+                var f = Build(StartTick, ShootOffConfig(), new[] { "user-a", "user-b" }, () => scene.Layout);
+                var roundLog = f.RoundLog;
+                f.Archer("e1", "user-a");
+                f.Archer("e2", "user-b");
+
+                var targets = f.TargetsOfWave(0);
+                Assert.AreEqual(1, targets.Count);
+                Assert.IsTrue(targets[0].IsShared);
+
+                f.World.IngestRemoteShot(ShotBeside("e1", StartTick, targets[0], 0f, 1.0f));
+                f.World.IngestRemoteShot(ShotBeside("e2", StartTick, targets[0], 0.1f, 1.0f));
+                f.System.Tick(StartTick + 1, TickInterval);
+
+                //  공유 과녁: 둘 다 맞고, 점수는 안 오르고(라운드 마감 전), 기록판에 둘 다 남는다.
+                Assert.AreEqual(0, f.ScoreOf("e1"));
+                Assert.AreEqual(0, f.ScoreOf("e2"));
+                Assert.IsTrue(roundLog.TryGet(0, "e1", out _, out float d1));
+                Assert.IsTrue(roundLog.TryGet(0, "e2", out _, out float d2));
+                Assert.Less(d1, d2);
+                //  사건의 points는 띠 점수(연출용) — 정중앙이면 가장 안쪽 띠 점수.
+                Assert.AreEqual(10, f.LastHitPoints());
+                Assert.AreEqual(2, f.HitEventCount());
+                Assert.IsFalse(f.WaveState.IsConsumed(targets[0].SlotIndex));
+            }
+        }
+
+        [Test]
+        public void 같은_화살은_공유_과녁을_한_번만_기록한다()
+        {
+            using (var scene = new RangeScene(laneCount: 1, distance: 20f))
+            {
+                var f = Build(StartTick, ShootOffConfig(), new[] { "user-a" }, () => scene.Layout);
+                f.Archer("e1", "user-a");
+                var target = f.TargetsOfWave(0)[0];
+
+                f.World.IngestRemoteShot(ShotBeside("e1", StartTick, target, 0.1f, 1.0f));
+                f.System.Tick(StartTick + 1, TickInterval);
+                Assert.IsTrue(f.RoundLog.TryGet(0, "e1", out Vector2 face1, out float d1));
+
+                f.System.Tick(StartTick + 2, TickInterval);
+                Assert.IsTrue(f.RoundLog.TryGet(0, "e1", out Vector2 face2, out float d2));
+                Assert.AreEqual(face1, face2);
+                Assert.AreEqual(d1, d2);
+                Assert.AreEqual(1, f.HitEventCount(), "한 화살이 두 번 판정됐다");
+            }
+        }
+
+        /// <summary>
+        /// <paramref name="hitTick"/>에 그 과녁 한가운데로 떨어지는 화살. 오래 나는 화살이라 중력만큼
+        /// 위로 쏴서 정확히 그 자리에서 끝나게 맞춘다.
+        /// </summary>
+        static ArcheryShot ShotLandingAt(string shooterId, long fireTick, in ArcheryTarget target,
+                                         long hitTick, float distance)
+        {
+            Vector3 at = ArcheryTargetMotion.PositionAt(target, hitTick - 0.5, TickInterval);
+            float seconds = (hitTick - fireTick) * TickInterval;
+            Vector3 origin = at + new Vector3(0f, 0f, -distance);
+            var velocity = new Vector3(0f, 0.5f * ArcheryTrajectory.Gravity * seconds, distance / seconds);
+            return new ArcheryShot(shooterId, fireTick, origin, velocity);
+        }
+
+        [Test]
+        public void 간격에_쏜_화살은_다음_라운드_과녁에_안_맞는다()
+        {
+            using (var scene = new RangeScene(laneCount: 1, distance: 20f))
+            {
+                var f = Build(StartTick, ShootOffConfig(2), new[] { "user-a", "user-b" }, () => scene.Layout);
+                f.Archer("e1", "user-a");
+                f.Archer("e2", "user-b");
+
+                long round1Start = StartTick + 250 + 200;
+                var next = f.TargetsOfWave(1)[0];
+                long hitTick = round1Start + 1;
+
+                //  e1은 0라운드가 끝난 뒤 간격에 쐈다. e2는 1라운드가 열린 뒤 쐈다(대조군).
+                f.World.IngestRemoteShot(ShotLandingAt("e1", round1Start - 5, next, hitTick, 1.0f));
+                f.World.IngestRemoteShot(ShotLandingAt("e2", round1Start, next, hitTick, 1.0f));
+                f.System.Tick(hitTick, TickInterval);
+
+                Assert.IsTrue(f.RoundLog.TryGet(1, "e2", out _, out _), "대조군이 안 맞았다 — 화살 설정이 틀렸다");
+                Assert.IsFalse(f.RoundLog.TryGet(1, "e1", out _, out _),
+                    "지난 라운드 간격에 쏜 화살이 다음 라운드 과녁에 기록됐다");
+                Assert.AreEqual(1, f.HitEventCount());
+            }
+        }
+
+        [Test]
+        public void 판_시작_전에_쏜_화살은_첫_라운드_과녁에_안_맞는다()
+        {
+            using (var scene = new RangeScene(laneCount: 1, distance: 20f))
+            {
+                var f = Build(StartTick, ShootOffConfig(2), new[] { "user-a", "user-b" }, () => scene.Layout);
+                f.Archer("e1", "user-a");
+                f.Archer("e2", "user-b");
+
+                var first = f.TargetsOfWave(0)[0];
+                long hitTick = StartTick + 1;
+
+                f.World.IngestRemoteShot(ShotLandingAt("e1", StartTick - 3, first, hitTick, 1.0f));
+                f.World.IngestRemoteShot(ShotLandingAt("e2", StartTick, first, hitTick, 1.0f));
+                f.System.Tick(hitTick, TickInterval);
+
+                Assert.IsTrue(f.RoundLog.TryGet(0, "e2", out _, out _), "대조군이 안 맞았다 — 화살 설정이 틀렸다");
+                Assert.IsFalse(f.RoundLog.TryGet(0, "e1", out _, out _),
+                    "판 시작 전에 쏜 화살이 첫 라운드 과녁에 기록됐다");
+                Assert.AreEqual(1, f.HitEventCount());
             }
         }
     }

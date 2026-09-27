@@ -34,6 +34,17 @@ namespace LOP
         //  다음 틱에 현재 상태를 받는다 — "바뀔 때만 보낸다"가 "0명한테 보내고 끝"이 되지 않게 한다.
         private readonly HashSet<string> receivedSessionIds = new();
 
+        private struct CoinPose
+        {
+            public System.Numerics.Vector3 Position;
+            public System.Numerics.Quaternion Rotation;
+        }
+
+        //  사람마다 자기 판이 따로 쌓인다(골프식). 판은 하나라 차례가 오면 그 사람 것으로 바꿔 끼운다.
+        private readonly Dictionary<string, CoinPose[]> boards = new();
+        private CoinPose[] startPoses;
+        private string shownBoardOwner;   // 지금 판 위 자세가 누구 것인가
+
         public bool IsOver => turn != null && turn.Phase == PanchigiPhase.Over;
         /// <summary>사람별 타수(끝난 사람은 기록 타수). 판이 시작되기 전이면 null.</summary>
         public IReadOnlyDictionary<string, int> Strokes => turn?.Strokes;
@@ -56,6 +67,12 @@ namespace LOP
 
             var config = masterData.Tables.TbPanchigiConfig.GetOrDefault(1);
             turn = new PanchigiTurn(playerEntityIds, config != null ? config.StrokeLimit : 10);
+
+            startPoses = StartPoses();
+            foreach (string id in playerEntityIds)
+            {
+                boards[id] = startPoses;   // 배열은 바꾸지 않고 통째로 갈아 끼우므로 함께 써도 된다
+            }
 
             //  차례는 엔티티로 돌지만 타격은 userId로 온다 — 한 번만 이어 둔다.
             string[] playerList = roomDataStore.match.playerList;
@@ -127,6 +144,7 @@ namespace LOP
 
             if (turn.Phase == PanchigiPhase.Aiming)
             {
+                ShowBoardOf(turn.CurrentEntityId);
                 RefreshAimDeadlineIfNewTurn(tick, config);
             }
 
@@ -170,7 +188,20 @@ namespace LOP
 
             //  뒤집힘은 판을 되돌리기 *전에* 봐야 한다 — 되돌리면 회전이 초기화돼 흔적이 사라진다.
             bool allFlipped = AllFlipped();
-            bool droppedOut = ResetBoardIfAnyCoinDroppedOut();
+            bool droppedOut = AnyCoinOutOfBoard(boardLocator.Board.Bounds);
+            if (droppedOut)
+            {
+                //  낙은 원래 판치기 룰대로 판 전체를 처음으로 — 그 판에 뒤집어 둔 것까지 사라져야 벌이 된다.
+                ApplyPoses(startPoses);
+            }
+
+            string striker = turn.LastStrikerEntityId;
+            if (striker != null)
+            {
+                boards[striker] = CapturePoses();
+                shownBoardOwner = striker;
+            }
+
             turn.OnRested(allFlipped, droppedOut);
         }
 
@@ -214,45 +245,69 @@ namespace LOP
             return true;
         }
 
-        /// <summary>
-        /// 동전이 하나라도 판 밖으로 나갔으면 <b>판 전체</b>를 처음 세팅으로 되돌린다.
-        /// 나간 것만 주워 담지 않는 이유는 낙(落)이 벌칙이기 때문이다 — 그 턴에 뒤집어 둔 것까지
-        /// 같이 사라져야 "떨어뜨리면 손해"가 성립한다. 되돌린 뒤엔 뒤집힌 동전이 없으므로
-        /// 같은 턴에 승리 판정이 나지도 않는다.
-        /// </summary>
-        /// <returns>낙이 나서 판을 되돌렸으면 true.</returns>
-        private bool ResetBoardIfAnyCoinDroppedOut()
+        /// <summary>차례가 된 사람의 판을 올린다. 이미 그 사람 판이면(혼자 남았을 때) 건드리지 않는다.</summary>
+        private void ShowBoardOf(string entityId)
         {
-            Bounds bounds = boardLocator.Board.Bounds;
-            if (AnyCoinOutOfBoard(bounds) == false)
-            {
-                return false;
-            }
+            if (entityId == null || entityId == shownBoardOwner) { return; }
+            if (boards.TryGetValue(entityId, out CoinPose[] poses) == false) { return; }
 
-            var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
-            if (setup == null || boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
-            {
-                return false;
-            }
+            ApplyPoses(poses);
+            shownBoardOwner = entityId;
+        }
 
-            for (int i = 0; i < coinIds.Count && i < slots.Count; i++)
+        /// <summary>
+        /// 동전들을 이 자세로 옮긴다 — 낙 리셋과 판 바꿔 끼우기가 같은 일이다.
+        /// 동전은 dynamic이라 PhysX가 진실원본이다 — World.Transform에 쓰면 다음 틱에 덮어써진다.
+        /// 저장된 자세는 멎은 상태라 옮긴 뒤 다시 기다리지 않는다.
+        /// </summary>
+        private void ApplyPoses(CoinPose[] poses)
+        {
+            if (poses == null) { return; }
+
+            for (int i = 0; i < coinIds.Count && i < poses.Length; i++)
             {
                 var body = entityRegistry.Get(coinIds[i])?.Get<GameFramework.World.PhysicsBody>();
-                if (body == null)
-                {
-                    continue;
-                }
+                if (body == null) { continue; }
 
-                //  동전은 dynamic이라 PhysX가 진실원본이다 — World.Transform에 쓰면 다음 틱에 덮어써진다.
-                //  자세는 자리의 회전이 아니라 시작 면(+up)으로 되돌린다 — 스폰과 같은 규칙이어야
-                //  "초기 세팅으로 복귀"가 성립한다.
-                body.SetPosition(slots[i].position.ToNumerics());
-                body.SetRotation(System.Numerics.Quaternion.Identity);
+                body.SetPosition(poses[i].Position);
+                body.SetRotation(poses[i].Rotation);
                 body.SetVelocity(System.Numerics.Vector3.Zero);
                 body.SetAngularVelocity(System.Numerics.Vector3.Zero);
             }
+        }
 
-            return true;
+        private CoinPose[] CapturePoses()
+        {
+            var poses = new CoinPose[coinIds.Count];
+            for (int i = 0; i < coinIds.Count; i++)
+            {
+                var body = entityRegistry.Get(coinIds[i])?.Get<GameFramework.World.PhysicsBody>();
+                if (body == null) { continue; }
+
+                poses[i] = new CoinPose { Position = body.GetPosition(), Rotation = body.GetRotation() };
+            }
+            return poses;
+        }
+
+        /// <summary>
+        /// 처음 배치 — 자리의 위치에 시작 면(+up). 자리의 회전은 쓰지 않는다: 스폰과 같은 규칙이어야
+        /// "처음으로 되돌리기"가 성립한다.
+        /// </summary>
+        private CoinPose[] StartPoses()
+        {
+            var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
+            if (setup == null || boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
+            {
+                //  룰 시스템이 스폰할 때 이미 같은 조건으로 터뜨린다 — 여기 오면 그 뒤에 무언가 바뀐 것이다.
+                throw new System.InvalidOperationException("판치기 처음 배치를 못 찾았다 — TbPanchigiSetup·씬 대형을 확인할 것.");
+            }
+
+            var poses = new CoinPose[slots.Count];
+            for (int i = 0; i < slots.Count; i++)
+            {
+                poses[i] = new CoinPose { Position = slots[i].position.ToNumerics(), Rotation = System.Numerics.Quaternion.Identity };
+            }
+            return poses;
         }
 
         private bool AnyCoinOutOfBoard(Bounds bounds)

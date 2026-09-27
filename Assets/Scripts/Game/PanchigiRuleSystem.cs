@@ -5,7 +5,7 @@ namespace LOP
 {
     /// <summary>
     /// 판치기 룰(서버). 판을 세우고(플레이어·동전 스폰, 대형 배치) <see cref="PanchigiTurnSystem"/>에
-    /// 턴 진행을 맡긴 뒤, 그 결과(사람별 타수)로 등수를 매긴다 — 적은 순, 같으면 공동.
+    /// 턴 진행을 맡긴 뒤, 그 결과(사람별 볼링 점수)로 등수를 매긴다 — 높은 순, 같으면 공동.
     /// </summary>
     public class PanchigiRuleSystem : IGameRuleSystem
     {
@@ -94,13 +94,13 @@ namespace LOP
 
         public bool IsMatchOver => turnSystem.IsOver;
 
-        //  시간이 아니라 타수 상한으로 끝난다 — TbPanchigiConfig.StrokeLimit.
+        //  시간이 아니라 프레임 수로 끝난다 — TbPanchigiConfig.FrameCount.
         public long MatchDurationTicks => 0;
 
         public MatchOutcome ResolveOutcome()
         {
             var outcome = new MatchOutcome();
-            var places = PanchigiRanking.Place(turnSystem.Strokes ?? new Dictionary<string, int>());
+            var places = PanchigiRanking.Place(turnSystem.Totals ?? new Dictionary<string, int>());
             string[] playerList = roomDataStore.match.playerList;
 
             //  플레이어 엔티티는 playerList 순서대로 만들었다(Initialize) — 같은 자리끼리 잇는다.

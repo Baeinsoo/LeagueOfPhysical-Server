@@ -74,7 +74,8 @@ namespace LOP
 
                 if (lanes != null)
                 {
-                    //  한 발 승부는 모두 레인 0 사대에 선다 — 누구 화면에서나 과녁이 똑같이 보이게.
+                    //  한 발 승부는 레인 0 사대에 스폰한다 — 실제 자리(나란히, 라운드마다 돈다)는
+                    //  ArcheryWorld가 첫 틱부터 틱마다 정한다(ArcheryShootOffSeats).
                     var lane = lanes.Lanes[config.CourseKind == ArcheryCourseKind.ShootOff ? 0 : i];
                     position = lane.ShooterPosition;
                     rotation = new Vector3(0f, Mathf.Atan2(lane.Forward.x, lane.Forward.z) * Mathf.Rad2Deg, 0f);

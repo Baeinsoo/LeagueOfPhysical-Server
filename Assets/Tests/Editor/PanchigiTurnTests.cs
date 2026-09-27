@@ -6,199 +6,200 @@ namespace LOP.Tests
     public class PanchigiTurnTests
     {
         private static readonly string[] TwoPlayers = { "A", "B" };
+        private const int Pins = 6;
 
-        private static PanchigiTurn Aiming(IReadOnlyList<string> players, int turnLimit = 60, int dropOutLimit = 3)
+        private static PanchigiTurn Started(IReadOnlyList<string> players, int frames = 5)
         {
-            var turn = new PanchigiTurn(players, turnLimit, dropOutLimit);
-            turn.OnRested(false, false);   // 판 시작 직후 한 번 — 여기서 첫 조준으로 들어간다
+            var turn = new PanchigiTurn(players, frames, Pins);
+            Assert.AreEqual(PanchigiBoardAction.ResetFull, turn.OnRested(0, false), "판 시작은 처음 배치");
             return turn;
         }
 
-        [Test]
-        public void 낙_없이_치면_벌점이_안_쌓인다()
+        private static PanchigiBoardAction Roll(PanchigiTurn turn, int flipped, bool dropped = false)
         {
-            var turn = Aiming(TwoPlayers);
-            string striker = turn.CurrentEntityId;
-
-            turn.OnStruck(striker);
-            turn.OnRested(false, false);
-
-            Assert.AreEqual(0, turn.GetDropOutCount(striker));
+            turn.OnStruck(turn.CurrentEntityId);
+            return turn.OnRested(flipped, dropped);
         }
-
-        [Test]
-        public void 낙이_나면_친_사람에게_벌점이_붙는다()
-        {
-            var turn = Aiming(TwoPlayers);
-            string striker = turn.CurrentEntityId;
-
-            turn.OnStruck(striker);
-            turn.OnRested(false, true);
-
-            Assert.AreEqual(1, turn.GetDropOutCount(striker));
-            Assert.AreEqual(0, turn.GetDropOutCount("B"), "낙은 친 사람만의 벌점이다");
-        }
-
-        [Test]
-        public void 벌점이_한도에_닿으면_그_사람이_빠진다()
-        {
-            var turn = Aiming(TwoPlayers, dropOutLimit: 2);
-
-            //  A가 두 번 낙 — 사이에 B의 차례가 한 번 낀다
-            turn.OnStruck("A"); turn.OnRested(false, true);
-            turn.OnStruck("B"); turn.OnRested(false, false);
-            turn.OnStruck("A"); turn.OnRested(false, true);
-
-            Assert.IsTrue(turn.IsEliminated("A"));
-            Assert.IsFalse(turn.IsEliminated("B"));
-        }
-
-        [Test]
-        public void 둘_중_하나가_빠지면_남은_사람이_이긴다()
-        {
-            var turn = Aiming(TwoPlayers, dropOutLimit: 1);
-
-            turn.OnStruck("A");
-            turn.OnRested(false, true);
-
-            Assert.AreEqual(PanchigiPhase.Over, turn.Phase);
-            Assert.AreEqual("B", turn.WinnerEntityId);
-        }
-
-        [Test]
-        public void 빠진_사람에게는_차례가_안_돌아온다()
-        {
-            var turn = Aiming(new[] { "A", "B", "C" }, dropOutLimit: 1);
-
-            turn.OnStruck("A");
-            turn.OnRested(false, true);   // A 탈락, 아직 둘 남아 계속된다
-
-            Assert.AreEqual(PanchigiPhase.Aiming, turn.Phase);
-
-            //  한 바퀴를 다 돌려도 A는 안 나온다
-            for (int i = 0; i < 6; i++)
-            {
-                Assert.AreNotEqual("A", turn.CurrentEntityId);
-                turn.OnStruck(turn.CurrentEntityId);
-                turn.OnRested(false, false);
-            }
-        }
-
-        [Test]
-        public void 낙과_전부_뒤집힘이_같이_나면_낙이_이긴다()
-        {
-            //  판을 되돌리면 뒤집힌 동전이 남지 않으므로 승리가 성립할 수 없다.
-            var turn = Aiming(TwoPlayers);
-
-            turn.OnStruck("A");
-            turn.OnRested(true, true);
-
-            Assert.AreNotEqual(PanchigiPhase.Over, turn.Phase, "낙이 났으면 그 턴에 이길 수 없다");
-            Assert.AreEqual(1, turn.GetDropOutCount("A"));
-        }
-
-        [Test]
-        public void 조준_시간을_넘겨도_벌점은_안_붙는다()
-        {
-            var turn = Aiming(TwoPlayers);
-            string passer = turn.CurrentEntityId;
-
-            turn.OnAimTimeout();
-
-            Assert.AreEqual(0, turn.GetDropOutCount(passer), "패스는 낙이 아니다");
-        }
-
-        //  아래 여섯은 서버 레포의 수기 검증 스크립트(PanchigiVerification)가 지키던 것을 옮겨온
-        //  것이다. 진행 규칙이 패키지로 오면서 진짜 테스트를 붙일 수 있게 됐고, 두 벌을 두면
-        //  시그니처가 바뀔 때 한쪽만 고쳐져 조용히 어긋난다(실제로 배포가 그렇게 깨졌다).
 
         [Test]
         public void 판이_시작되면_첫_사람이_조준한다()
         {
-            var turn = new PanchigiTurn(TwoPlayers, 60, 3);
-
-            turn.OnRested(false, false);
-
+            var turn = Started(TwoPlayers);
             Assert.AreEqual(PanchigiPhase.Aiming, turn.Phase);
             Assert.AreEqual("A", turn.CurrentEntityId);
-            Assert.AreEqual(0, turn.TurnCount, "아무도 아직 안 쳤다");
         }
 
         [Test]
-        public void 치면_동전이_멎을_때까지_기다린다()
+        public void 첫_번째_뒤에는_뒤집힌_것을_치우고_같은_사람이_또_친다()
         {
-            var turn = Aiming(TwoPlayers);
+            var turn = Started(TwoPlayers);
 
-            turn.OnStruck("A");
-
-            Assert.AreEqual(PanchigiPhase.Settling, turn.Phase);
-            Assert.AreEqual(1, turn.TurnCount);
-            Assert.IsNull(turn.CurrentEntityId, "구르는 동안은 아무도 조준하지 않는다");
+            Assert.AreEqual(PanchigiBoardAction.RemoveFlipped, Roll(turn, 2));
+            Assert.AreEqual("A", turn.CurrentEntityId);
         }
 
         [Test]
-        public void 패스도_턴으로_세고_차례는_넘어간다()
+        public void 첫_번째에_하나도_못_뒤집으면_흩어진_판_그대로_두_번째를_친다()
         {
-            //  안 세면 전원이 계속 패스해 판이 영영 안 끝난다.
-            var turn = Aiming(TwoPlayers);
+            //  0개라고 판을 처음으로 되돌리면, 1개라도 뒤집은 사람만 흩어진 판을 치게 된다.
+            var turn = Started(TwoPlayers);
+
+            Assert.AreEqual(PanchigiBoardAction.RemoveFlipped, Roll(turn, 0));
+            Assert.AreEqual("A", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 마지막_프레임_스트라이크_뒤_보너스가_0개면_판을_다시_세우지_않는다()
+        {
+            var turn = Started(TwoPlayers, frames: 1);
+            Roll(turn, 6);
+
+            Assert.AreEqual(PanchigiBoardAction.RemoveFlipped, Roll(turn, 0));
+            Assert.AreEqual("A", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 두_번째_뒤에는_판을_새로_세우고_다음_사람이다()
+        {
+            var turn = Started(TwoPlayers);
+            Roll(turn, 2);
+
+            Assert.AreEqual(PanchigiBoardAction.ResetFull, Roll(turn, 1));
+            Assert.AreEqual("B", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 스트라이크면_바로_다음_사람이다()
+        {
+            var turn = Started(TwoPlayers);
+
+            Assert.AreEqual(PanchigiBoardAction.ResetFull, Roll(turn, 6));
+            Assert.AreEqual("B", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 파울이면_치기_직전으로_되돌리고_같은_사람이_두_번째를_친다()
+        {
+            var turn = Started(TwoPlayers);
+
+            Assert.AreEqual(PanchigiBoardAction.RestoreBeforeRoll, Roll(turn, 3, dropped: true));
+            Assert.AreEqual("A", turn.CurrentEntityId);
+            Assert.IsTrue(turn.Rolls("A")[0].Foul);
+        }
+
+        [Test]
+        public void 두_번째_파울이면_프레임이_끝나고_판을_새로_세운다()
+        {
+            var turn = Started(TwoPlayers);
+            Roll(turn, 2);
+
+            Assert.AreEqual(PanchigiBoardAction.ResetFull, Roll(turn, 3, dropped: true));
+            Assert.AreEqual("B", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 첫_번째_파울_뒤_두_번째에_다_뒤집으면_스페어다()
+        {
+            var turn = Started(TwoPlayers);
+            Roll(turn, 0, dropped: true);
+            Roll(turn, 6);
+
+            Assert.AreEqual("B", turn.CurrentEntityId);
+            //  스페어 보너스는 A의 다음 프레임 첫 번째에서 정해진다
+            Roll(turn, 1); Roll(turn, 1);   // B
+            Roll(turn, 2);                  // A 2프레임 첫 번째
+            Assert.AreEqual(8, PanchigiBowlingScore.Frames(turn.Rolls("A"), 5, Pins)[0].Cumulative);
+        }
+
+        [Test]
+        public void 시간_초과는_0점_타격이고_같은_프레임이_이어진다()
+        {
+            var turn = Started(TwoPlayers);
 
             turn.OnAimTimeout();
 
-            Assert.AreEqual(PanchigiPhase.Aiming, turn.Phase);
+            Assert.AreEqual(1, turn.Rolls("A").Count);
+            Assert.AreEqual(0, turn.Rolls("A")[0].Flipped);
+            Assert.IsFalse(turn.Rolls("A")[0].Foul);
+            Assert.AreEqual("A", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 두_번째에서_시간_초과면_다음_사람에게_판을_새로_세운다()
+        {
+            var turn = Started(TwoPlayers);
+            Roll(turn, 2);
+
+            Assert.AreEqual(PanchigiBoardAction.ResetFull, turn.OnAimTimeout());
             Assert.AreEqual("B", turn.CurrentEntityId);
-            Assert.AreEqual(1, turn.TurnCount);
         }
 
         [Test]
-        public void 다_뒤집으면_그렇게_만든_사람이_이긴다()
+        public void 마지막_프레임_스트라이크_뒤_판을_다시_세운다()
         {
-            var turn = Aiming(TwoPlayers);
+            var turn = Started(TwoPlayers, frames: 1);
 
-            turn.OnStruck("A");
-            turn.OnRested(true, false);
+            Assert.AreEqual(PanchigiBoardAction.ResetFull, Roll(turn, 6), "보너스는 판을 다시 세워 친다");
+            Assert.AreEqual("A", turn.CurrentEntityId, "마지막 프레임 보너스는 같은 사람");
+            Assert.AreEqual(PanchigiBoardAction.RemoveFlipped, Roll(turn, 2));
+            Assert.AreEqual("A", turn.CurrentEntityId);
+            Assert.AreEqual(PanchigiBoardAction.ResetFull, Roll(turn, 1));
+            Assert.AreEqual("B", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 마지막_프레임_오픈이면_두_번으로_끝난다()
+        {
+            var turn = Started(TwoPlayers, frames: 1);
+            Roll(turn, 2); Roll(turn, 1);
+
+            Assert.AreEqual("B", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 모두_끝나면_판이_끝나고_합계가_나온다()
+        {
+            var turn = Started(TwoPlayers, frames: 1);
+            Roll(turn, 2); Roll(turn, 1);   // A 3
+            Roll(turn, 6); Roll(turn, 6); Roll(turn, 6);   // B 18
 
             Assert.AreEqual(PanchigiPhase.Over, turn.Phase);
-            Assert.AreEqual("A", turn.WinnerEntityId);
+            Assert.IsNull(turn.CurrentEntityId);
+            Assert.AreEqual(3, turn.Total("A"));
+            Assert.AreEqual(18, turn.Total("B"));
         }
 
         [Test]
-        public void 턴_상한에_닿으면_무승부로_끝난다_패스로()
+        public void 세_명이면_프레임마다_차례대로_돈다()
         {
-            var turn = new PanchigiTurn(TwoPlayers, 1, 3);
-            turn.OnRested(false, false);
-
-            turn.OnAimTimeout();          // TurnCount 1 == 상한
-            turn.OnAimTimeout();          // 이미 끝나서 무시돼야 한다
-
-            Assert.AreEqual(PanchigiPhase.Over, turn.Phase);
-            Assert.IsNull(turn.WinnerEntityId);
+            var turn = Started(new[] { "A", "B", "C" }, frames: 2);
+            Roll(turn, 6);   // A
+            Assert.AreEqual("B", turn.CurrentEntityId);
+            Roll(turn, 1); Roll(turn, 1);
+            Assert.AreEqual("C", turn.CurrentEntityId);
+            Roll(turn, 1); Roll(turn, 1);
+            Assert.AreEqual("A", turn.CurrentEntityId);
         }
 
         [Test]
-        public void 턴_상한에_닿으면_무승부로_끝난다_타격으로()
+        public void 타격_수_합계는_치거나_시간이_넘을_때마다_는다()
         {
-            //  위와 같은 상한이지만 들어오는 문이 다르다 - 여긴 OnRested가 끝을 낸다.
-            var turn = new PanchigiTurn(TwoPlayers, 1, 3);
-            turn.OnRested(false, false);
+            var turn = Started(TwoPlayers);
+            int before = turn.TotalRolls;
+            Roll(turn, 1);
+            turn.OnAimTimeout();
 
-            turn.OnStruck("A");
-            turn.OnRested(false, false);
-
-            Assert.AreEqual(PanchigiPhase.Over, turn.Phase);
-            Assert.IsNull(turn.WinnerEntityId, "쳤지만 안 뒤집혔으니 승자가 아니다");
+            Assert.AreEqual(before + 2, turn.TotalRolls);
         }
 
         [Test]
-        public void 한도가_영이면_탈락시키지_않는다()
+        public void 순위는_높은_점수가_앞이고_같으면_공동이다()
         {
-            //  설정으로 벌칙을 꺼 둘 수 있어야 한다.
-            var turn = Aiming(TwoPlayers, dropOutLimit: 0);
-
-            turn.OnStruck("A");
-            turn.OnRested(false, true);
-
-            Assert.IsFalse(turn.IsEliminated("A"));
-            Assert.AreEqual(PanchigiPhase.Aiming, turn.Phase);
+            var places = PanchigiRanking.Place(new Dictionary<string, int> { ["A"] = 30, ["B"] = 30, ["C"] = 12, ["D"] = 45 });
+            Assert.AreEqual(1, places["D"]);
+            Assert.AreEqual(2, places["A"]);
+            Assert.AreEqual(2, places["B"]);
+            Assert.AreEqual(4, places["C"]);
         }
     }
 }

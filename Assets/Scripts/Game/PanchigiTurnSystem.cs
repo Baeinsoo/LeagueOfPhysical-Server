@@ -8,6 +8,7 @@ namespace LOP
     /// <summary>
     /// 판치기 진행(서버). End 페이즈에서 돈다 — 물리가 돈 뒤·스냅샷 송신 전이라
     /// "이번 틱 결과를 보고 턴을 정한 뒤 그 상태를 같이 보낸다"가 한 틱 안에 끝난다.
+    /// 규칙(<see cref="PanchigiTurn"/>)이 돌려주는 판 조치 — 전부 세우기 / 뒤집힌 것 치우기 / 직전으로 — 를 물리로 실행한다.
     /// </summary>
     public class PanchigiTurnSystem : ITickSystem
     {
@@ -24,18 +25,38 @@ namespace LOP
 
         private int restTicks;
         private long aimDeadlineTick;
-        private long lastDeadlineTurnCount = -1;   // 마감을 이미 정한 턴인지 — TurnCount는 조준 진입마다 반드시 바뀐다
+        private long lastDeadlineTurnCount = -1;   // 마감을 이미 정한 턴인지 — TurnCount는 치거나 시간이 넘을 때마다 바뀐다
         private PanchigiPhase sentPhase = PanchigiPhase.Over;   // 첫 틱에 반드시 한 번 보내도록
         private string sentEntityId;
-        private int sentDropOutTotal = -1;
-        private int sentTurnCount = -1;
+        private int sentTotalRolls = -1;
 
         //  이번 상태(phase+차례)를 이미 받은 세션 id들. 늦게 접속하거나 재접속한 세션은 여기 없으니
         //  다음 틱에 현재 상태를 받는다 — "바뀔 때만 보낸다"가 "0명한테 보내고 끝"이 되지 않게 한다.
         private readonly HashSet<string> receivedSessionIds = new();
 
+        private struct CoinPose
+        {
+            public System.Numerics.Vector3 Position;
+            public System.Numerics.Quaternion Rotation;
+        }
+
+        private CoinPose[] startPoses;
+        private CoinPose[] beforeRoll;                 // 치기 직전 자세 — 파울이면 여기로
+        private readonly HashSet<int> parked = new();  // 치운 동전(coinIds 번호) — 판 옆에 굳혀 둔다
+
         public bool IsOver => turn != null && turn.Phase == PanchigiPhase.Over;
-        public string WinnerEntityId => turn?.WinnerEntityId;
+
+        /// <summary>사람별 합계 점수. 판이 시작되기 전이면 null.</summary>
+        public IReadOnlyDictionary<string, int> Totals
+        {
+            get
+            {
+                if (turn == null) { return null; }
+                var totals = new Dictionary<string, int>();
+                foreach (string id in turn.PlayerEntityIds) { totals[id] = turn.Total(id); }
+                return totals;
+            }
+        }
 
         public PanchigiTurnSystem(ITickUpdater tickUpdater, IRoomDataStore roomDataStore, ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry, LOP.MasterData.LOPMasterData masterData,
@@ -54,9 +75,8 @@ namespace LOP
             coinIds = coinEntityIds;
 
             var config = masterData.Tables.TbPanchigiConfig.GetOrDefault(1);
-            turn = new PanchigiTurn(playerEntityIds,
-                config != null ? config.MatchTurnLimit : 60,
-                config != null ? config.DropOutLimit : 0);
+            turn = new PanchigiTurn(playerEntityIds, config != null ? config.FrameCount : 5, coinEntityIds.Count);
+            startPoses = StartPoses();
 
             //  차례는 엔티티로 돌지만 타격은 userId로 온다 — 한 번만 이어 둔다.
             string[] playerList = roomDataStore.match.playerList;
@@ -101,6 +121,8 @@ namespace LOP
             if (userToEntity.TryGetValue(userId, out string entityId))
             {
                 turn?.OnStruck(entityId);
+                //  임펄스는 이미 걸었지만 물리가 아직 안 돌아 자세는 치기 전 그대로다.
+                beforeRoll = CapturePoses();
             }
         }
 
@@ -123,7 +145,7 @@ namespace LOP
             }
             else if (tick >= aimDeadlineTick)
             {
-                turn.OnAimTimeout();
+                Apply(turn.OnAimTimeout());
             }
 
             if (turn.Phase == PanchigiPhase.Aiming)
@@ -136,9 +158,9 @@ namespace LOP
 
         /// <summary>
         /// 조준 마감은 "이번 조준에 들어선 순간" 한 번만 정한다. 방송 여부(대역폭 최적화)와 묶으면
-        /// 안 된다 — 같은 사람이 연달아 차례를 받는 경우(예: 남은 사람이 1명) CurrentEntityId가 안
+        /// 안 된다 — 같은 사람이 연달아 차례를 받는 경우(한 프레임의 두 번째) CurrentEntityId가 안
         /// 바뀌어 방송이 스킵되고, 그러면 마감도 영영 안 갱신돼 매 틱 타임아웃이 도는 사고가 난다.
-        /// TurnCount는 조준 진입마다(패스든 타격이든) 반드시 바뀌므로 이걸로 "새 턴인지"를 본다.
+        /// TurnCount는 치거나 시간이 넘을 때마다 반드시 바뀌므로 이걸로 "새 턴인지"를 본다.
         /// </summary>
         private void RefreshAimDeadlineIfNewTurn(long tick, LOP.MasterData.PanchigiConfig config)
         {
@@ -169,23 +191,25 @@ namespace LOP
 
             restTicks = 0;
 
-            //  뒤집힘은 판을 되돌리기 *전에* 봐야 한다 — 되돌리면 회전이 초기화돼 흔적이 사라진다.
-            bool allFlipped = AllFlipped();
-            bool droppedOut = ResetBoardIfAnyCoinDroppedOut();
-            turn.OnRested(allFlipped, droppedOut);
+            //  뒤집힘은 판을 되돌리기 *전에* 센다 — 되돌리면 흔적이 사라진다.
+            int flipped = CountFlippedOnBoard();
+            bool droppedOut = AnyCoinOutOfBoard(boardLocator.Board.Bounds);
+            Apply(turn.OnRested(flipped, droppedOut));
         }
 
         private bool AllAtRest(LOP.MasterData.PanchigiConfig config)
         {
             Bounds bounds = boardLocator.Board.Bounds;
-            foreach (string id in coinIds)
+            for (int i = 0; i < coinIds.Count; i++)
             {
-                var body = entityRegistry.Get(id)?.Get<GameFramework.World.PhysicsBody>();
+                if (parked.Contains(i)) { continue; }   // 치운 동전은 판 밖에 굳어 있다
+
+                var body = Body(i);
                 if (body == null) { continue; }
 
                 //  판 밖으로 떨어져 자유낙하하는 동전은 속도가 계속 커져 영영 안 멎는다. 그걸
-                //  기다리면 "안 멎어서 복귀 못 하고, 복귀 못 해서 안 멎는" 교착에 빠진다 — 어차피
-                //  다음 단계(ReturnOutOfBoardCoins)가 자리로 되돌리니 멎은 것으로 쳐도 안전하다.
+                //  기다리면 "안 멎어서 되돌리지 못하고, 못 되돌려서 안 멎는" 교착에 빠진다 — 어차피
+                //  파울로 직전 자세로 되돌리니 멎은 것으로 쳐도 안전하다.
                 if (PanchigiCoin.IsOutOfBoard(body.GetPosition(), bounds))
                 {
                     continue;
@@ -200,67 +224,136 @@ namespace LOP
             return true;
         }
 
-        private bool AllFlipped()
+        private int CountFlippedOnBoard()
         {
-            foreach (string id in coinIds)
+            int flipped = 0;
+            for (int i = 0; i < coinIds.Count; i++)
             {
-                var body = entityRegistry.Get(id)?.Get<GameFramework.World.PhysicsBody>();
-                if (body == null) { continue; }
-
-                if (PanchigiCoin.IsFlipped(body.GetRotation()) == false)
-                {
-                    return false;
-                }
+                if (parked.Contains(i)) { continue; }
+                var body = Body(i);
+                if (body != null && PanchigiCoin.IsFlipped(body.GetRotation())) { flipped++; }
             }
-            return true;
+            return flipped;
+        }
+
+        private void Apply(PanchigiBoardAction action)
+        {
+            switch (action)
+            {
+                case PanchigiBoardAction.ResetFull:
+                    for (int i = 0; i < coinIds.Count; i++) { Body(i)?.SetKinematic(false); }
+                    parked.Clear();
+                    ApplyPoses(startPoses);
+                    break;
+                case PanchigiBoardAction.RemoveFlipped:
+                    ParkFlipped();
+                    break;
+                case PanchigiBoardAction.RestoreBeforeRoll:
+                    ApplyPoses(beforeRoll);
+                    break;
+            }
         }
 
         /// <summary>
-        /// 동전이 하나라도 판 밖으로 나갔으면 <b>판 전체</b>를 처음 세팅으로 되돌린다.
-        /// 나간 것만 주워 담지 않는 이유는 낙(落)이 벌칙이기 때문이다 — 그 턴에 뒤집어 둔 것까지
-        /// 같이 사라져야 "떨어뜨리면 손해"가 성립한다. 되돌린 뒤엔 뒤집힌 동전이 없으므로
-        /// 같은 턴에 승리 판정이 나지도 않는다.
+        /// 뒤집힌 동전을 판 옆에 한 줄로 치운다(볼링 핀을 치우듯). 물리를 끄고(키네마틱) 몸과 World 양쪽에
+        /// 같은 자세를 쓴다 — 서버 물리 시스템은 키네마틱 몸을 밀지도 읽지도 않으므로 World에 안 쓰면
+        /// 스냅샷이 옛 자리를 보낸다. 판 밖이라 타격 처리(판 위 샘플만 고른다)가 자연히 건드리지 않는다.
         /// </summary>
-        /// <returns>낙이 나서 판을 되돌렸으면 true.</returns>
-        private bool ResetBoardIfAnyCoinDroppedOut()
+        private void ParkFlipped()
         {
             Bounds bounds = boardLocator.Board.Bounds;
-            if (AnyCoinOutOfBoard(bounds) == false)
+            for (int i = 0; i < coinIds.Count; i++)
             {
-                return false;
-            }
+                if (parked.Contains(i)) { continue; }
+                var entity = entityRegistry.Get(coinIds[i]);
+                var body = entity?.Get<GameFramework.World.PhysicsBody>();
+                if (body == null || PanchigiCoin.IsFlipped(body.GetRotation()) == false) { continue; }
 
-            var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
-            if (setup == null || boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
-            {
-                return false;
-            }
-
-            for (int i = 0; i < coinIds.Count && i < slots.Count; i++)
-            {
-                var body = entityRegistry.Get(coinIds[i])?.Get<GameFramework.World.PhysicsBody>();
-                if (body == null)
+                CoinPose pose = ParkPose(parked.Count, bounds);
+                body.SetKinematic(true);
+                body.SetPosition(pose.Position);
+                body.SetRotation(pose.Rotation);
+                var transform = entity.Get<GameFramework.World.Transform>();
+                if (transform != null)
                 {
-                    continue;
+                    transform.Position = pose.Position;
+                    transform.Rotation = pose.Rotation;
                 }
+                parked.Add(i);
+            }
+        }
 
-                //  동전은 dynamic이라 PhysX가 진실원본이다 — World.Transform에 쓰면 다음 틱에 덮어써진다.
-                //  자세는 자리의 회전이 아니라 시작 면(+up)으로 되돌린다 — 스폰과 같은 규칙이어야
-                //  "초기 세팅으로 복귀"가 성립한다.
-                body.SetPosition(slots[i].position.ToNumerics());
-                body.SetRotation(System.Numerics.Quaternion.Identity);
+        private static CoinPose ParkPose(int slot, Bounds board)
+        {
+            const float Gap = 0.35f;   // 동전 지름 0.3 + 여유
+            return new CoinPose
+            {
+                Position = new System.Numerics.Vector3(board.max.x + 0.3f, board.max.y + 0.03f, board.min.z + 0.3f + slot * Gap),
+                Rotation = System.Numerics.Quaternion.CreateFromAxisAngle(System.Numerics.Vector3.UnitX, (float)System.Math.PI),
+            };
+        }
+
+        /// <summary>
+        /// 동전들을 이 자세로 옮긴다 — 새 프레임과 파울 되돌리기가 같은 일이다. 치운 동전은 건드리지 않는다.
+        /// 동전은 dynamic이라 PhysX가 진실원본이다 — World.Transform에 쓰면 다음 틱에 덮어써진다.
+        /// </summary>
+        private void ApplyPoses(CoinPose[] poses)
+        {
+            if (poses == null) { return; }
+
+            for (int i = 0; i < coinIds.Count && i < poses.Length; i++)
+            {
+                if (parked.Contains(i)) { continue; }
+                var body = Body(i);
+                if (body == null) { continue; }
+
+                body.SetPosition(poses[i].Position);
+                body.SetRotation(poses[i].Rotation);
                 body.SetVelocity(System.Numerics.Vector3.Zero);
                 body.SetAngularVelocity(System.Numerics.Vector3.Zero);
             }
+        }
 
-            return true;
+        private CoinPose[] CapturePoses()
+        {
+            var poses = new CoinPose[coinIds.Count];
+            for (int i = 0; i < coinIds.Count; i++)
+            {
+                var body = Body(i);
+                if (body == null) { continue; }
+
+                poses[i] = new CoinPose { Position = body.GetPosition(), Rotation = body.GetRotation() };
+            }
+            return poses;
+        }
+
+        /// <summary>
+        /// 처음 배치 — 자리의 위치에 시작 면(+up). 자리의 회전은 쓰지 않는다: 스폰과 같은 규칙이어야
+        /// "처음으로 되돌리기"가 성립한다.
+        /// </summary>
+        private CoinPose[] StartPoses()
+        {
+            var setup = masterData.Tables.TbPanchigiSetup.GetOrDefault(roomDataStore.match.playerList.Length);
+            if (setup == null || boardLocator.Board.TryGetSlots(setup.Formation, out IReadOnlyList<Transform> slots) == false)
+            {
+                //  룰 시스템이 스폰할 때 이미 같은 조건으로 터뜨린다 — 여기 오면 그 뒤에 무언가 바뀐 것이다.
+                throw new System.InvalidOperationException("판치기 처음 배치를 못 찾았다 — TbPanchigiSetup·씬 대형을 확인할 것.");
+            }
+
+            var poses = new CoinPose[slots.Count];
+            for (int i = 0; i < slots.Count; i++)
+            {
+                poses[i] = new CoinPose { Position = slots[i].position.ToNumerics(), Rotation = System.Numerics.Quaternion.Identity };
+            }
+            return poses;
         }
 
         private bool AnyCoinOutOfBoard(Bounds bounds)
         {
-            foreach (string id in coinIds)
+            for (int i = 0; i < coinIds.Count; i++)
             {
-                var body = entityRegistry.Get(id)?.Get<GameFramework.World.PhysicsBody>();
+                if (parked.Contains(i)) { continue; }   // 치운 동전은 판 밖이지만 낙이 아니다
+                var body = Body(i);
                 if (body != null && PanchigiCoin.IsOutOfBoard(body.GetPosition(), bounds))
                 {
                     return true;
@@ -268,6 +361,8 @@ namespace LOP
             }
             return false;
         }
+
+        private GameFramework.World.PhysicsBody Body(int index) => entityRegistry.Get(coinIds[index])?.Get<GameFramework.World.PhysicsBody>();
 
         /// <summary>
         /// 현재 턴 상태를, 아직 못 받은 연결 세션에게만 보낸다. 상태(국면·차례)가 바뀌면 "받은 세션"
@@ -282,16 +377,14 @@ namespace LOP
                 return;   // 종료는 기존 매치 종료 경로가 알린다
             }
 
-            //  낙도 "달라진 것"에 넣는다. 국면·차례만 보면, 낙이 났는데 마침 같은 사람이 다시
-            //  조준하게 된 경우 벌점이 화면에 영영 안 올라간다.
+            //  타격 수도 "달라진 것"에 넣는다. 국면·차례만 보면, 한 프레임의 두 번째처럼 같은 사람이
+            //  다시 조준할 때 첫 번째 결과가 점수판에 영영 안 올라간다.
             if (turn.Phase != sentPhase || turn.CurrentEntityId != sentEntityId
-                || turn.TotalDropOuts != sentDropOutTotal
-                || turn.TurnCount != sentTurnCount)
+                || turn.TotalRolls != sentTotalRolls)
             {
                 sentPhase = turn.Phase;
                 sentEntityId = turn.CurrentEntityId;
-                sentDropOutTotal = turn.TotalDropOuts;
-                sentTurnCount = turn.TurnCount;
+                sentTotalRolls = turn.TotalRolls;
                 receivedSessionIds.Clear();
             }
 
@@ -300,14 +393,17 @@ namespace LOP
                 Phase = turn.Phase == PanchigiPhase.Aiming ? 1 : 0,
                 CurrentEntityId = turn.CurrentEntityId ?? string.Empty,
                 AimDeadlineTick = aimDeadlineTick,
-                TurnCount = turn.TurnCount,
             };
 
-            foreach (var pair in turn.DropOutCounts)
+            foreach (string id in turn.PlayerEntityIds)
             {
-                message.DropOutCounts.Add(pair.Key, pair.Value);
+                var player = new PanchigiPlayerRolls { EntityId = id };
+                foreach (PanchigiRoll roll in turn.Rolls(id))
+                {
+                    player.Rolls.Add(new PanchigiRollInfo { Flipped = roll.Flipped, Foul = roll.Foul });
+                }
+                message.Players.Add(player);
             }
-            message.EliminatedEntityIds.AddRange(turn.EliminatedEntityIds);
 
             foreach (var session in sessionManager.GetAllSessions())
             {

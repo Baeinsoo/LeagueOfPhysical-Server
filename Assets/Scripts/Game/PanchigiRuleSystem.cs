@@ -5,8 +5,7 @@ namespace LOP
 {
     /// <summary>
     /// 판치기 룰(서버). 판을 세우고(플레이어·동전 스폰, 대형 배치) <see cref="PanchigiTurnSystem"/>에
-    /// 턴 진행을 맡긴 뒤, 그 결과(승자 유무)로 등수를 매긴다. 승자가 있으면 1등/공동 꼴등, 없으면
-    /// (무승부) 전원 1등.
+    /// 턴 진행을 맡긴 뒤, 그 결과(사람별 볼링 점수)로 등수를 매긴다 — 높은 순, 같으면 공동.
     /// </summary>
     public class PanchigiRuleSystem : IGameRuleSystem
     {
@@ -19,7 +18,6 @@ namespace LOP
         private readonly LOP.MasterData.LOPMasterData masterData;
         private readonly PanchigiBoardLocator boardLocator;
         private readonly PanchigiTurnSystem turnSystem;
-        private readonly GameFramework.World.EntityRegistry entityRegistry;
 
         private readonly List<string> playerEntityIds = new();
         private readonly List<string> coinEntityIds = new();
@@ -27,14 +25,13 @@ namespace LOP
         public IReadOnlyList<string> PlayerEntityIds => playerEntityIds;
         public IReadOnlyList<string> CoinEntityIds => coinEntityIds;
 
-        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoardLocator boardLocator, PanchigiTurnSystem turnSystem, GameFramework.World.EntityRegistry entityRegistry)
+        public PanchigiRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.MasterData.LOPMasterData masterData, PanchigiBoardLocator boardLocator, PanchigiTurnSystem turnSystem)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.masterData = masterData;
             this.boardLocator = boardLocator;
             this.turnSystem = turnSystem;
-            this.entityRegistry = entityRegistry;
         }
 
         public void Initialize()
@@ -97,29 +94,23 @@ namespace LOP
 
         public bool IsMatchOver => turnSystem.IsOver;
 
-        //  시간이 아니라 턴 수로 끝난다 — TbPanchigiConfig.MatchTurnLimit.
+        //  시간이 아니라 프레임 수로 끝난다 — TbPanchigiConfig.FrameCount.
         public long MatchDurationTicks => 0;
 
         public MatchOutcome ResolveOutcome()
         {
             var outcome = new MatchOutcome();
-            string winnerEntityId = turnSystem.WinnerEntityId;
+            var places = PanchigiRanking.Place(turnSystem.Totals ?? new Dictionary<string, int>());
+            string[] playerList = roomDataStore.match.playerList;
 
-            foreach (string userId in roomDataStore.match.playerList)
+            //  플레이어 엔티티는 playerList 순서대로 만들었다(Initialize) — 같은 자리끼리 잇는다.
+            for (int i = 0; i < playerList.Length && i < playerEntityIds.Count; i++)
             {
-                //  승자 1등 / 나머지 공동 꼴등. 무승부(승자 없음)면 전원 1등.
-                int placement = winnerEntityId == null || IsWinner(userId, winnerEntityId) ? 1 : 2;
-                outcome.placements.Add(new MatchPlacement { userId = userId, placement = placement });
+                int placement = places.TryGetValue(playerEntityIds[i], out int place) ? place : 1;
+                outcome.placements.Add(new MatchPlacement { userId = playerList[i], placement = placement });
             }
 
             return outcome;
-        }
-
-        private bool IsWinner(string userId, string winnerEntityId)
-        {
-            var entity = entityRegistry.Get(winnerEntityId);
-            var ownership = entity?.Get<GameFramework.World.Ownership>();
-            return ownership != null && ownership.OwnerId == userId;
         }
     }
 }

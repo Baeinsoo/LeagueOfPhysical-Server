@@ -107,7 +107,8 @@ namespace LOP
         private PanchigiBoardAction Record(string entityId, PanchigiRoll roll)
         {
             List<PanchigiRoll> mine = rolls[entityId];
-            int frameBefore = PanchigiBowlingScore.Locate(mine, frameCount, pinCount).Frame;
+            PanchigiBowlingPosition before = PanchigiBowlingScore.Locate(mine, frameCount, pinCount);
+            int frameBefore = before.Frame;
             mine.Add(roll);
             TotalRolls++;
 
@@ -121,8 +122,10 @@ namespace LOP
             Aim();   // 같은 사람의 같은 프레임
             if (roll.Foul) { return PanchigiBoardAction.RestoreBeforeRoll; }
 
-            //  마지막 프레임 보너스에서 다 뒤집혔으면 판을 다시 세운다.
-            return now.Standing == pinCount ? PanchigiBoardAction.ResetFull : PanchigiBoardAction.RemoveFlipped;
+            //  마지막 프레임 보너스에서 서 있던 것을 다 뒤집었으면 판을 다시 세운다. "지금 6개가 서 있다"로
+            //  보면 안 된다 — 하나도 못 뒤집은 경우도 6개라, 흩어진 판을 처음으로 되돌려 버린다.
+            bool reracked = before.Standing > 0 && roll.Down >= before.Standing;
+            return reracked ? PanchigiBoardAction.ResetFull : PanchigiBoardAction.RemoveFlipped;
         }
 
         private void NextPlayer()

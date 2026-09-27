@@ -39,6 +39,26 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 첫_번째에_하나도_못_뒤집으면_흩어진_판_그대로_두_번째를_친다()
+        {
+            //  0개라고 판을 처음으로 되돌리면, 1개라도 뒤집은 사람만 흩어진 판을 치게 된다.
+            var turn = Started(TwoPlayers);
+
+            Assert.AreEqual(PanchigiBoardAction.RemoveFlipped, Roll(turn, 0));
+            Assert.AreEqual("A", turn.CurrentEntityId);
+        }
+
+        [Test]
+        public void 마지막_프레임_스트라이크_뒤_보너스가_0개면_판을_다시_세우지_않는다()
+        {
+            var turn = Started(TwoPlayers, frames: 1);
+            Roll(turn, 6);
+
+            Assert.AreEqual(PanchigiBoardAction.RemoveFlipped, Roll(turn, 0));
+            Assert.AreEqual("A", turn.CurrentEntityId);
+        }
+
+        [Test]
         public void 두_번째_뒤에는_판을_새로_세우고_다음_사람이다()
         {
             var turn = Started(TwoPlayers);

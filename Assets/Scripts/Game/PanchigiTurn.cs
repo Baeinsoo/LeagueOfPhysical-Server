@@ -10,89 +10,86 @@ namespace LOP
     }
 
     /// <summary>
-    /// 판치기 한 판의 진행. 물리도 시계도 모르고 "무슨 일이 있었나"만 받아 다음 국면을 정한다.
+    /// 판치기 한 판의 진행(골프식 — 같은 배치에서 적은 타수로 다 뒤집기). 물리도 시계도 모르고
+    /// "무슨 일이 있었나"만 받아 다음 국면과 타수를 정한다. 판은 사람마다 따로 쌓이는데, 동전 자세를
+    /// 바꿔 끼우는 일은 부르는 쪽(<see cref="PanchigiTurnSystem"/>)이 한다.
     /// </summary>
     public class PanchigiTurn
     {
-        private readonly int turnLimit;
-        private readonly int dropOutLimit;
+        private readonly int strokeLimit;
 
-        private readonly Dictionary<string, int> dropOutCounts = new();
-        private readonly HashSet<string> eliminated = new();
-        private readonly List<string> alive = new();
+        private readonly Dictionary<string, int> strokes = new();
+        private readonly HashSet<string> finished = new();
+        private readonly List<string> active = new();
 
         private int nextIndex;
-        private string lastStriker;
 
         public PanchigiPhase Phase { get; private set; } = PanchigiPhase.Settling;
 
         /// <summary>지금 칠 차례인 사람. <see cref="PanchigiPhase.Aiming"/>이 아니면 null.</summary>
         public string CurrentEntityId { get; private set; }
 
-        /// <summary>친 것과 패스한 것을 모두 센다 — 안 그러면 전원이 계속 패스해 판이 안 끝난다.</summary>
-        public int TurnCount { get; private set; }
-
-        /// <summary>이긴 사람. 아직 안 끝났거나 무승부면 null.</summary>
-        public string WinnerEntityId { get; private set; }
-
-        /// <summary>낙(落) 몇 번까지 봐주는지. 0이면 벌칙 없음.</summary>
-        public int DropOutLimit => dropOutLimit;
-
-        public PanchigiTurn(IReadOnlyList<string> playerEntityIds, int turnLimit, int dropOutLimit)
-        {
-            this.turnLimit = turnLimit;
-            this.dropOutLimit = dropOutLimit;
-            alive.AddRange(playerEntityIds);
-        }
-
-        /// <summary>그 사람이 지금까지 떨어뜨린 횟수.</summary>
-        public int GetDropOutCount(string entityId)
-        {
-            return entityId != null && dropOutCounts.TryGetValue(entityId, out int count) ? count : 0;
-        }
-
-        public bool IsEliminated(string entityId)
-        {
-            return entityId != null && eliminated.Contains(entityId);
-        }
-
-        /// <summary>사람별 낙 횟수. 한 번도 안 떨어뜨린 사람은 들어 있지 않다.</summary>
-        public IReadOnlyDictionary<string, int> DropOutCounts => dropOutCounts;
-
-        /// <summary>판에서 빠진 사람들.</summary>
-        public IReadOnlyCollection<string> EliminatedEntityIds => eliminated;
-
-        /// <summary>지금까지 난 낙의 총합. "무언가 달라졌나"를 싸게 보려는 용도다.</summary>
-        public int TotalDropOuts { get; private set; }
+        /// <summary>방금 친 사람 — 멎은 판을 누구 몫으로 저장할지 부르는 쪽이 여기서 안다.</summary>
+        public string LastStrikerEntityId { get; private set; }
 
         /// <summary>
-        /// 동전이 모두 멎었다. 판 시작 직후에도 한 번 온다(그땐 아무도 안 쳐서 allFlipped가 거짓).
+        /// 친 것과 시간 초과를 모두 센다. 조준 마감을 "새 조준마다 한 번" 정하는 데 쓴다 —
+        /// 혼자 남아 같은 사람이 연달아 받아도 이 값은 바뀐다.
         /// </summary>
-        /// <param name="allFlipped">동전이 전부 뒤집혔다 — 친 사람의 승리다.</param>
-        /// <param name="droppedOut">동전이 판 밖으로 나갔다 — 친 사람의 벌점이다.</param>
+        public int TurnCount { get; private set; }
+
+        /// <summary>벌타와 상한 기록까지 합친 모두의 타수. "무언가 달라졌나"를 싸게 보려는 용도다.</summary>
+        public int TotalStrokes { get; private set; }
+
+        /// <summary>사람별 타수. 끝난 사람은 기록 타수(상한에 닿았으면 상한+1).</summary>
+        public IReadOnlyDictionary<string, int> Strokes => strokes;
+
+        /// <summary>홀아웃했거나 상한에 닿아 순번에서 빠진 사람들.</summary>
+        public IReadOnlyCollection<string> FinishedEntityIds => finished;
+
+        public PanchigiTurn(IReadOnlyList<string> playerEntityIds, int strokeLimit)
+        {
+            this.strokeLimit = strokeLimit;
+            active.AddRange(playerEntityIds);
+            foreach (string id in playerEntityIds)
+            {
+                strokes[id] = 0;
+            }
+        }
+
+        public int GetStrokes(string entityId)
+        {
+            return entityId != null && strokes.TryGetValue(entityId, out int count) ? count : 0;
+        }
+
+        public bool IsFinished(string entityId)
+        {
+            return entityId != null && finished.Contains(entityId);
+        }
+
+        /// <summary>
+        /// 동전이 모두 멎었다. 판 시작 직후에도 한 번 온다(그땐 아무도 안 쳤다).
+        /// </summary>
+        /// <param name="allFlipped">친 사람의 판이 전부 뒤집혔다 — 홀아웃.</param>
+        /// <param name="droppedOut">동전이 판 밖으로 나갔다 — 1벌타. 판은 부르는 쪽이 처음 배치로 되돌렸다.</param>
         public void OnRested(bool allFlipped, bool droppedOut)
         {
             if (Phase != PanchigiPhase.Settling) { return; }
 
-            if (droppedOut)
+            string striker = LastStrikerEntityId;
+            if (striker != null)
             {
-                //  낙이 났으면 판을 처음 세팅으로 되돌린 뒤라 뒤집힌 동전이 남아 있지 않다.
-                //  그래서 같은 턴에 승리가 성립할 수 없다 — allFlipped보다 먼저 본다.
-                Penalize(lastStriker);
+                //  낙을 먼저 본다 — 되돌린 판에는 뒤집힌 동전이 없으니 같은 타에 홀아웃할 수 없다.
+                if (droppedOut)
+                {
+                    AddStroke(striker);
+                }
+                else if (allFlipped)
+                {
+                    Finish(striker);
+                }
 
-                if (Phase == PanchigiPhase.Over) { return; }
-            }
-            else if (allFlipped)
-            {
-                WinnerEntityId = lastStriker;   // 그 상태를 만든 사람
-                Phase = PanchigiPhase.Over;
-                return;
-            }
-
-            if (TurnCount >= turnLimit)
-            {
-                Phase = PanchigiPhase.Over;     // 무승부 — WinnerEntityId는 null
-                return;
+                FinishIfAtLimit(striker);
             }
 
             EnterAiming();
@@ -102,73 +99,68 @@ namespace LOP
         {
             if (Phase != PanchigiPhase.Aiming) { return; }
 
-            lastStriker = entityId;
+            LastStrikerEntityId = entityId;
             TurnCount++;
+            AddStroke(entityId);
             CurrentEntityId = null;
             Phase = PanchigiPhase.Settling;
         }
 
-        /// <summary>조준 시간을 넘겼다 — 그냥 패스한다. 물리를 안 건드리므로 Settling을 거치지 않는다.</summary>
+        /// <summary>조준 시간을 넘겼다 — 1타로 치고 넘어간다. 물리를 안 건드리므로 Settling을 거치지 않는다.</summary>
         public void OnAimTimeout()
         {
             if (Phase != PanchigiPhase.Aiming) { return; }
 
+            string passer = CurrentEntityId;
             TurnCount++;
-
-            if (TurnCount >= turnLimit)
-            {
-                CurrentEntityId = null;
-                Phase = PanchigiPhase.Over;
-                return;
-            }
-
+            AddStroke(passer);
+            FinishIfAtLimit(passer);
             EnterAiming();
         }
 
-        /// <summary>낙 벌점을 매기고, 한도에 닿았으면 판에서 뺀다.</summary>
-        private void Penalize(string entityId)
+        private void AddStroke(string entityId)
         {
-            if (entityId == null || dropOutLimit <= 0) { return; }
+            strokes[entityId] = GetStrokes(entityId) + 1;
+            TotalStrokes++;
+        }
 
-            dropOutCounts.TryGetValue(entityId, out int count);
-            dropOutCounts[entityId] = ++count;
-            TotalDropOuts++;
+        /// <summary>상한에 닿았는데 못 끝냈으면 상한+1로 기록하고 뺀다. 벌타로 넘어간 만큼은 세지 않는다.</summary>
+        private void FinishIfAtLimit(string entityId)
+        {
+            if (strokeLimit <= 0 || finished.Contains(entityId)) { return; }
 
-            if (count < dropOutLimit) { return; }
+            int count = GetStrokes(entityId);
+            if (count < strokeLimit) { return; }
 
-            eliminated.Add(entityId);
+            TotalStrokes += strokeLimit + 1 - count;
+            strokes[entityId] = strokeLimit + 1;
+            Finish(entityId);
+        }
+
+        private void Finish(string entityId)
+        {
+            finished.Add(entityId);
 
             //  뺀 자리보다 뒤에 있던 사람들이 한 칸씩 앞으로 당겨진다 — 다음 차례 인덱스를 같이
             //  당기지 않으면 바로 다음 사람을 통째로 건너뛴다.
-            int removedIndex = alive.IndexOf(entityId);
-            alive.RemoveAt(removedIndex);
+            int removedIndex = active.IndexOf(entityId);
+            active.RemoveAt(removedIndex);
             if (removedIndex < nextIndex) { nextIndex--; }
-
-            if (alive.Count == 1)
-            {
-                WinnerEntityId = alive[0];   // 마지막 한 사람
-                CurrentEntityId = null;
-                Phase = PanchigiPhase.Over;
-            }
-            else if (alive.Count == 0)
-            {
-                CurrentEntityId = null;
-                Phase = PanchigiPhase.Over;   // 무승부
-            }
         }
 
         private void EnterAiming()
         {
-            if (alive.Count == 0)
+            if (active.Count == 0)
             {
+                CurrentEntityId = null;
                 Phase = PanchigiPhase.Over;
                 return;
             }
 
-            if (nextIndex >= alive.Count) { nextIndex = 0; }
+            if (nextIndex >= active.Count) { nextIndex = 0; }
 
-            CurrentEntityId = alive[nextIndex];
-            nextIndex = (nextIndex + 1) % alive.Count;
+            CurrentEntityId = active[nextIndex];
+            nextIndex = (nextIndex + 1) % active.Count;
             Phase = PanchigiPhase.Aiming;
         }
     }

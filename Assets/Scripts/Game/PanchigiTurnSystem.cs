@@ -27,15 +27,16 @@ namespace LOP
         private long lastDeadlineTurnCount = -1;   // 마감을 이미 정한 턴인지 — TurnCount는 조준 진입마다 반드시 바뀐다
         private PanchigiPhase sentPhase = PanchigiPhase.Over;   // 첫 틱에 반드시 한 번 보내도록
         private string sentEntityId;
-        private int sentDropOutTotal = -1;
-        private int sentTurnCount = -1;
+        private int sentTotalStrokes = -1;
+        private int sentFinishedCount = -1;
 
         //  이번 상태(phase+차례)를 이미 받은 세션 id들. 늦게 접속하거나 재접속한 세션은 여기 없으니
         //  다음 틱에 현재 상태를 받는다 — "바뀔 때만 보낸다"가 "0명한테 보내고 끝"이 되지 않게 한다.
         private readonly HashSet<string> receivedSessionIds = new();
 
         public bool IsOver => turn != null && turn.Phase == PanchigiPhase.Over;
-        public string WinnerEntityId => turn?.WinnerEntityId;
+        /// <summary>사람별 타수(끝난 사람은 기록 타수). 판이 시작되기 전이면 null.</summary>
+        public IReadOnlyDictionary<string, int> Strokes => turn?.Strokes;
 
         public PanchigiTurnSystem(ITickUpdater tickUpdater, IRoomDataStore roomDataStore, ISessionManager sessionManager,
             GameFramework.World.EntityRegistry entityRegistry, LOP.MasterData.LOPMasterData masterData,
@@ -54,9 +55,7 @@ namespace LOP
             coinIds = coinEntityIds;
 
             var config = masterData.Tables.TbPanchigiConfig.GetOrDefault(1);
-            turn = new PanchigiTurn(playerEntityIds,
-                config != null ? config.MatchTurnLimit : 60,
-                config != null ? config.DropOutLimit : 0);
+            turn = new PanchigiTurn(playerEntityIds, config != null ? config.StrokeLimit : 10);
 
             //  차례는 엔티티로 돌지만 타격은 userId로 온다 — 한 번만 이어 둔다.
             string[] playerList = roomDataStore.match.playerList;
@@ -282,16 +281,16 @@ namespace LOP
                 return;   // 종료는 기존 매치 종료 경로가 알린다
             }
 
-            //  낙도 "달라진 것"에 넣는다. 국면·차례만 보면, 낙이 났는데 마침 같은 사람이 다시
-            //  조준하게 된 경우 벌점이 화면에 영영 안 올라간다.
+            //  타수도 "달라진 것"에 넣는다. 국면·차례만 보면, 혼자 남은 사람이 시간 초과로 1타를 먹어도
+            //  (같은 사람이 다시 조준) 화면의 타수가 영영 안 올라간다.
             if (turn.Phase != sentPhase || turn.CurrentEntityId != sentEntityId
-                || turn.TotalDropOuts != sentDropOutTotal
-                || turn.TurnCount != sentTurnCount)
+                || turn.TotalStrokes != sentTotalStrokes
+                || turn.FinishedEntityIds.Count != sentFinishedCount)
             {
                 sentPhase = turn.Phase;
                 sentEntityId = turn.CurrentEntityId;
-                sentDropOutTotal = turn.TotalDropOuts;
-                sentTurnCount = turn.TurnCount;
+                sentTotalStrokes = turn.TotalStrokes;
+                sentFinishedCount = turn.FinishedEntityIds.Count;
                 receivedSessionIds.Clear();
             }
 
@@ -300,14 +299,13 @@ namespace LOP
                 Phase = turn.Phase == PanchigiPhase.Aiming ? 1 : 0,
                 CurrentEntityId = turn.CurrentEntityId ?? string.Empty,
                 AimDeadlineTick = aimDeadlineTick,
-                TurnCount = turn.TurnCount,
             };
 
-            foreach (var pair in turn.DropOutCounts)
+            foreach (var pair in turn.Strokes)
             {
-                message.DropOutCounts.Add(pair.Key, pair.Value);
+                message.Strokes.Add(pair.Key, pair.Value);
             }
-            message.EliminatedEntityIds.AddRange(turn.EliminatedEntityIds);
+            message.FinishedEntityIds.AddRange(turn.FinishedEntityIds);
 
             foreach (var session in sessionManager.GetAllSessions())
             {

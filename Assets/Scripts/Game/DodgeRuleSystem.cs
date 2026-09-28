@@ -1,12 +1,11 @@
 using System.Collections.Generic;
-using System.Linq;
 using UnityEngine;
 
 namespace LOP
 {
     /// <summary>
-    /// Dodge 룰(서버). 참가자마다 맵의 자리에 몸을 세우고, 지금은 시간 상한으로 판을 끝낸다.
-    /// 목숨·탈락·등수(스펙 §1)는 슬라이스 2가 여기에 붙는다.
+    /// Dodge 룰(서버). 참가자마다 맵의 자리에 몸을 세우고 목숨을 준다. 산 사람이 한 명 이하가 되면 끝나고,
+    /// 등수는 탈락 순서의 역순이다(스펙 §1). 맞음·탈락 자체는 DodgeHazardSystem이 정한다.
     /// </summary>
     public class DodgeRuleSystem : IGameRuleSystem
     {
@@ -19,11 +18,17 @@ namespace LOP
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
+        private readonly DodgeMatchState state;
+        private readonly DodgeConfig config;
+        private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
-        public DodgeRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner)
+        public DodgeRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
+                               DodgeMatchState state, DodgeConfig config)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
+            this.state = state;
+            this.config = config;
         }
 
         /// <summary>i번째 사람이 설 자리. 자리가 모자라면 돌려 쓰고, 없으면 바닥에 가로로 줄세운다.</summary>
@@ -47,10 +52,14 @@ namespace LOP
             var playerList = roomDataStore.match.playerList;
             for (int i = 0; i < playerList.Length; i++)
             {
+                string entityId = entitySpawner.GenerateEntityId();
+                entityIdToUserId[entityId] = playerList[i];
+                state.Players[entityId] = new DodgePlayerLife { Lives = config.Lives };
+
                 entitySpawner.Spawn(new CharacterCreationData
                 {
                     userId = playerList[i],
-                    entityId = entitySpawner.GenerateEntityId(),
+                    entityId = entityId,
                     visualId = BodyVisualId,
                     characterCode = BodyCharacterCode,
                     position = SpawnPositionFor(slots, i),
@@ -64,32 +73,30 @@ namespace LOP
                     currentExp = 0,
                 });
             }
+            state.MarkChanged();
         }
 
         public void Deinitialize() { }
 
-        // 목숨·탈락은 슬라이스 2. 그때까지는 시간 상한으로만 끝난다.
-        public bool IsMatchOver => false;
+        // 혼자 들어온 판은 시작하자마자 끝나지 않게, 두 명 이상일 때만 "한 명 남음"으로 끝낸다.
+        public bool IsMatchOver => entityIdToUserId.Count >= 2 && state.AliveCount <= 1;
 
-        // 50Hz × 60초.
-        public long MatchDurationTicks => 3000;
+        // 50Hz × 5분. 슬라이스 3의 서든데스가 판을 끝내기 전까지의 안전 상한.
+        public long MatchDurationTicks => 15000;
 
-        // 진짜 등수(탈락 순서의 역순)는 슬라이스 2. 그때까지는 보고 경로가 끊기지 않게 무작위로 둔다.
         public MatchOutcome ResolveOutcome()
         {
-            var userIds = roomDataStore.match.playerList.ToList();
-            for (int i = userIds.Count - 1; i > 0; i--)
+            var alive = new List<string>();
+            foreach (var kv in state.Players)
             {
-                int j = Random.Range(0, i + 1);
-                (userIds[i], userIds[j]) = (userIds[j], userIds[i]);
+                if (kv.Value.Alive && entityIdToUserId.TryGetValue(kv.Key, out var user)) alive.Add(user);
             }
-
-            var outcome = new MatchOutcome();
-            for (int i = 0; i < userIds.Count; i++)
+            var eliminations = new List<(string, long)>();
+            foreach (var (entityId, tick) in state.Eliminations)
             {
-                outcome.placements.Add(new MatchPlacement { userId = userIds[i], placement = i + 1 });
+                if (entityIdToUserId.TryGetValue(entityId, out var user)) eliminations.Add((user, tick));
             }
-            return outcome;
+            return DodgePlacements.Resolve(alive, eliminations);
         }
     }
 }

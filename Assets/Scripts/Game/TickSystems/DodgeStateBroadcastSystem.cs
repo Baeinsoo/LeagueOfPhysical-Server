@@ -55,7 +55,8 @@ namespace LOP
             var message = new DodgeStateToC { Version = state.Version };
             foreach (var p in state.Patterns)
             {
-                var w = new DodgePatternWire { Id = p.Id, Kind = (int)p.Kind, StartTick = p.StartTick, Seed = p.Seed };
+                var w = new DodgePatternWire { Id = p.Id, Kind = (int)p.Kind, StartTick = p.StartTick, Seed = p.Seed,
+                                               WarnTicks = p.WarnTicks };
                 w.P.Add(p.P0); w.P.Add(p.P1); w.P.Add(p.P2); w.P.Add(p.P3);
                 message.Patterns.Add(w);
             }

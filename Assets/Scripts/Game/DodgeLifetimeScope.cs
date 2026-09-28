@@ -13,7 +13,10 @@ namespace LOP
             builder.Register<DodgeConfigProvider>(Lifetime.Singleton);
             builder.Register<DodgeConfig>(c => c.Resolve<DodgeConfigProvider>().Get(), Lifetime.Singleton);
             builder.Register<DodgeMatchState>(Lifetime.Singleton);
-            builder.Register(c => new DodgeDirector(c.Resolve<IMatchSeed>().Value, c.Resolve<DodgeConfig>()), Lifetime.Singleton);
+            builder.Register<DodgeStageProvider>(Lifetime.Singleton);
+            builder.Register<DodgeStageTable>(c => c.Resolve<DodgeStageProvider>().Get(), Lifetime.Singleton);
+            builder.Register(c => new DodgeDirector(c.Resolve<IMatchSeed>().Value, c.Resolve<DodgeConfig>(),
+                                                    c.Resolve<DodgeStageTable>()), Lifetime.Singleton);
             builder.Register<DodgeDirectorSystem>(Lifetime.Singleton);
             builder.Register(c => new DodgeHazardSystem(
                 c.Resolve<DodgeMatchState>(),

@@ -84,5 +84,15 @@ namespace LOP.Tests
             Assert.AreEqual(2, wire.Players[0].Lives);
             Assert.AreEqual(-1, wire.Players[0].EliminatedTick);
         }
+
+        [Test]
+        public void 예고_길이도_실어_보낸다()
+        {
+            var state = new DodgeMatchState();
+            state.Patterns.Add(new DodgePattern(3, DodgePatternKind.Bomb, 100, 0, 1f, 2f, 2f, 0f, warnTicks: 42));
+            state.MarkChanged();
+            var wire = DodgeStateBroadcastSystem.ToWire(state);
+            Assert.AreEqual(42, wire.Patterns[0].WarnTicks);
+        }
     }
 }

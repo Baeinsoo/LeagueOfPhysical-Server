@@ -26,6 +26,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Archery.unity
     guid: 1cdf7da80c5a40a4588901f66d7056b9
+  - enabled: 1
+    path: Assets/Scenes/Dodge.unity
+    guid: 43c03713a751d634d814377f2e4c03d2
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 35add8549303d7e40afb044c7a36484b, type: 2}
   m_UseUCBPForAssetBundles: 0

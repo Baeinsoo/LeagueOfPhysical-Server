@@ -14,7 +14,12 @@ namespace LOP
         // 맵에 사대 마커가 없을 때만 쓰는 폴백. 원 둘레에 등간격으로 세운다.
         private const float FallbackRingRadius = 12f;
 
-        private const string BodyVisualId = "Assets/Art/Characters/Knight/Knight.prefab";
+        private const string KnightVisualId = "Assets/Art/Characters/Knight/Knight.prefab";
+        //  한 발 승부만 새 룩(PolyOne 치비). 프리팹과 원격 등록은 클라 레포(Addressables 키 = 경로).
+        private const string ChibiVisualId = "Assets/Characters/Chibi/Chibi.prefab";
+
+        public static string BodyVisualFor(ArcheryCourseKind kind)
+            => kind == ArcheryCourseKind.ShootOff ? ChibiVisualId : KnightVisualId;
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
@@ -94,7 +99,7 @@ namespace LOP
                 {
                     userId = playerList[i],
                     entityId = entityId,
-                    visualId = BodyVisualId,
+                    visualId = BodyVisualFor(config.CourseKind),
                     characterCode = "",
                     position = position,
                     rotation = rotation,

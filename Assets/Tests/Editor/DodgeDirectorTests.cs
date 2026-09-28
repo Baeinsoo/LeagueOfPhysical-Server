@@ -93,17 +93,18 @@ namespace LOP.Tests
         {
             var stages = new DodgeStageTable(new[]
             {
-                new DodgeStage("폭탄", 10f, new[] { DodgePatternKind.Bomb }, 1f, 0f, 1.6f),
+                // 경계 520틱 — 간격 80틱이라 500틱에 고른 패턴이 경계 너머(525틱)에 뜬다
+                new DodgeStage("폭탄", 10.4f, new[] { DodgePatternKind.Bomb }, 1f, 0f, 1.6f),
                 new DodgeStage("레이저", 10f, new[] { DodgePatternKind.Laser }, 1f, 0f, 1.6f),
             });
             var c = Config();
             var got = Run(new DodgeDirector(5UL, c, stages), 0, 999, 0);
             Assert.Greater(got.Count, 0);
+            // 기준은 고른 틱이 아니라 화면에 뜨는 틱이다 — 배너가 레이저로 바뀐 뒤에 폭탄이 뜨면 안 된다.
             foreach (var p in got)
             {
-                long picked = p.StartTick - c.LeadTicks;   // 고른 틱
-                var want = picked < 500 ? DodgePatternKind.Bomb : DodgePatternKind.Laser;
-                Assert.AreEqual(want, p.Kind, $"picked at {picked}");
+                var want = p.StartTick < 520 ? DodgePatternKind.Bomb : DodgePatternKind.Laser;
+                Assert.AreEqual(want, p.Kind, $"starts at {p.StartTick}");
             }
         }
 

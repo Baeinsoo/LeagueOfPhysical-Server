@@ -55,7 +55,9 @@ namespace LOP
                 return;
             }
 
-            var at = stages.At(tick, gameplayStartTick, config);
+            // 스테이지·세기는 화면에 뜨는 틱(고른 틱 + 예약 시간)으로 본다 — 고른 틱으로 보면 새 스테이지 배너가
+            // 뜬 뒤에 이전 스테이지 종류가 나타난다.
+            var at = stages.At(tick + config.LeadTicks, gameplayStartTick, config);
             nextTick = tick + IntervalTicksAt(at, config);
 
             var kinds = at.Kinds;

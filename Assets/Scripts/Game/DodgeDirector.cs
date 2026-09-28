@@ -6,28 +6,39 @@ namespace LOP
 {
     /// <summary>
     /// 다음 위험을 고른다(서버 전용). 매치 씨앗으로 뽑아 같은 판을 다시 돌리면 같은 순서가 나온다.
-    /// 고른 패턴은 지금이 아니라 예약 시간 뒤에 시작한다 — 핑 낮은 사람이 먼저 보지 않게(스펙 §5.1).
-    /// 사람을 노리는 패턴(조준탄·발밑 폭탄)은 고르는 순간의 서버 위치를 담는다.
+    /// 무엇을 낼지는 지금 스테이지가, 얼마나 세게(간격·예고·개수)는 세기가 정한다(스펙 §4.2).
+    /// 고른 패턴은 예약 시간 뒤에 시작한다 — 핑 낮은 사람이 먼저 보지 않게(스펙 §5.1).
     /// </summary>
     public class DodgeDirector
     {
-        private static readonly DodgePatternKind[] Rotation =
-        {
-            DodgePatternKind.BulletRain, DodgePatternKind.Bomb, DodgePatternKind.BulletWall, DodgePatternKind.Laser,
-            DodgePatternKind.BulletAimed, DodgePatternKind.Rock, DodgePatternKind.Tiles,
-        };
-
         private readonly ulong seed;
         private readonly DodgeConfig config;
+        private readonly DodgeStageTable stages;
         private int counter;
         private int nextId = 1;
         private long nextTick = long.MinValue;
 
-        public DodgeDirector(ulong matchSeed, DodgeConfig config)
+        public DodgeDirector(ulong matchSeed, DodgeConfig config, DodgeStageTable stages)
         {
             seed = Hashing.Combine(matchSeed, Hashing.Fnv1a64("dodge-director"));
             this.config = config;
+            this.stages = stages;
         }
+
+        // 세기가 오르면 줄어드는 값들. 하한이 있다 — 세기가 끝없이 오르는 서든데스에서도 피할 수 있어야 한다.
+        public static int IntervalTicksAt(in DodgeStagePoint at, in DodgeConfig c)
+            => Mathf.Max(c.MinIntervalTicks, Mathf.RoundToInt(at.IntervalTicks / Mathf.Max(at.Intensity, 0.01f)));
+
+        public static int WarnTicksAt(float intensity, in DodgeConfig c)
+            => Mathf.Max(c.MinWarnTicks, Mathf.RoundToInt(c.WarnTicks / Mathf.Max(intensity, 0.01f)));
+
+        // 세기가 오르면 느는 값들. 위가 막혀 있다 — 경기장이 탄으로 꽉 차면 "피하기"가 아니다.
+        public static int RainCount(float intensity) => Mathf.Clamp(Mathf.RoundToInt(12f * intensity), 6, 40);
+        public static float WallGap(float intensity) => Mathf.Max(1.8f, 3f / Mathf.Max(intensity, 0.01f));
+        public static int LaserCount(float intensity) => Mathf.Clamp(Mathf.FloorToInt(intensity), 1, 3);
+        public static int RockCount(float intensity) => intensity >= 1.6f ? 2 : 1;
+
+        private const int SecondRockDelayTicks = 20;   // 두 개 연달아 — 첫 것을 피한 자리를 둘째가 지난다
 
         public void Next(long tick, long gameplayStartTick, IReadOnlyList<Vector2> alivePositions, List<DodgePattern> into)
         {
@@ -43,22 +54,28 @@ namespace LOP
             {
                 return;
             }
-            nextTick = tick + config.PatternIntervalTicks;
 
-            var kind = config.OnlyKind > 0 ? (DodgePatternKind)config.OnlyKind : Rotation[counter % Rotation.Length];
+            var at = stages.At(tick, gameplayStartTick, config);
+            nextTick = tick + IntervalTicksAt(at, config);
+
+            var kinds = at.Kinds;
+            var kind = config.OnlyKind > 0 ? (DodgePatternKind)config.OnlyKind : kinds[counter % kinds.Length];
             // 뽑는 순서가 계약이다 — 같은 씨앗에서 같은 판이 나와야 재현·디버깅이 된다.
             var rng = new DeterministicRandom(Hashing.Combine(seed, (ulong)counter));
             counter++;
 
             long start = tick + config.LeadTicks;
+            int warn = WarnTicksAt(at.Intensity, config);
             float h = config.ArenaHalf;
             switch (kind)
             {
                 case DodgePatternKind.BulletRain:
-                    into.Add(new DodgePattern(nextId++, kind, start, rng.NextUInt64(), rng.Range(0, 4), 12f, 4f, 0.15f));
+                    into.Add(new DodgePattern(nextId++, kind, start, rng.NextUInt64(), rng.Range(0, 4),
+                                              RainCount(at.Intensity), 4f, 0.15f));
                     break;
                 case DodgePatternKind.BulletWall:
-                    into.Add(new DodgePattern(nextId++, kind, start, 0, rng.Range(0, 4), rng.Range(-h + 2f, h - 2f), 3f, 0.9f));
+                    into.Add(new DodgePattern(nextId++, kind, start, 0, rng.Range(0, 4), rng.Range(-h + 2f, h - 2f),
+                                              WallGap(at.Intensity), 0.9f));
                     break;
                 case DodgePatternKind.BulletAimed:
                     if (alivePositions.Count == 0) break;
@@ -71,21 +88,25 @@ namespace LOP
                 case DodgePatternKind.Bomb:
                     foreach (var p in alivePositions)
                     {
-                        into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f));
+                        into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, warn));
                     }
                     break;
                 case DodgePatternKind.Laser:
+                    for (int i = LaserCount(at.Intensity); i > 0; i--)
                     {
-                        float at = rng.Range(-h + 1f, h - 1f);
+                        float pos = rng.Range(-h + 1f, h - 1f);
                         bool vertical = rng.Range(0, 2) == 0;
                         into.Add(vertical
-                            ? new DodgePattern(nextId++, kind, start, 0, at, -h, at, h)
-                            : new DodgePattern(nextId++, kind, start, 0, -h, at, h, at));
+                            ? new DodgePattern(nextId++, kind, start, 0, pos, -h, pos, h, warn)
+                            : new DodgePattern(nextId++, kind, start, 0, -h, pos, h, pos, warn));
                     }
                     break;
                 case DodgePatternKind.Rock:
-                    into.Add(new DodgePattern(nextId++, kind, start, 0, rng.Range(0, 4), rng.Range(-h + 2f, h - 2f),
-                                              rng.Range(-0.35f, 0.35f), 0f));
+                    for (int i = 0; i < RockCount(at.Intensity); i++)
+                    {
+                        into.Add(new DodgePattern(nextId++, kind, start + i * SecondRockDelayTicks, 0, rng.Range(0, 4),
+                                                  rng.Range(-h + 2f, h - 2f), rng.Range(-0.35f, 0.35f), 0f, warn));
+                    }
                     break;
                 case DodgePatternKind.Tiles:
                     {
@@ -96,7 +117,7 @@ namespace LOP
                         {
                             if (((i % n) + (i / n)) % 2 == parity) mask |= 1UL << i;   // 체크무늬 한쪽
                         }
-                        into.Add(new DodgePattern(nextId++, kind, start, mask, 0f, 0f, 0f, 0f));
+                        into.Add(new DodgePattern(nextId++, kind, start, mask, 0f, 0f, 0f, 0f, warn));
                     }
                     break;
             }

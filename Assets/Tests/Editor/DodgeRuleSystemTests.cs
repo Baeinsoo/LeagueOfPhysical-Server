@@ -32,5 +32,10 @@ namespace LOP.Tests
             Assert.AreEqual(0f, b.y);
             Assert.Greater(Vector3.Distance(a, b), 1.5f);
         }
+
+        // 한 발 승부와 같은 치비 — 클라가 같은 키로 원격 그룹에서 받는다.
+        [Test]
+        public void 선수는_한_발_승부와_같은_치비다() =>
+            Assert.AreEqual("Assets/Characters/Chibi/Chibi.prefab", DodgeRuleSystem.BodyVisualId);
     }
 }

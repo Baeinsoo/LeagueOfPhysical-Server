@@ -12,8 +12,8 @@ namespace LOP
         // 맵에 SpawnPoint가 없을 때만 쓰는 폴백 간격(m). 겹쳐 세우면 누가 누군지 안 보인다.
         private const float FallbackSpacingX = 2f;
 
-        // 플랩왕의 기사 몸을 빌려 쓴다. 이 모드는 이동만 하므로 능력치·스킬은 쓰이지 않는다.
-        private const string BodyVisualId = "Assets/Art/Characters/Knight/Knight.prefab";
+        // 한 발 승부 치비 — 새 룩. 클라가 같은 키로 원격 그룹에서 받는다. 이동만 하므로 능력치·스킬은 기사 캐릭터 코드를 그대로 빌린다.
+        public const string BodyVisualId = "Assets/Characters/Chibi/Chibi.prefab";
         private const string BodyCharacterCode = "character_001";
 
         private readonly IRoomDataStore roomDataStore;

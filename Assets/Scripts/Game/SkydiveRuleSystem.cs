@@ -13,9 +13,9 @@ namespace LOP
         private const float FallbackSpawnY = 200f;
         private const float FallbackSpawnSpacingX = 3f;
 
-        // Bird.prefab은 Animator가 없어 어떤 자세도 못 취한다. Knight는 리그가 있는 사람 몸이라
-        // 지금은 기울기만 쓰지만, 나중에 진짜 스카이다이빙 클립(다이브/대자/패러세일)을 얹을 자리가 된다.
-        private const string BodyVisualId = "Assets/Art/Characters/Knight/Knight.prefab";
+        // 새 룩(슬라이스 4) — PolyOne 치비. 휴머노이드라 떨어지는 동작(Falling)·기울기를 쓴다.
+        // 프리팹과 원격 등록은 클라 레포(Addressables 키 = 경로). 진짜 스카이다이빙 클립은 나중에 이 몸에 얹는다.
+        public const string BodyVisualId = "Assets/Characters/Chibi/Chibi.prefab";
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;

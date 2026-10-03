@@ -28,6 +28,7 @@ namespace LOP
                 var elimSlot = new int[slots + 1];   // 마지막 칸 = 살아남음(우승)
                 var lengths = new List<double>();
                 int hitsCollide = 0, hitsFree = 0;
+                double aliveCollide = 0, aliveFree = 0;
                 for (ulong seed = 1; seed <= (ulong)seeds; seed++)
                 {
                     var m = new DodgeSimMatch(seed, c, s, n);
@@ -40,9 +41,11 @@ namespace LOP
                     if (n >= 2)
                     {
                         hitsCollide += m.Hits.Count;
+                        aliveCollide += AliveSeconds(m);
                         var free = new DodgeSimMatch(seed, c, s, n, collide: false);
                         free.Run(new DodgeHumanBot(seed), MaxTicks);
                         hitsFree += free.Hits.Count;
+                        aliveFree += AliveSeconds(free);
                     }
                 }
                 sb.AppendLine($"## {n}인");
@@ -61,8 +64,8 @@ namespace LOP
                 sb.AppendLine($"- 판 길이 중앙값: {lengths[lengths.Count / 2]:F0}초");
                 if (n >= 2)
                 {
-                    double blocked = hitsCollide > 0 ? 100.0 * (hitsCollide - hitsFree) / hitsCollide : 0;
-                    sb.AppendLine($"- 다른 선수에 막혀서 맞은 비율: {blocked:F0}% (충돌 {hitsCollide}회 / 충돌 없음 {hitsFree}회)");
+                    double blocked = BlockedPercent(hitsCollide, aliveCollide, hitsFree, aliveFree);
+                    sb.AppendLine($"- 다른 선수에 막혀서 맞은 비율: {blocked:F0}% (살아 있던 1분당 맞음 — 충돌 {Rate(hitsCollide, aliveCollide):F2} / 충돌 없음 {Rate(hitsFree, aliveFree):F2})");
                 }
                 sb.AppendLine();
             }
@@ -96,6 +99,25 @@ namespace LOP
             sb.AppendLine();
             sb.AppendLine("> 이동은 단순화(가속 무시) — 실제보다 조금 덜 맞게 나온다(스펙 §3).");
             return sb.ToString();
+        }
+
+        /// <summary>
+        /// 막혀서 맞은 비율 = 1 − (충돌 없는 판의 맞음률 / 충돌 판의 맞음률). 맞음률은 살아 있던 시간당이다 —
+        /// 판은 n−1명이 탈락할 때까지 가서 맞은 총수는 충돌과 무관하게 ~목숨×(n−1)로 묶이기 때문(검토 C1).
+        /// </summary>
+        public static double BlockedPercent(int hitsCollide, double aliveSecondsCollide, int hitsFree, double aliveSecondsFree)
+        {
+            double rc = Rate(hitsCollide, aliveSecondsCollide), rf = Rate(hitsFree, aliveSecondsFree);
+            return rc > 0 ? 100.0 * (1.0 - rf / rc) : 0;
+        }
+
+        private static double Rate(int hits, double aliveSeconds) => aliveSeconds > 0 ? hits / (aliveSeconds / 60.0) : 0;
+
+        private static double AliveSeconds(DodgeSimMatch m)
+        {
+            double sum = 0;
+            for (long t = 0; t <= m.Tick; t++) sum += AliveAt(m, t);
+            return sum / DodgeConfig.TicksPerSecond;
         }
 
         private static int AliveAt(DodgeSimMatch m, long t)

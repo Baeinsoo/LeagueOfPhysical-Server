@@ -23,5 +23,14 @@ namespace LOP.Tests
             var c = DodgeSimTables.Config(); var s = DodgeSimTables.Stages();
             Assert.AreEqual(DodgeDifficultyReport.Build(c, s, 2, new[] { 2 }), DodgeDifficultyReport.Build(c, s, 2, new[] { 2 }));
         }
+
+        // 판은 n−1명이 탈락할 때까지 가서 맞은 총수는 충돌과 무관하게 ~5(n−1)로 묶인다 — 막힘은 "같은 시간에 더 많이 맞음"으로 잰다(검토 C1).
+        [Test]
+        public void 막힘_비율은_살아_있던_시간으로_나눈_비율로_잰다()
+        {
+            // 둘 다 35번 맞았지만 충돌 판은 더 빨리 탈락했다(700초 vs 1000초) → 같은 시간에 더 많이 맞았다.
+            Assert.AreEqual(30.0, DodgeDifficultyReport.BlockedPercent(35, 700.0, 35, 1000.0), 1e-6);
+            Assert.AreEqual(0.0, DodgeDifficultyReport.BlockedPercent(0, 700.0, 0, 1000.0), 1e-6);
+        }
     }
 }

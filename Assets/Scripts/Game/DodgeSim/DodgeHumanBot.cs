@@ -33,7 +33,8 @@ namespace LOP
         private readonly Dictionary<int, int> decisions = new Dictionary<int, int>();
         private readonly List<DodgePattern> known = new List<DodgePattern>();
         private readonly Dictionary<long, List<DodgeShape>> shapeCache = new Dictionary<long, List<DodgeShape>>();
-        private int knownSignature = -1;
+        private readonly List<(int id, float count)> knownKey = new List<(int, float)>();
+        private readonly List<(int id, float count)> scratchKey = new List<(int, float)>();
         private DodgeConfig plan;
         private bool planReady;
 
@@ -65,13 +66,39 @@ namespace LOP
         // 아는 패턴 = 시작 틱(화면에 나타남) + 반응 지연이 지난 것.
         private void Refresh(DodgeSimMatch m, long now)
         {
+            // 본 틱(지금 − 반응 지연)에 화면에 있던 것만 안다. 탄비는 그때까지 나온 탄만(검토 I1).
+            long seen = now - reactionTicks;
             known.Clear();
-            int sig = 17;
+            scratchKey.Clear();
             foreach (var p in m.State.Patterns)
             {
-                if (now >= p.StartTick + reactionTicks) { known.Add(p); sig = sig * 31 + p.Id; }
+                if (seen < p.StartTick) continue;
+                var v = Visible(p, seen);
+                known.Add(v);
+                scratchKey.Add((v.Id, v.P1));
             }
-            if (sig != knownSignature) { shapeCache.Clear(); knownSignature = sig; }
+            // 아는 것이 바뀌면 미래 도형 캐시를 버린다 — 해시가 아니라 목록 그대로 비교(충돌 없음).
+            bool same = scratchKey.Count == knownKey.Count;
+            for (int i = 0; same && i < scratchKey.Count; i++) same = scratchKey[i] == knownKey[i];
+            if (!same)
+            {
+                shapeCache.Clear();
+                knownKey.Clear();
+                knownKey.AddRange(scratchKey);
+            }
+        }
+
+        /// <summary>
+        /// seenTick에 사람이 알 수 있는 만큼의 패턴. 탄비는 탄이 spacing틱마다 하나씩 나오므로 그때까지 나온 개수로 줄인 사본 —
+        /// 나머지(탄 벽·조준·폭탄·레이저·장독·바닥)는 예고가 뜨는 순간 전부 보인다.
+        /// </summary>
+        public static DodgePattern Visible(in DodgePattern p, long seenTick)
+        {
+            if (p.Kind != DodgePatternKind.BulletRain) return p;
+            long spacing = (long)Mathf.Max(0f, p.P2);
+            long age = seenTick - p.StartTick;
+            float count = spacing <= 0 ? p.P1 : Mathf.Min(p.P1, age / spacing + 1);
+            return new DodgePattern(p.Id, p.Kind, p.StartTick, p.Seed, p.P0, count, p.P2, p.P3, p.WarnTicks);
         }
 
         private List<DodgeShape> ShapesAt(DodgeSimMatch m, long t)

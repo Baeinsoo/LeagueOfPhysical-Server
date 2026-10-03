@@ -53,5 +53,16 @@ namespace LOP.Tests
         {
             Assert.AreEqual(HitsIn(new DodgeHumanBot(3), 3, 3000), HitsIn(new DodgeHumanBot(3), 3, 3000));
         }
+
+        // 탄비는 탄이 하나씩 나타난다 — 사람은 아직 안 나온 탄을 못 본다(검토 I1). 본 틱까지 나온 탄만 남긴 사본을 쓴다.
+        [Test]
+        public void 아직_안_나온_탄은_모른다()
+        {
+            var rain = new DodgePattern(1, DodgePatternKind.BulletRain, 100, 7, 0f, 40f, 4f, 0.15f);
+            Assert.AreEqual(6f, DodgeHumanBot.Visible(rain, 120).P1);    // 나이 20틱 → 0,4,8,12,16,20틱 탄
+            Assert.AreEqual(40f, DodgeHumanBot.Visible(rain, 1000).P1);
+            var bomb = new DodgePattern(2, DodgePatternKind.Bomb, 100, 7, 1f, 2f, 2f, 0f);
+            Assert.AreEqual(bomb.P1, DodgeHumanBot.Visible(bomb, 120).P1);   // 다른 종류는 그대로
+        }
     }
 }

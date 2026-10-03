@@ -12,9 +12,12 @@ namespace LOP
             this.md = md;
         }
 
-        public DodgeStageTable Get()
+        public DodgeStageTable Get() => From(md.Tables.TbDodgeStage.DataList);
+
+        /// <summary>표 행들 → 시간표(id 순). 시뮬도 같은 변환을 쓴다.</summary>
+        public static DodgeStageTable From(IEnumerable<LOP.MasterData.DodgeStage> data)
         {
-            var rows = new List<LOP.MasterData.DodgeStage>(md.Tables.TbDodgeStage.DataList);
+            var rows = new List<LOP.MasterData.DodgeStage>(data);
             rows.Sort((a, b) => a.Id.CompareTo(b.Id));
             var stages = new List<DodgeStage>(rows.Count);
             foreach (var r in rows)

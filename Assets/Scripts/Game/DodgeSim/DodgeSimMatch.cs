@@ -110,6 +110,15 @@ namespace LOP
             }
         }
 
+        /// <summary>검사기용 — 이동·진행기만 돌고 판정은 건너뛴다(유령은 맞지 않는다). 유령은 순간이동한다(조준 위치만 필요).</summary>
+        public void StepPatternsOnly(IDodgeSimMover ghost)
+        {
+            Tick++;
+            for (int i = 0; i < Players; i++) Positions[i] = ghost.Want(this, i);
+            SyncTransforms();
+            director.Tick(Tick, Dt);
+        }
+
         private void MoveTo(int i, Vector2 want)
         {
             Vector2 from = Positions[i];

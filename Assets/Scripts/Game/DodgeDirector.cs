@@ -41,10 +41,10 @@ namespace LOP
         private const int SecondRockDelayTicks = 20;
 
         // 수박은 발밑이 아니라 근처에 — 정확히 노리면 예고 1초에 2.2m를 뛰어야 해 보통 사람은 못 피한다(4a 측정, 4b).
-        public const float BombNearMin = 1f;
-        public const float BombNearMax = 1.8f;
-        /// <summary>수박 예고 하한(1.5초) — 세기가 올라도 반응 + 탈출 시간은 줄지 않는다.</summary>
-        public const int BombMinWarnTicks = 75;
+        public const float BombNearMin = 0.5f;
+        public const float BombNearMax = 1.2f;
+        /// <summary>수박 예고 하한(1.2초) — 세기가 올라도 반응 + 탈출 시간은 줄지 않는다. 1.5초·1~1.8m 옆은 사람 판에서 너무 쉬웠다.</summary>
+        public const int BombMinWarnTicks = 60;
         /// <summary>온돌 예고 하한(1.2초) — 반응 후 옆 칸까지 갈 시간.</summary>
         public const int TileMinWarnTicks = 60;
         /// <summary>탄 벽의 탄 사이. 판정 지름(2×(탄+몸) = 0.76m)보다 좁아야 구멍으로만 지나간다.</summary>

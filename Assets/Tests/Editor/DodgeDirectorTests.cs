@@ -62,6 +62,8 @@ namespace LOP.Tests
         [Test]
         public void 폭탄은_산_사람마다_하나씩_근처에_떨어진다()
         {
+            Assert.AreEqual(0.5f, DodgeDirector.BombNearMin);
+            Assert.AreEqual(1.2f, DodgeDirector.BombNearMax);
             var d = new DodgeDirector(1UL, Config((int)DodgePatternKind.Bomb), Flat());
             var got = Run(d, 0, Config().FirstPatternDelayTicks, 0);
             Assert.AreEqual(2, got.Count);
@@ -201,14 +203,14 @@ namespace LOP.Tests
             Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.TileMinWarnTicks);
         }
 
-        // 수박 예고는 세기가 올라도 1.5초 밑으로 안 내려간다 — 0.8초 하한으로는 반응 + 2m 탈출이 안 된다.
+        // 수박 예고는 세기가 올라도 1.2초 밑으로 안 내려간다 — 0.8초 하한으로는 반응 + 2m 탈출이 안 된다.
         [Test]
-        public void 폭탄_예고는_1점5초_밑으로_안_내려간다()
+        public void 폭탄_예고는_1점2초_밑으로_안_내려간다()
         {
             var c = Config((int)DodgePatternKind.Bomb);
             var stages = new DodgeStageTable(new[] { new DodgeStage("수박", 60f, new[] { DodgePatternKind.Bomb }, 3f, 0f, 1.6f) });
             var got = Run(new DodgeDirector(1UL, c, stages), 0, c.FirstPatternDelayTicks, 0);
-            Assert.AreEqual(75, DodgeDirector.BombMinWarnTicks);
+            Assert.AreEqual(60, DodgeDirector.BombMinWarnTicks);   // 사람 판: 1.5초·1~1.8m 옆은 너무 쉬웠다 → 중간으로
             Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.BombMinWarnTicks);
         }
     }

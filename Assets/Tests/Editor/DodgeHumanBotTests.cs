@@ -76,5 +76,14 @@ namespace LOP.Tests
             var bomb = new DodgeShape { Type = DodgeShapeType.Circle, Active = true, Radius = 2f };
             Assert.AreEqual(2f, DodgeHumanBot.PlanShape(bomb, 0.45f).Radius, 1e-5f);   // 원은 판정 반지름 쪽에서 이미 넓힌다
         }
+
+        // 가운데 심판(충돌체)을 가로지르는 길은 막혀 그 자리에 선다 — 봇은 그런 길을 고르지 않는다.
+        [Test]
+        public void 심판을_가로지르는_길은_막힌_길이다()
+        {
+            Assert.IsTrue(DodgeHumanBot.PathBlocked(new Vector2(4f, 0f), new Vector2(-4f, 0f)));
+            Assert.IsTrue(DodgeHumanBot.PathBlocked(new Vector2(4f, 0f), new Vector2(0.3f, 0f)));    // 끝이 심판 안
+            Assert.IsFalse(DodgeHumanBot.PathBlocked(new Vector2(4f, 3f), new Vector2(-4f, 3f)));
+        }
     }
 }

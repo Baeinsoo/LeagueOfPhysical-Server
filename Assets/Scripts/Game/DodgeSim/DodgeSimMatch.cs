@@ -18,6 +18,8 @@ namespace LOP
     {
         public const float BodyRadius = 0.37f;
         public const float MoveSpeed = 4f;
+        /// <summary>가운데 투척 심판의 맵 충돌체 반지름(DodgeMap "Thrower").</summary>
+        public const float ThrowerRadius = 0.45f;
         private const float Dt = 1f / DodgeConfig.TicksPerSecond;
 
         /// <summary>DodgeMap SpawnPoint1~8(2026-10-03 에디터에서 읽은 값).</summary>
@@ -126,6 +128,11 @@ namespace LOP
             Vector2 to = from + step;
             to.x = Mathf.Clamp(to.x, -Limit, Limit);
             to.y = Mathf.Clamp(to.y, -Limit, Limit);
+            // 심판은 맵 충돌체라 충돌 끄기(Collide)와 무관하게 막는다.
+            if ((to - DodgeDirector.Thrower).sqrMagnitude < (ThrowerRadius + BodyRadius) * (ThrowerRadius + BodyRadius))
+            {
+                return;
+            }
             if (Collide)
             {
                 for (int j = 0; j < Players; j++)

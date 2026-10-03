@@ -92,6 +92,13 @@ namespace LOP
         /// seenTick에 사람이 알 수 있는 만큼의 패턴. 탄비는 탄이 spacing틱마다 하나씩 나오므로 그때까지 나온 개수로 줄인 사본 —
         /// 나머지(탄 벽·조준·폭탄·레이저·장독·바닥)는 예고가 뜨는 순간 전부 보인다.
         /// </summary>
+        /// <summary>from→to 직선이 가운데 심판(충돌체 + 몸)에 걸리나.</summary>
+        public static bool PathBlocked(Vector2 from, Vector2 to)
+        {
+            float r = DodgeSimMatch.ThrowerRadius + DodgeSimMatch.BodyRadius;
+            return DodgeGeometry.SegmentDistance(from, to, DodgeDirector.Thrower, DodgeDirector.Thrower) < r;
+        }
+
         /// <summary>계획용 도형 — 칸(발밑 판정)은 여유만큼 넓힌다. 원·선은 계획 설정의 판정 반지름이 이미 넓혀 둔다.</summary>
         public static DodgeShape PlanShape(DodgeShape s, float margin)
         {
@@ -134,6 +141,7 @@ namespace LOP
             void Consider(Vector2 cand)
             {
                 cand = new Vector2(Mathf.Clamp(cand.x, -m.Limit, m.Limit), Mathf.Clamp(cand.y, -m.Limit, m.Limit));
+                if (PathBlocked(here, cand)) return;   // 심판에 막혀 그 자리에 서게 되는 길
                 long hit = FirstHit(m, here, cand, now);
                 long bucket = (hit == long.MaxValue ? HorizonTicks : hit - now) / SafeBucketTicks;
                 float score = (cand - here).magnitude + CenterBias * cand.magnitude;

@@ -76,5 +76,15 @@ namespace LOP.Tests
             Assert.AreEqual(S.Count + 1, r.MinCellsByStage.Length);
             for (int i = 0; i < S.Count; i++) Assert.Greater(r.MinCellsByStage[i], 0);
         }
+
+        [Test]
+        public void 심판_자리는_설_수_없는_칸이다()
+        {
+            var g = new DodgeReachGrid(8.63f);
+            g.FillAll();
+            g.ClearDisc(DodgeDirector.Thrower, DodgeSimMatch.ThrowerRadius + DodgeSimMatch.BodyRadius);
+            Assert.IsFalse(g.Get(g.CellOf(Vector2.zero)));
+            Assert.IsTrue(g.Get(g.CellOf(new Vector2(1.5f, 0f))));
+        }
     }
 }

@@ -91,5 +91,15 @@ namespace LOP.Tests
             Assert.IsTrue(m.Over);
             Assert.AreEqual(1, m.Eliminations.Count);
         }
+
+        // 가운데 투척 심판은 맵 충돌체다 — 선수는 뚫고 지나가지 못한다.
+        [Test]
+        public void 가운데_심판은_못_지나간다()
+        {
+            var m = new DodgeSimMatch(1, C, S, 1);
+            for (int i = 0; i < 300; i++) m.Step(new Go(new Vector2(-4f, 0f)));   // (4,0)에서 가운데를 가로질러
+            Assert.GreaterOrEqual((m.Positions[0] - DodgeDirector.Thrower).magnitude,
+                                  DodgeSimMatch.ThrowerRadius + DodgeSimMatch.BodyRadius - 1e-3f);
+        }
     }
 }

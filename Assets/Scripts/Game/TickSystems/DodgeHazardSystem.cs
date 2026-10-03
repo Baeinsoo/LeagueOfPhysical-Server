@@ -28,6 +28,13 @@ namespace LOP
 
         public void Tick(long tick, float deltaTime)
         {
+            state.LastTick = tick;
+            // 판이 갈렸다(여운 동안) — 이긴 사람은 더 맞지 않는다. 혼자 들어온 판은 계속 센다.
+            if (state.Players.Count >= 2 && state.AliveCount <= 1)
+            {
+                return;
+            }
+
             // 순서를 고정한다 — 같은 틱의 판정 결과가 딕셔너리 순서에 따라 달라지면 안 된다.
             ids.Clear();
             ids.AddRange(state.Players.Keys);

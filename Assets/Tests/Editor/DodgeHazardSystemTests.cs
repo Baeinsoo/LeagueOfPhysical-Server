@@ -90,5 +90,18 @@ namespace LOP.Tests
             CollectionAssert.AreEqual(new[] { "1" }, eliminated);
             Assert.AreEqual(1, state.Eliminations.Count);
         }
+
+        // 판이 갈린 뒤(여운 3초) 남은 한 명은 더 맞지 않는다 — 이긴 사람이 결과 직전에 "탈락"하면 안 된다.
+        [Test]
+        public void 한_명만_남으면_더_판정하지_않는다()
+        {
+            Add("2", new Vector3(5f, 0f, 0f));
+            state.Players["2"].EliminatedTick = 5;
+            BombAt(11);
+            system.Tick(10, DeltaTime);
+            system.Tick(11, DeltaTime);
+            Assert.AreEqual(C.Lives, state.Players["1"].Lives);
+            Assert.AreEqual(11, state.LastTick);
+        }
     }
 }

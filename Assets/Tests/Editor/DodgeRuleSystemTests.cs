@@ -37,5 +37,22 @@ namespace LOP.Tests
         [Test]
         public void 선수는_한_발_승부와_같은_치비다() =>
             Assert.AreEqual("Assets/Characters/Chibi/Chibi.prefab", DodgeRuleSystem.BodyVisualId);
+
+        // 마지막 탈락 뒤 여운 — 자막(2.5초)과 들것(2초)이 다 보인 뒤에 결과로 넘어간다. 바로 끝내면 2인 판에서는 탈락 연출을 못 본다.
+        [Test]
+        public void 마지막_탈락_뒤_여운이_지나야_끝난다()
+        {
+            Assert.IsFalse(DodgeRuleSystem.MatchOver(2, 1, 100, 100));
+            Assert.IsFalse(DodgeRuleSystem.MatchOver(2, 1, 100, 100 + DodgeRuleSystem.EndGraceTicks - 1));
+            Assert.IsTrue(DodgeRuleSystem.MatchOver(2, 1, 100, 100 + DodgeRuleSystem.EndGraceTicks));
+            Assert.GreaterOrEqual(DodgeRuleSystem.EndGraceTicks, 125);   // 자막 한 줄 2.5초(50Hz)
+        }
+
+        [Test]
+        public void 둘_이상_살아_있거나_혼자_들어온_판은_안_끝난다()
+        {
+            Assert.IsFalse(DodgeRuleSystem.MatchOver(2, 2, -1, 10000));
+            Assert.IsFalse(DodgeRuleSystem.MatchOver(1, 0, 100, 10000));
+        }
     }
 }

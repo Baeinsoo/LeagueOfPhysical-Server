@@ -78,8 +78,15 @@ namespace LOP
 
         public void Deinitialize() { }
 
+        public bool IsMatchOver => MatchOver(entityIdToUserId.Count, state.AliveCount,
+            state.Eliminations.Count > 0 ? state.Eliminations[state.Eliminations.Count - 1].tick : -1, state.LastTick);
+
+        /// <summary>마지막 탈락 뒤 결과로 넘어가기까지(3초, 50Hz). 클라의 탈락 자막(2.5초)·들것(2초)이 다 보이게.</summary>
+        public const int EndGraceTicks = 150;
+
         // 혼자 들어온 판은 시작하자마자 끝나지 않게, 두 명 이상일 때만 "한 명 남음"으로 끝낸다.
-        public bool IsMatchOver => entityIdToUserId.Count >= 2 && state.AliveCount <= 1;
+        public static bool MatchOver(int players, int alive, long lastEliminationTick, long now) =>
+            players >= 2 && alive <= 1 && now - lastEliminationTick >= EndGraceTicks;
 
         // 50Hz × 5분. 슬라이스 3의 서든데스가 판을 끝내기 전까지의 안전 상한.
         public long MatchDurationTicks => 15000;

@@ -23,6 +23,9 @@ namespace LOP
 
         public int Version { get; private set; }
 
+        /// <summary>판정 시스템이 마지막으로 돈 틱 — 룰이 "마지막 탈락 뒤 얼마나 지났나"를 잰다.</summary>
+        public long LastTick;
+
         public void MarkChanged() => Version++;
 
         public int AliveCount

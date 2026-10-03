@@ -22,7 +22,13 @@ namespace LOP
                 c.Resolve<DodgeMatchState>(),
                 c.Resolve<GameFramework.World.IWorld>().EntityRegistry,
                 c.Resolve<DodgeConfig>(),
-                c.Resolve<EntitySpawner>().Despawn), Lifetime.Singleton);
+                c.Resolve<EntitySpawner>().Despawn,
+                (id, tick, lives) =>
+                {
+                    var world = c.Resolve<GameFramework.World.IWorld>();
+                    var at = c.Resolve<DodgeStageTable>().At(tick, world.GameplayStartTick, c.Resolve<DodgeConfig>());
+                    UnityEngine.Debug.Log(DodgeHitLog.Format(at, tick, world.GameplayStartTick, lives));
+                }), Lifetime.Singleton);
             builder.Register<DodgeStateBroadcastSystem>(Lifetime.Singleton);
 
             builder.Register<IGameRuleSystem, DodgeRuleSystem>(Lifetime.Singleton);

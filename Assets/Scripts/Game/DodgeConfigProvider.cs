@@ -18,11 +18,15 @@ namespace LOP
                 throw new System.InvalidOperationException(
                     "TbDodgeConfig id=1 행을 찾을 수 없음 — MasterData 미로드 또는 DodgeConfig 데이터 누락");
             }
-            return new DodgeConfig(r.Lives, r.InvulnerableSeconds, r.HitRadius, r.LeadSeconds, r.ArenaHalf,
-                                   r.TileCount, r.FirstPatternDelaySeconds, r.PatternIntervalSeconds, r.OnlyKind,
-                                   r.WarnSeconds, r.BulletSpeed, r.BulletRadius, r.BombRadius, r.BombActiveSeconds,
-                                   r.LaserWidth, r.LaserOnSeconds, r.RockSpeed, r.RockRadius, r.TileOnSeconds,
-                                   r.MinIntervalSeconds, r.MinWarnSeconds, r.SuddenDeathBase, r.SuddenDeathGrowth);
+            return From(r);
         }
+
+        /// <summary>표 한 행 → 공용 값. 시뮬(<see cref="DodgeSimTables"/>)도 같은 변환을 쓴다.</summary>
+        public static DodgeConfig From(LOP.MasterData.DodgeConfig r) =>
+            new DodgeConfig(r.Lives, r.InvulnerableSeconds, r.HitRadius, r.LeadSeconds, r.ArenaHalf,
+                            r.TileCount, r.FirstPatternDelaySeconds, r.PatternIntervalSeconds, r.OnlyKind,
+                            r.WarnSeconds, r.BulletSpeed, r.BulletRadius, r.BombRadius, r.BombActiveSeconds,
+                            r.LaserWidth, r.LaserOnSeconds, r.RockSpeed, r.RockRadius, r.TileOnSeconds,
+                            r.MinIntervalSeconds, r.MinWarnSeconds, r.SuddenDeathBase, r.SuddenDeathGrowth);
     }
 }

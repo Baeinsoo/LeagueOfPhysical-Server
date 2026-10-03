@@ -14,12 +14,15 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry registry;
         private readonly DodgeConfig config;
         private readonly System.Action<string> eliminate;
+        private readonly System.Action<string, long, int> onHit;
         private readonly Dictionary<string, Vector2> previous = new Dictionary<string, Vector2>();
         private readonly List<string> ids = new List<string>();
 
         public DodgeHazardSystem(DodgeMatchState state, GameFramework.World.EntityRegistry registry,
-                                 DodgeConfig config, System.Action<string> eliminate)
+                                 DodgeConfig config, System.Action<string> eliminate,
+                                 System.Action<string, long, int> onHit = null)
         {
+            this.onHit = onHit;
             this.state = state;
             this.registry = registry;
             this.config = config;
@@ -70,6 +73,7 @@ namespace LOP
                     }
 
                     life.Lives--;
+                    onHit?.Invoke(id, tick, life.Lives);   // 보정 로그(슬라이스 4a §7) — id·틱·남은 목숨
                     life.InvulnerableUntilTick = tick + config.InvulnerableTicks;
                     if (life.Lives <= 0)
                     {

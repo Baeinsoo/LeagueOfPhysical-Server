@@ -84,9 +84,9 @@ namespace LOP
         /// <summary>마지막 탈락 뒤 결과로 넘어가기까지(3초, 50Hz). 클라의 탈락 자막(2.5초)·들것(2초)이 다 보이게.</summary>
         public const int EndGraceTicks = 150;
 
-        // 혼자 들어온 판은 시작하자마자 끝나지 않게, 두 명 이상일 때만 "한 명 남음"으로 끝낸다.
+        // 둘 이상이면 "한 명 남음", 혼자면(최소 인원 1 — 혼자 연습) "탈락"으로 갈린다. 갈린 뒤 여운이 지나면 끝.
         public static bool MatchOver(int players, int alive, long lastEliminationTick, long now) =>
-            players >= 2 && alive <= 1 && now - lastEliminationTick >= EndGraceTicks;
+            players >= 1 && alive <= (players >= 2 ? 1 : 0) && now - lastEliminationTick >= EndGraceTicks;
 
         // 50Hz × 5분. 슬라이스 3의 서든데스가 판을 끝내기 전까지의 안전 상한.
         public long MatchDurationTicks => 15000;

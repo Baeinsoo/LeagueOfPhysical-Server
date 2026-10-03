@@ -49,10 +49,18 @@ namespace LOP.Tests
         }
 
         [Test]
-        public void 둘_이상_살아_있거나_혼자_들어온_판은_안_끝난다()
+        public void 둘_이상_살아_있으면_안_끝난다()
         {
             Assert.IsFalse(DodgeRuleSystem.MatchOver(2, 2, -1, 10000));
-            Assert.IsFalse(DodgeRuleSystem.MatchOver(1, 0, 100, 10000));
+        }
+
+        // 혼자 하는 판(최소 인원 1) — 살아 있는 동안은 계속, 탈락하면 같은 여운 뒤에 끝난다.
+        [Test]
+        public void 혼자면_탈락하고_여운_뒤에_끝난다()
+        {
+            Assert.IsFalse(DodgeRuleSystem.MatchOver(1, 1, -1, 10000));
+            Assert.IsFalse(DodgeRuleSystem.MatchOver(1, 0, 100, 100 + DodgeRuleSystem.EndGraceTicks - 1));
+            Assert.IsTrue(DodgeRuleSystem.MatchOver(1, 0, 100, 100 + DodgeRuleSystem.EndGraceTicks));
         }
     }
 }

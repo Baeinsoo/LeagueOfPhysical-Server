@@ -31,6 +31,18 @@ namespace LOP
         public bool Get(int x, int z) => x < 64 ? (lo[z] >> x & 1) != 0 : (hi[z] >> (x - 64) & 1) != 0;
         public void Clear(int x, int z) { if (x < 64) lo[z] &= ~(1UL << x); else hi[z] &= ~(1UL << (x - 64)); }
 
+        /// <summary>원 안 칸을 지운다 — 설 수 없는 곳(가운데 심판).</summary>
+        public void ClearDisc(Vector2 center, float radius)
+        {
+            var a = CellOf(center - Vector2.one * radius);
+            var b = CellOf(center + Vector2.one * radius);
+            for (int z = a.z; z <= b.z; z++)
+            for (int x = a.x; x <= b.x; x++)
+            {
+                if ((Center(x, z) - center).sqrMagnitude < radius * radius) Clear(x, z);
+            }
+        }
+
         public void FillAll()
         {
             ulong maskLo = N >= 64 ? ulong.MaxValue : (1UL << N) - 1;
@@ -161,6 +173,7 @@ namespace LOP
                 long t = match.Tick;
                 budget += perTick;
                 while (budget >= DodgeReachGrid.Cell) { grid.Dilate(diagonal); diagonal = !diagonal; budget -= DodgeReachGrid.Cell; }
+                grid.ClearDisc(DodgeDirector.Thrower, DodgeSimMatch.ThrowerRadius + DodgeSimMatch.BodyRadius);   // 심판 자리로는 못 퍼진다
 
                 shapes.Clear();
                 foreach (var p in match.State.Patterns) DodgeHazards.Shapes(p, t, config, shapes);

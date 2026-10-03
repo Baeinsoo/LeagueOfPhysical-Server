@@ -35,6 +35,15 @@ namespace LOP
         // 세기가 오르면 느는 값들. 위가 막혀 있다 — 경기장이 탄으로 꽉 차면 "피하기"가 아니다.
         public static int RainCount(float intensity) => Mathf.Clamp(Mathf.RoundToInt(8f * intensity), 6, 40);
         public static float WallGap(float intensity) => Mathf.Max(1.8f, 3f / Mathf.Max(intensity, 0.01f));
+        /// <summary>링 한 겹의 탄 수. 판정 지름 0.76m가 지나가는 반지름 = 0.38 / sin(π/N) — 10개면 1.2m, 28개면 3.4m 밖.</summary>
+        public static int RingCount(float intensity) => Mathf.Clamp(Mathf.RoundToInt(12f * intensity), 8, 28);
+        public static int SpiralArms(float intensity) => intensity >= 1.2f ? 4 : 3;
+
+        /// <summary>탄막 투척기(경기장 가운데의 심판). 맵에도 같은 자리에 충돌체가 있다.</summary>
+        public static readonly Vector2 Thrower = DodgeHazards.Thrower;
+        // rad/틱 — 반지름 4m에서 접선 속도 3~5 m/s. 사람(4 m/s)이 따라 돌거나 갈래 사이로 비킬 수 있게.
+        private const float SpiralTurnMin = 0.015f, SpiralTurnMax = 0.025f;
+
         public static int LaserCount(float intensity) => Mathf.Clamp(Mathf.FloorToInt(intensity), 1, 3);
         public static int RockCount(float intensity) => intensity >= 1.6f ? 2 : 1;
 
@@ -93,8 +102,18 @@ namespace LOP
                     if (alivePositions.Count == 0) break;
                     {
                         Vector2 target = alivePositions[rng.Range(0, alivePositions.Count)];
-                        Vector2 origin = DodgeHazards.EdgePoint(rng.Range(0, 4), rng.Range(-h, h), config.EdgeDistance);
-                        into.Add(new DodgePattern(nextId++, kind, start, 0, origin.x, origin.y, target.x, target.y));
+                        // 가운데 투척기에서 그 사람 쪽으로 3갈래(탄막 규칙 — 발사원은 한 곳).
+                        into.Add(new DodgePattern(nextId++, kind, start, 0, Thrower.x, Thrower.y, target.x, target.y));
+                    }
+                    break;
+                case DodgePatternKind.Ring:
+                    into.Add(new DodgePattern(nextId++, kind, start, 0, Thrower.x, Thrower.y,
+                                              RingCount(at.Intensity), rng.Range(0f, 2f * Mathf.PI)));
+                    break;
+                case DodgePatternKind.Spiral:
+                    {
+                        float turn = rng.Range(SpiralTurnMin, SpiralTurnMax) * (rng.Range(0, 2) == 0 ? -1f : 1f);
+                        into.Add(new DodgePattern(nextId++, kind, start, 0, Thrower.x, Thrower.y, SpiralArms(at.Intensity), turn));
                     }
                     break;
                 case DodgePatternKind.Bomb:

@@ -93,6 +93,38 @@ namespace LOP.Tests
             Assert.AreEqual(1, got.Count);
             var target = new Vector2(got[0].P2, got[0].P3);
             Assert.IsTrue(target == Two[0] || target == Two[1]);
+            Assert.AreEqual(DodgeDirector.Thrower, new Vector2(got[0].P0, got[0].P1));   // 가운데 투척기에서 쏜다
+        }
+
+        // 탄막은 가운데 투척기에서 — 링은 엇갈리는 N개, 나선은 갈래·방향이 판마다 다르다.
+        [Test]
+        public void 링은_가운데에서_정해진_개수로_퍼진다()
+        {
+            var got = Run(new DodgeDirector(1UL, Config((int)DodgePatternKind.Ring), Flat()), 0, Config().FirstPatternDelayTicks, 0);
+            Assert.AreEqual(1, got.Count);
+            Assert.AreEqual(DodgeDirector.Thrower, new Vector2(got[0].P0, got[0].P1));
+            Assert.AreEqual(DodgeDirector.RingCount(1f), (int)got[0].P2);
+        }
+
+        [Test]
+        public void 나선은_가운데에서_돌아간다()
+        {
+            bool cw = false, ccw = false;
+            for (ulong seed = 1; seed <= 12; seed++)
+            {
+                var got = Run(new DodgeDirector(seed, Config((int)DodgePatternKind.Spiral), Flat()), 0, Config().FirstPatternDelayTicks, 0);
+                Assert.AreEqual(DodgeDirector.Thrower, new Vector2(got[0].P0, got[0].P1));
+                Assert.GreaterOrEqual(got[0].P2, 2f);
+                cw |= got[0].P3 < 0f; ccw |= got[0].P3 > 0f;
+            }
+            Assert.IsTrue(cw && ccw, "도는 방향이 판마다 달라야 한다");
+        }
+
+        [Test]
+        public void 링_개수는_세기에_따라_늘고_위가_막혀_있다()
+        {
+            Assert.Greater(DodgeDirector.RingCount(2f), DodgeDirector.RingCount(1f));
+            Assert.AreEqual(DodgeDirector.RingCount(100f), DodgeDirector.RingCount(1000f));
         }
 
         [Test]
@@ -102,7 +134,7 @@ namespace LOP.Tests
             var kinds = new HashSet<DodgePatternKind>();
             var ids = new HashSet<int>();
             foreach (var p in got) { kinds.Add(p.Kind); Assert.IsTrue(ids.Add(p.Id)); }
-            Assert.AreEqual(7, kinds.Count);
+            Assert.AreEqual(8, kinds.Count);
         }
 
         [Test]
@@ -131,7 +163,7 @@ namespace LOP.Tests
             var got = Run(new DodgeDirector(9UL, Config(), new DodgeStageTable(new DodgeStage[0])), 0, 3000, 0);
             var kinds = new HashSet<DodgePatternKind>();
             foreach (var p in got) kinds.Add(p.Kind);
-            Assert.AreEqual(7, kinds.Count);
+            Assert.AreEqual(8, kinds.Count);
         }
 
         [Test]

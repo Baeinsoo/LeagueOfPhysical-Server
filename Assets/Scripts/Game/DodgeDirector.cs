@@ -33,12 +33,22 @@ namespace LOP
             => Mathf.Max(c.MinWarnTicks, Mathf.RoundToInt(c.WarnTicks / Mathf.Max(intensity, 0.01f)));
 
         // 세기가 오르면 느는 값들. 위가 막혀 있다 — 경기장이 탄으로 꽉 차면 "피하기"가 아니다.
-        public static int RainCount(float intensity) => Mathf.Clamp(Mathf.RoundToInt(12f * intensity), 6, 40);
+        public static int RainCount(float intensity) => Mathf.Clamp(Mathf.RoundToInt(8f * intensity), 6, 40);
         public static float WallGap(float intensity) => Mathf.Max(1.8f, 3f / Mathf.Max(intensity, 0.01f));
         public static int LaserCount(float intensity) => Mathf.Clamp(Mathf.FloorToInt(intensity), 1, 3);
         public static int RockCount(float intensity) => intensity >= 1.6f ? 2 : 1;
 
-        private const int SecondRockDelayTicks = 20;   // 두 개 연달아 — 첫 것을 피한 자리를 둘째가 지난다
+        private const int SecondRockDelayTicks = 20;
+
+        // 수박은 발밑이 아니라 근처에 — 정확히 노리면 예고 1초에 2.2m를 뛰어야 해 보통 사람은 못 피한다(4a 측정, 4b).
+        public const float BombNearMin = 1f;
+        public const float BombNearMax = 1.8f;
+        /// <summary>수박 예고 하한(1.5초) — 세기가 올라도 반응 + 탈출 시간은 줄지 않는다.</summary>
+        public const int BombMinWarnTicks = 75;
+        /// <summary>온돌 예고 하한(1.2초) — 반응 후 옆 칸까지 갈 시간.</summary>
+        public const int TileMinWarnTicks = 60;
+        /// <summary>탄 벽의 탄 사이. 판정 지름(2×(탄+몸) = 0.76m)보다 좁아야 구멍으로만 지나간다.</summary>
+        public const float WallBulletSpacing = 0.7f;   // 두 개 연달아 — 첫 것을 피한 자리를 둘째가 지난다
 
         public void Next(long tick, long gameplayStartTick, IReadOnlyList<Vector2> alivePositions, List<DodgePattern> into)
         {
@@ -77,7 +87,7 @@ namespace LOP
                     break;
                 case DodgePatternKind.BulletWall:
                     into.Add(new DodgePattern(nextId++, kind, start, 0, rng.Range(0, 4), rng.Range(-h + 2f, h - 2f),
-                                              WallGap(at.Intensity), 0.9f));
+                                              WallGap(at.Intensity), WallBulletSpacing));
                     break;
                 case DodgePatternKind.BulletAimed:
                     if (alivePositions.Count == 0) break;
@@ -90,7 +100,10 @@ namespace LOP
                 case DodgePatternKind.Bomb:
                     foreach (var p in alivePositions)
                     {
-                        into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, warn));
+                        float angle = rng.Range(0f, 2f * Mathf.PI), off = rng.Range(BombNearMin, BombNearMax);
+                        float x = Mathf.Clamp(p.x + Mathf.Cos(angle) * off, -h, h), z = Mathf.Clamp(p.y + Mathf.Sin(angle) * off, -h, h);
+                        into.Add(new DodgePattern(nextId++, kind, start, 0, x, z, config.BombRadius, 0f,
+                                                  Mathf.Max(warn, BombMinWarnTicks)));
                     }
                     break;
                 case DodgePatternKind.Laser:
@@ -119,7 +132,7 @@ namespace LOP
                         {
                             if (((i % n) + (i / n)) % 2 == parity) mask |= 1UL << i;   // 체크무늬 한쪽
                         }
-                        into.Add(new DodgePattern(nextId++, kind, start, mask, 0f, 0f, 0f, 0f, warn));
+                        into.Add(new DodgePattern(nextId++, kind, start, mask, 0f, 0f, 0f, 0f, Mathf.Max(warn, TileMinWarnTicks)));
                     }
                     break;
             }

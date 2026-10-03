@@ -92,6 +92,16 @@ namespace LOP
         /// seenTick에 사람이 알 수 있는 만큼의 패턴. 탄비는 탄이 spacing틱마다 하나씩 나오므로 그때까지 나온 개수로 줄인 사본 —
         /// 나머지(탄 벽·조준·폭탄·레이저·장독·바닥)는 예고가 뜨는 순간 전부 보인다.
         /// </summary>
+        /// <summary>계획용 도형 — 칸(발밑 판정)은 여유만큼 넓힌다. 원·선은 계획 설정의 판정 반지름이 이미 넓혀 둔다.</summary>
+        public static DodgeShape PlanShape(DodgeShape s, float margin)
+        {
+            if (s.Type == DodgeShapeType.Rect)
+            {
+                s.X0 -= margin; s.Z0 -= margin; s.X1 += margin; s.Z1 += margin;
+            }
+            return s;
+        }
+
         public static DodgePattern Visible(in DodgePattern p, long seenTick)
         {
             if (p.Kind != DodgePatternKind.BulletRain) return p;
@@ -107,6 +117,7 @@ namespace LOP
             {
                 list = new List<DodgeShape>();
                 foreach (var p in known) DodgeHazards.Shapes(p, t, m.Config, list);
+                for (int i = 0; i < list.Count; i++) list[i] = PlanShape(list[i], aimNoise + SampleSlack);
                 shapeCache[t] = list;
             }
             return list;

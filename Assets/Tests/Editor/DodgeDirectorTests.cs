@@ -57,15 +57,30 @@ namespace LOP.Tests
             }
         }
 
+        // 발밑을 정확히 노리면 예고 1초에 2.2m를 뛰어야 해 보통 사람은 못 피한다(4a 측정: 수박에서 95% 탈락).
+        // 사람마다 하나씩, 그 사람 근처(1~1.8m 옆)에 떨어진다 — 여전히 그 사람을 덮지만 빠져나갈 길이 짧다.
         [Test]
-        public void 폭탄은_산_사람_발밑마다_하나씩이다()
+        public void 폭탄은_산_사람마다_하나씩_근처에_떨어진다()
         {
             var d = new DodgeDirector(1UL, Config((int)DodgePatternKind.Bomb), Flat());
             var got = Run(d, 0, Config().FirstPatternDelayTicks, 0);
             Assert.AreEqual(2, got.Count);
-            Assert.AreEqual(1f, got[0].P0);
-            Assert.AreEqual(1f, got[0].P1);
-            Assert.AreEqual(-2f, got[1].P0);
+            var targets = Two;
+            for (int i = 0; i < 2; i++)
+            {
+                float off = (new Vector2(got[i].P0, got[i].P1) - targets[i]).magnitude;
+                Assert.GreaterOrEqual(off, DodgeDirector.BombNearMin - 1e-4f);
+                Assert.LessOrEqual(off, DodgeDirector.BombNearMax + 1e-4f);
+            }
+        }
+
+        // 탄 벽은 구멍으로만 지나간다 — 탄 사이가 판정 지름보다 넓으면 정가운데로 빠지는 틈이 생기는데, 그림으로는 몸을 뚫고 지나가 보인다.
+        [Test]
+        public void 탄_벽은_구멍_말고는_못_지나간다()
+        {
+            var c = Config((int)DodgePatternKind.BulletWall);
+            var got = Run(new DodgeDirector(1UL, c, Flat()), 0, c.FirstPatternDelayTicks, 0);
+            Assert.Less(got[0].P3, 2f * (c.BulletRadius + c.HitRadius));
         }
 
         [Test]
@@ -156,7 +171,7 @@ namespace LOP.Tests
         [Test]
         public void 세기가_오르면_개수가_는다()
         {
-            Assert.AreEqual(12, DodgeDirector.RainCount(1f));
+            Assert.AreEqual(8, DodgeDirector.RainCount(1f));   // 4b: 슬리퍼가 느려져(4 m/s) 오래 남는 만큼 줄였다
             Assert.Greater(DodgeDirector.RainCount(2f), DodgeDirector.RainCount(1f));
             Assert.AreEqual(40, DodgeDirector.RainCount(100f));
             Assert.AreEqual(3f, DodgeDirector.WallGap(1f), 1e-5f);
@@ -172,7 +187,29 @@ namespace LOP.Tests
         {
             var c = Config((int)DodgePatternKind.Bomb);
             var got = Run(new DodgeDirector(1UL, c, Flat()), 0, c.FirstPatternDelayTicks, 0);
-            Assert.AreEqual(DodgeDirector.WarnTicksAt(1f, c), got[0].WarnTicks);
+            Assert.AreEqual(Mathf.Max(DodgeDirector.WarnTicksAt(1f, c), DodgeDirector.BombMinWarnTicks), got[0].WarnTicks);
+        }
+
+        // 온돌 예고는 1.2초 밑으로 안 내려간다 — 0.8초로는 반응 후 옆 칸(최대 ~1.5m)까지 못 간다(4b 측정: 온돌에서 53% 탈락).
+        [Test]
+        public void 온돌_예고는_1점2초_밑으로_안_내려간다()
+        {
+            var c = Config((int)DodgePatternKind.Tiles);
+            var stages = new DodgeStageTable(new[] { new DodgeStage("온돌", 60f, new[] { DodgePatternKind.Tiles }, 3f, 0f, 1.6f) });
+            var got = Run(new DodgeDirector(1UL, c, stages), 0, c.FirstPatternDelayTicks, 0);
+            Assert.AreEqual(60, DodgeDirector.TileMinWarnTicks);
+            Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.TileMinWarnTicks);
+        }
+
+        // 수박 예고는 세기가 올라도 1.5초 밑으로 안 내려간다 — 0.8초 하한으로는 반응 + 2m 탈출이 안 된다.
+        [Test]
+        public void 폭탄_예고는_1점5초_밑으로_안_내려간다()
+        {
+            var c = Config((int)DodgePatternKind.Bomb);
+            var stages = new DodgeStageTable(new[] { new DodgeStage("수박", 60f, new[] { DodgePatternKind.Bomb }, 3f, 0f, 1.6f) });
+            var got = Run(new DodgeDirector(1UL, c, stages), 0, c.FirstPatternDelayTicks, 0);
+            Assert.AreEqual(75, DodgeDirector.BombMinWarnTicks);
+            Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.BombMinWarnTicks);
         }
     }
 }

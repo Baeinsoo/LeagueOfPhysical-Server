@@ -64,5 +64,17 @@ namespace LOP.Tests
             var bomb = new DodgePattern(2, DodgePatternKind.Bomb, 100, 7, 1f, 2f, 2f, 0f);
             Assert.AreEqual(bomb.P1, DodgeHumanBot.Visible(bomb, 120).P1);   // 다른 종류는 그대로
         }
+
+        // 온돌 칸은 발밑 판정이라 판정 반지름이 안 붙는다 — 봇이 칸 경계 바로 안쪽을 고르면 빗나감에 넘어간다.
+        // 계획할 때는 칸도 여유만큼 넓혀 본다(실제 판정은 그대로).
+        [Test]
+        public void 계획할_때_칸도_여유만큼_넓힌다()
+        {
+            var tile = new DodgeShape { Type = DodgeShapeType.Rect, Active = true, X0 = 0f, Z0 = 0f, X1 = 3f, Z1 = 3f };
+            var wide = DodgeHumanBot.PlanShape(tile, 0.45f);
+            Assert.AreEqual(-0.45f, wide.X0, 1e-5f); Assert.AreEqual(3.45f, wide.X1, 1e-5f);
+            var bomb = new DodgeShape { Type = DodgeShapeType.Circle, Active = true, Radius = 2f };
+            Assert.AreEqual(2f, DodgeHumanBot.PlanShape(bomb, 0.45f).Radius, 1e-5f);   // 원은 판정 반지름 쪽에서 이미 넓힌다
+        }
     }
 }

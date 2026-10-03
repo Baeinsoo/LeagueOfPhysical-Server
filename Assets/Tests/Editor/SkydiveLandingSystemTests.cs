@@ -33,10 +33,7 @@ namespace LOP.Tests
         }
 
         static SkydiveLandingSystem System(GameFramework.World.EntityRegistry registry)
-            => new SkydiveLandingSystem(registry, Config(),
-                                        SkydiveCourseLayout.ShelfYs,
-                                        SkydiveCourseLayout.SpawnY,
-                                        SkydiveCourseLayout.RespawnPoints);
+            => new SkydiveLandingSystem(registry, Config(), new CheckpointField());
 
         [Test]
         public void 치명_속도로_착지하면_마지막_선반으로_되돌린다()

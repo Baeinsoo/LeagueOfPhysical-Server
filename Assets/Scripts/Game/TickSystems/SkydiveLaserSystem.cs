@@ -20,9 +20,7 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly LaserField laserField;
         private readonly SkydiveConfig config;
-        private readonly IReadOnlyList<float> shelfYs;
-        private readonly float spawnY;
-        private readonly IReadOnlyDictionary<float, Vector3> respawnPoints;
+        private readonly CheckpointField checkpoints;
 
         //  틱 N의 끝 위치 == 틱 N+1의 시작 위치. 이 캐시가 이번 틱에 지나온 경로를 만든다.
         private readonly Dictionary<string, Vector3> previousPositions = new Dictionary<string, Vector3>();
@@ -34,16 +32,12 @@ namespace LOP
         public SkydiveLaserSystem(GameFramework.World.EntityRegistry entityRegistry,
                                   LaserField laserField,
                                   SkydiveConfig config,
-                                  IReadOnlyList<float> shelfYs,
-                                  float spawnY,
-                                  IReadOnlyDictionary<float, Vector3> respawnPoints)
+                                  CheckpointField checkpoints)
         {
             this.entityRegistry = entityRegistry;
             this.laserField = laserField;
             this.config = config;
-            this.shelfYs = shelfYs;
-            this.spawnY = spawnY;
-            this.respawnPoints = respawnPoints;
+            this.checkpoints = checkpoints;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -124,6 +118,10 @@ namespace LOP
         {
             //  respawnCounts는 선반별 부활 순번(spread용) — 레이저 자신의 상태다. SkydiveRespawn은
             //  이 값을 읽어 각도를 정하고 하나 늘려 돌려줄 뿐, 저장은 하지 않는다.
+            //  맵이 이 시스템보다 늦게 뜬다 — 생성 때 복사하지 말고 지금 읽는다.
+            var shelfYs = checkpoints.ShelfYs;
+            float spawnY = checkpoints.SpawnY;
+            var respawnPoints = checkpoints.RespawnPoints;
             float shelfY = SkydiveCheckpoints.LastPassedShelfY(deathY, shelfYs, spawnY);
             respawnCounts.TryGetValue(shelfY, out int order);
             SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order);

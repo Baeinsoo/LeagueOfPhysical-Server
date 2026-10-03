@@ -44,9 +44,9 @@ namespace LOP.Tests
             return entity;
         }
 
-        static SkydiveLaserSystem BuildSystem(GameFramework.World.EntityRegistry registry, LaserField laserField)
-            => new SkydiveLaserSystem(registry, laserField, Config(),
-                SkydiveCourseLayout.ShelfYs, SkydiveCourseLayout.SpawnY, SkydiveCourseLayout.RespawnPoints);
+        static SkydiveLaserSystem BuildSystem(GameFramework.World.EntityRegistry registry, LaserField laserField,
+                                              CheckpointField checkpoints = null)
+            => new SkydiveLaserSystem(registry, laserField, Config(), checkpoints ?? new CheckpointField());
 
         [Test]
         public void 레이저를_지나면_마지막_선반으로_되돌아가고_스태미나가_찬다()
@@ -158,6 +158,33 @@ namespace LOP.Tests
             Assert.AreEqual(fallThroughAgain.z, transform.Position.Z, 0.001f);
             Assert.AreEqual(teleportCountAfterFirstRespawn, transform.TeleportCount);
             Assert.AreEqual(3f, stamina.Current);
+        }
+    
+
+        [Test]
+        public void 맵이_늦게_떠도_필드의_부활_지점을_쓴다()
+        {
+            var registry = new GameFramework.World.EntityRegistry();
+            var diver = Diver("diver-1", new Vector3(0f, 1650f, 0f));
+            registry.Add(diver);
+            var laserField = new LaserField();
+            laserField.Add(CrossingLaser());
+            var checkpoints = new CheckpointField();
+            var system = BuildSystem(registry, laserField, checkpoints);
+
+            //  시스템이 생긴 뒤에 맵이 떠서 표식이 들어온다.
+            checkpoints.Add(3600f, new Vector3(0f, 3600f, 0f));
+            checkpoints.Add(2000f, new Vector3(-25f, 2000f, -10f));
+
+            system.Tick(1, DeltaTime);
+            diver.Get<GameFramework.World.Transform>().Position = new Vector3(0f, 1550f, 0f).ToNumerics();
+            system.Tick(2, DeltaTime);
+
+            var p = diver.Get<GameFramework.World.Transform>().Position;
+            var expected = new Vector3(-25f, 2000f, -10f) + new Vector3(2f, 0f, 0f);   // 첫 부활은 spread 각도 0
+            Assert.AreEqual(expected.x, p.X, 0.001f);
+            Assert.AreEqual(expected.y, p.Y, 0.001f);
+            Assert.AreEqual(expected.z, p.Z, 0.001f);
         }
     }
 }

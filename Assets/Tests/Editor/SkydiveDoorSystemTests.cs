@@ -53,8 +53,7 @@ namespace LOP.Tests
         }
 
         static SkydiveDoorSystem BuildSystem(GameFramework.World.EntityRegistry registry, DoorField doorField)
-            => new SkydiveDoorSystem(registry, doorField, Config(),
-                SkydiveCourseLayout.ShelfYs, SkydiveCourseLayout.SpawnY, SkydiveCourseLayout.RespawnPoints);
+            => new SkydiveDoorSystem(registry, doorField, Config(), new CheckpointField());
 
         [Test]
         public void 닫힌_문_안에_있으면_마지막_선반으로_되돌아간다()

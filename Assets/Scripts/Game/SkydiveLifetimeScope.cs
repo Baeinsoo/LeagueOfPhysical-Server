@@ -49,30 +49,27 @@ namespace LOP
             builder.Register<ICharacterCreator, SkydivePlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, SkydiveRuleSystem>(Lifetime.Singleton);
 
+            // 맵 씬의 CheckpointMarker가 맵 로드 시 여기에 자기를 넣는다. 비어 있으면 옛 코드 표로 폴백.
+            builder.Register<CheckpointField>(Lifetime.Singleton);
+
             //  맵 씬의 LaserVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
             builder.Register<LaserField>(Lifetime.Singleton);
             builder.Register(c => new SkydiveLaserSystem(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<LaserField>(),
                 c.Resolve<SkydiveConfig>(),
-                SkydiveCourseLayout.ShelfYs,
-                SkydiveCourseLayout.SpawnY,
-                SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
+                c.Resolve<CheckpointField>()), Lifetime.Singleton);
 
             builder.Register(c => new SkydiveDoorSystem(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<DoorField>(),
                 c.Resolve<SkydiveConfig>(),
-                SkydiveCourseLayout.ShelfYs,
-                SkydiveCourseLayout.SpawnY,
-                SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
+                c.Resolve<CheckpointField>()), Lifetime.Singleton);
 
             builder.Register(c => new SkydiveLandingSystem(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
                 c.Resolve<SkydiveConfig>(),
-                SkydiveCourseLayout.ShelfYs,
-                SkydiveCourseLayout.SpawnY,
-                SkydiveCourseLayout.RespawnPoints), Lifetime.Singleton);
+                c.Resolve<CheckpointField>()), Lifetime.Singleton);
 
             builder.Register<FinishTrackingSystem>(Lifetime.Singleton);
             // 도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면

@@ -16,9 +16,7 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly DoorField doorField;
         private readonly SkydiveConfig config;
-        private readonly IReadOnlyList<float> shelfYs;
-        private readonly float spawnY;
-        private readonly IReadOnlyDictionary<float, Vector3> respawnPoints;
+        private readonly CheckpointField checkpoints;
 
         //  선반별 부활 순번(spread용) — 문 판정만의 상태다. 레이저의 respawnCounts와 공유하지
         //  않는다(SkydiveRespawn 주석 참고 — 공유하면 서로 다른 위험이 한 카운터로 뒤섞인다).
@@ -28,16 +26,12 @@ namespace LOP
         public SkydiveDoorSystem(GameFramework.World.EntityRegistry entityRegistry,
                                  DoorField doorField,
                                  SkydiveConfig config,
-                                 IReadOnlyList<float> shelfYs,
-                                 float spawnY,
-                                 IReadOnlyDictionary<float, Vector3> respawnPoints)
+                                 CheckpointField checkpoints)
         {
             this.entityRegistry = entityRegistry;
             this.doorField = doorField;
             this.config = config;
-            this.shelfYs = shelfYs;
-            this.spawnY = spawnY;
-            this.respawnPoints = respawnPoints;
+            this.checkpoints = checkpoints;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -65,6 +59,10 @@ namespace LOP
 
         private void Respawn(GameFramework.World.Entity diver, float deathY)
         {
+            //  맵이 이 시스템보다 늦게 뜬다 — 생성 때 복사하지 말고 지금 읽는다.
+            var shelfYs = checkpoints.ShelfYs;
+            float spawnY = checkpoints.SpawnY;
+            var respawnPoints = checkpoints.RespawnPoints;
             float shelfY = SkydiveCheckpoints.LastPassedShelfY(deathY, shelfYs, spawnY);
             respawnCounts.TryGetValue(shelfY, out int order);
             SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order);

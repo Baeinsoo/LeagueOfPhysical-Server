@@ -24,5 +24,8 @@ namespace LOP
         public int dexterity { get; set; }
         public int intelligence { get; set; }
         public int vitality { get; set; }
+
+        /// <summary>식으로 움직이는 캐릭터(<see cref="ScriptedMotion"/>) — 월드 시뮬·AI 두뇌 없이 모드 시스템이 자리를 쓴다.</summary>
+        public bool scriptedMotion { get; set; }
     }
 }

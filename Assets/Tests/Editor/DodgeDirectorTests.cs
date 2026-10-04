@@ -93,7 +93,7 @@ namespace LOP.Tests
             Assert.AreEqual(1, got.Count);
             var target = new Vector2(got[0].P2, got[0].P3);
             Assert.IsTrue(target == Two[0] || target == Two[1]);
-            Assert.AreEqual(DodgeDirector.Thrower, new Vector2(got[0].P0, got[0].P1));   // 가운데 투척기에서 쏜다
+            Assert.AreEqual(DodgeReferee.Spot, new Vector2(got[0].P0, got[0].P1));   // 가운데 투척기에서 쏜다
         }
 
         // 탄막은 가운데 투척기에서 — 링은 엇갈리는 N개, 나선은 갈래·방향이 판마다 다르다.
@@ -102,8 +102,9 @@ namespace LOP.Tests
         {
             var got = Run(new DodgeDirector(1UL, Config((int)DodgePatternKind.Ring), Flat()), 0, Config().FirstPatternDelayTicks, 0);
             Assert.AreEqual(1, got.Count);
-            Assert.AreEqual(DodgeDirector.Thrower, new Vector2(got[0].P0, got[0].P1));
+            Assert.AreEqual(DodgeReferee.Spot, new Vector2(got[0].P0, got[0].P1));
             Assert.AreEqual(DodgeDirector.RingCount(1f), (int)got[0].P2);
+            Assert.AreEqual((ulong)DodgeDirector.RingGap, got[0].Seed);   // 부채꼴 틈
         }
 
         [Test]
@@ -113,7 +114,7 @@ namespace LOP.Tests
             for (ulong seed = 1; seed <= 12; seed++)
             {
                 var got = Run(new DodgeDirector(seed, Config((int)DodgePatternKind.Spiral), Flat()), 0, Config().FirstPatternDelayTicks, 0);
-                Assert.AreEqual(DodgeDirector.Thrower, new Vector2(got[0].P0, got[0].P1));
+                Assert.AreEqual(DodgeReferee.Spot, new Vector2(got[0].P0, got[0].P1));
                 Assert.GreaterOrEqual(got[0].P2, 2f);
                 cw |= got[0].P3 < 0f; ccw |= got[0].P3 > 0f;
             }
@@ -134,7 +135,7 @@ namespace LOP.Tests
             var kinds = new HashSet<DodgePatternKind>();
             var ids = new HashSet<int>();
             foreach (var p in got) { kinds.Add(p.Kind); Assert.IsTrue(ids.Add(p.Id)); }
-            Assert.AreEqual(8, kinds.Count);
+            Assert.AreEqual(7, kinds.Count);
         }
 
         [Test]
@@ -163,7 +164,7 @@ namespace LOP.Tests
             var got = Run(new DodgeDirector(9UL, Config(), new DodgeStageTable(new DodgeStage[0])), 0, 3000, 0);
             var kinds = new HashSet<DodgePatternKind>();
             foreach (var p in got) kinds.Add(p.Kind);
-            Assert.AreEqual(8, kinds.Count);
+            Assert.AreEqual(7, kinds.Count);
         }
 
         [Test]

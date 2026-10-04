@@ -173,7 +173,7 @@ namespace LOP
                 long t = match.Tick;
                 budget += perTick;
                 while (budget >= DodgeReachGrid.Cell) { grid.Dilate(diagonal); diagonal = !diagonal; budget -= DodgeReachGrid.Cell; }
-                grid.ClearDisc(DodgeDirector.Thrower, DodgeSimMatch.ThrowerRadius + DodgeSimMatch.BodyRadius);   // 심판 자리로는 못 퍼진다
+                grid.ClearDisc(match.Referee, DodgeSimMatch.RefereeRadius + DodgeSimMatch.BodyRadius);   // 심판 자리로는 못 퍼진다
 
                 shapes.Clear();
                 foreach (var p in match.State.Patterns) DodgeHazards.Shapes(p, t, config, shapes);

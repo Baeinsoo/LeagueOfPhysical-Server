@@ -26,20 +26,30 @@ namespace LOP.Tests
             Assert.Less(bot * 2, stand);
         }
 
-        // 반응이 빠르면 덜 맞는다 — 반응 지연이 실제로 "모른다"로 작동하는지.
+        // 반응이 빠르면 덜 맞는다 — 반응 지연이 실제로 "모른다"로 작동하는지. 수박(스테이지 2)에서 잰다:
+        // 탄막은 가운데에서 1초쯤 날아와야 닿아 반응 0.25초 차이가 거의 안 갈린다(심판 탄막 이후).
+        static int HitsInStage2(IDodgeSimMover mover, ulong seed)
+        {
+            long from = S.At(0, 0, C).EndTick, to = S.At(from, 0, C).EndTick;
+            var m = new DodgeSimMatch(seed, C, S, 1);
+            m.Run(mover, to);
+            int n = 0;
+            foreach (var (_, t) in m.Hits) if (t >= from) n++;
+            return n;
+        }
+
         [Test]
         public void 반응이_빠르면_덜_맞는다()
         {
             int fast = 0, slow = 0;
             for (ulong s = 1; s <= 8; s++)
             {
-                fast += HitsIn(new DodgeHumanBot(s, reactionSeconds: 0f), s, Stage1);
-                slow += HitsIn(new DodgeHumanBot(s, reactionSeconds: 0.6f), s, Stage1);
+                fast += HitsInStage2(new DodgeHumanBot(s, reactionSeconds: 0f), s);
+                slow += HitsInStage2(new DodgeHumanBot(s, reactionSeconds: 0.6f), s);
             }
             Assert.Less(fast, slow);
         }
 
-        // 화면에 뜨기 전 패턴은 모른다 — 반응 지연이 패턴 길이보다 길면 피하지 못한다.
         [Test]
         public void 모르는_패턴은_안_본다()
         {
@@ -81,9 +91,9 @@ namespace LOP.Tests
         [Test]
         public void 심판을_가로지르는_길은_막힌_길이다()
         {
-            Assert.IsTrue(DodgeHumanBot.PathBlocked(new Vector2(4f, 0f), new Vector2(-4f, 0f)));
-            Assert.IsTrue(DodgeHumanBot.PathBlocked(new Vector2(4f, 0f), new Vector2(0.3f, 0f)));    // 끝이 심판 안
-            Assert.IsFalse(DodgeHumanBot.PathBlocked(new Vector2(4f, 3f), new Vector2(-4f, 3f)));
+            Assert.IsTrue(DodgeHumanBot.PathBlocked(new Vector2(4f, 0f), new Vector2(-4f, 0f), DodgeReferee.Spot));
+            Assert.IsTrue(DodgeHumanBot.PathBlocked(new Vector2(4f, 0f), new Vector2(0.3f, 0f), DodgeReferee.Spot));    // 끝이 심판 안
+            Assert.IsFalse(DodgeHumanBot.PathBlocked(new Vector2(4f, 3f), new Vector2(-4f, 3f), DodgeReferee.Spot));
         }
     }
 }

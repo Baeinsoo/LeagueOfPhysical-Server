@@ -82,7 +82,7 @@ namespace LOP.Tests
         {
             var g = new DodgeReachGrid(8.63f);
             g.FillAll();
-            g.ClearDisc(DodgeDirector.Thrower, DodgeSimMatch.ThrowerRadius + DodgeSimMatch.BodyRadius);
+            g.ClearDisc(DodgeReferee.Spot, DodgeSimMatch.RefereeRadius + DodgeSimMatch.BodyRadius);
             Assert.IsFalse(g.Get(g.CellOf(Vector2.zero)));
             Assert.IsTrue(g.Get(g.CellOf(new Vector2(1.5f, 0f))));
         }

@@ -18,6 +18,7 @@ namespace LOP
         private int nextId = 1;
         private long nextTick = long.MinValue;
         private long tileClearTick = long.MinValue;
+        private int bombRotation;
 
         public DodgeDirector(ulong matchSeed, DodgeConfig config, DodgeStageTable stages)
         {
@@ -49,6 +50,14 @@ namespace LOP
         public static int RockCount(float intensity) => intensity >= 1.6f ? 2 : 1;
 
         private const int SecondRockDelayTicks = 20;
+
+        /// <summary>
+        /// 한 번에 노리는 사람 수 — 4명당 1명. 노리는 패턴(조준·연사·줄넘기 첫 줄·장독)은 한 사람만 노리면 인원이 늘수록
+        /// 각자 노려지는 빈도가 1/N로 준다 — 이 수만큼 서로 다른 사람을 노려 1인 체감을 비슷하게 둔다.
+        /// </summary>
+        public static int TargetCount(int alive) => System.Math.Max(1, (alive + 3) / 4);
+        /// <summary>수박 한 번에 떨어지는 최대 개수 — 사람마다 하나씩이면 8인에서 경기장이 덮인다. 대상은 돌아가며 모두에게.</summary>
+        public const int MaxBombs = 3;
 
         /// <summary>온돌 안전 칸 수(36칸 중) — 세기가 오르면 준다. 18 = 예전 체크무늬와 같은 넓이.</summary>
         public static int SafeTiles(float intensity) => Mathf.Clamp(Mathf.RoundToInt(18f / Mathf.Max(intensity, 0.01f)), 6, 18);
@@ -101,10 +110,9 @@ namespace LOP
                                               WallGap(at.Intensity), WallBulletSpacing));
                     break;
                 case DodgePatternKind.BulletAimed:
-                    if (alivePositions.Count == 0) break;
+                    // 투척기에서 노리는 사람마다 3갈래(탄막 규칙 — 발사원은 한 곳).
+                    foreach (var target in Targets(ref rng, alivePositions))
                     {
-                        Vector2 target = alivePositions[rng.Range(0, alivePositions.Count)];
-                        // 가운데 투척기에서 그 사람 쪽으로 3갈래(탄막 규칙 — 발사원은 한 곳).
                         into.Add(new DodgePattern(nextId++, kind, start, 0, thrower.x, thrower.y, target.x, target.y));
                     }
                     break;
@@ -121,40 +129,47 @@ namespace LOP
                     }
                     break;
                 case DodgePatternKind.Bomb:
-                    // 처음 버전 — 산 사람마다 발밑에 하나, 예고는 세기에 따라 공통 하한(0.8초)까지.
-                    // 근처·하한 1.2~1.5초·추격 3연발을 차례로 해 봤지만 사람 판에서 "여유가 없던" 이것이 낫다(10-04).
-                    foreach (var p in alivePositions)
+                    // 처음 버전 — 발밑에 하나, 예고는 세기에 따라 공통 하한(0.8초)까지(10-04 사람 판 결론).
+                    // 한 번에 MaxBombs개까지, 대상은 돌아가며 — 인원이 많아도 경기장이 수박으로 덮이지 않게.
                     {
-                        into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, warn));
+                        int count = Mathf.Min(alivePositions.Count, MaxBombs);
+                        for (int k = 0; k < count; k++)
+                        {
+                            var p = alivePositions[(bombRotation + k) % alivePositions.Count];
+                            into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, warn));
+                        }
+                        bombRotation += count;
                     }
                     break;
                 case DodgePatternKind.Laser:
-                    for (int i = LaserCount(at.Intensity); i > 0; i--)
+                    {
+                    // 앞 줄들은 노리는 사람마다 하나씩 그 자리를 지난다 — "나를 노리는 게 없다"(사람 판 소감).
+                    var aimed = Targets(ref rng, alivePositions);
+                    int lines = Mathf.Max(LaserCount(at.Intensity), aimed.Count);
+                    for (int i = 0; i < lines; i++)
                     {
                         float pos = rng.Range(-h + 1f, h - 1f);
                         bool vertical = rng.Range(0, 2) == 0;
-                        // 첫 줄은 산 사람 하나의 자리를 지난다 — "나를 노리는 게 없다"(사람 판 소감).
-                        if (i == LaserCount(at.Intensity) && alivePositions.Count > 0)
-                        {
-                            var target = alivePositions[rng.Range(0, alivePositions.Count)];
-                            pos = vertical ? target.x : target.y;
-                        }
+                        if (i < aimed.Count) pos = vertical ? aimed[i].x : aimed[i].y;
                         into.Add(vertical
                             ? new DodgePattern(nextId++, kind, start, 0, pos, -h, pos, h, warn)
                             : new DodgePattern(nextId++, kind, start, 0, -h, pos, h, pos, warn));
+                    }
                     }
                     break;
                 case DodgePatternKind.Rock:
                     {
                         // 사람 쪽으로 굴린다. 둘째는 맞은편 벽에서 시간차로 — 교차해 한 방향 도망을 막는다.
                         int firstSide = rng.Range(0, 4);
-                        for (int i = 0; i < RockCount(at.Intensity); i++)
+                        var aimed = Targets(ref rng, alivePositions);
+                        int rocks = Mathf.Max(RockCount(at.Intensity), aimed.Count);
+                        for (int i = 0; i < rocks; i++)
                         {
-                            int side = i == 0 ? firstSide : (firstSide + 2) % 4;
+                            int side = i % 2 == 0 ? (firstSide + i / 2) % 4 : (firstSide + 2 + i / 2) % 4;
                             float along = rng.Range(-h + 2f, h - 2f), twist = rng.Range(-0.35f, 0.35f);
                             if (alivePositions.Count > 0)
                             {
-                                var target = alivePositions[rng.Range(0, alivePositions.Count)];
+                                var target = aimed[i % aimed.Count];
                                 along = Mathf.Clamp((side % 2 == 0 ? target.x : target.y) + rng.Range(-RockAimJitter, RockAimJitter),
                                                     -h + 1.5f, h - 1.5f);
                                 Vector2 entry = DodgeHazards.EdgePoint(side, along, config.EdgeDistance);
@@ -197,9 +212,28 @@ namespace LOP
         private void AddStream(ref DeterministicRandom rng, long start, Vector2 thrower, IReadOnlyList<Vector2> alivePositions,
                                List<DodgePattern> into)
         {
-            if (alivePositions.Count == 0) return;
-            var target = alivePositions[rng.Range(0, alivePositions.Count)];
-            into.Add(new DodgePattern(nextId++, DodgePatternKind.BulletStream, start, 0, thrower.x, thrower.y, target.x, target.y));
+            foreach (var target in Targets(ref rng, alivePositions))
+            {
+                into.Add(new DodgePattern(nextId++, DodgePatternKind.BulletStream, start, 0, thrower.x, thrower.y, target.x, target.y));
+            }
+        }
+
+        // 서로 다른 TargetCount명 — 섞어서 앞에서부터. 산 사람이 없으면 빈 목록.
+        private static List<Vector2> Targets(ref DeterministicRandom rng, IReadOnlyList<Vector2> alivePositions)
+        {
+            var picked = new List<Vector2>();
+            int n = alivePositions.Count;
+            if (n == 0) return picked;
+            var order = new int[n];
+            for (int i = 0; i < n; i++) order[i] = i;
+            for (int i = n - 1; i > 0; i--)
+            {
+                int j = rng.Range(0, i + 1);
+                (order[i], order[j]) = (order[j], order[i]);
+            }
+            int k = Mathf.Min(TargetCount(n), n);
+            for (int i = 0; i < k; i++) picked.Add(alivePositions[order[i]]);
+            return picked;
         }
     }
 }

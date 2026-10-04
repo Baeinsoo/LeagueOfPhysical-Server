@@ -17,6 +17,8 @@ namespace LOP
         private int counter;
         private int nextId = 1;
         private long nextTick = long.MinValue;
+        private long tileClearTick = long.MinValue;
+        private readonly List<(long due, int index, int warn)> chase = new List<(long, int, int)>();
 
         public DodgeDirector(ulong matchSeed, DodgeConfig config, DodgeStageTable stages)
         {
@@ -49,11 +51,15 @@ namespace LOP
 
         private const int SecondRockDelayTicks = 20;
 
-        // 수박은 발밑이 아니라 근처에 — 정확히 노리면 예고 1초에 2.2m를 뛰어야 해 보통 사람은 못 피한다(4a 측정, 4b).
-        public const float BombNearMin = 0.5f;
-        public const float BombNearMax = 1.2f;
-        /// <summary>수박 예고 하한(1.2초) — 세기가 올라도 반응 + 탈출 시간은 줄지 않는다. 1.5초·1~1.8m 옆은 사람 판에서 너무 쉬웠다.</summary>
-        public const int BombMinWarnTicks = 60;
+        // 수박은 추격 장판 — 사람마다 ChaseGapTicks 간격으로 ChaseShots발, 떨어질 때마다 그 순간의 발밑(FFXIV 추격 장판 계열).
+        public const int ChaseShots = 3;
+        public const int ChaseGapTicks = 20;   // 0.4초
+        /// <summary>수박 예고 하한(1초) — 반응 0.35초 + 2.2m 탈출(0.55초). 근처에 떨어뜨린 1.2초는 사람 판에서 너무 쉬웠다.</summary>
+        public const int BombMinWarnTicks = 50;
+        /// <summary>온돌 안전 칸 수(36칸 중) — 세기가 오르면 준다. 18 = 예전 체크무늬와 같은 넓이.</summary>
+        public static int SafeTiles(float intensity) => Mathf.Clamp(Mathf.RoundToInt(18f / Mathf.Max(intensity, 0.01f)), 6, 18);
+        /// <summary>장독이 사람을 겨눌 때 들어오는 자리 흔들림(m) — 겨누되 매번 같은 길은 아니게.</summary>
+        private const float RockAimJitter = 2f;
         /// <summary>온돌 예고 하한(1.2초) — 반응 후 옆 칸까지 갈 시간.</summary>
         public const int TileMinWarnTicks = 60;
         /// <summary>탄 벽의 탄 사이. 판정 지름(2×(탄+몸) = 0.76m)보다 좁아야 구멍으로만 지나간다.</summary>
@@ -68,6 +74,19 @@ namespace LOP
             if (nextTick == long.MinValue)
             {
                 nextTick = gameplayStartTick + config.FirstPatternDelayTicks;
+            }
+            // 추격 수박 — 앞서 예약한 다음 발을 그 순간 그 사람 발밑에(간격과 무관하게 따로 돈다).
+            for (int i = chase.Count - 1; i >= 0; i--)
+            {
+                var (due, index, chaseWarn) = chase[i];
+                if (tick < due) continue;
+                chase.RemoveAt(i);
+                if (index < alivePositions.Count)
+                {
+                    var p = alivePositions[index];
+                    into.Add(new DodgePattern(nextId++, DodgePatternKind.Bomb, tick + config.LeadTicks, 0, p.x, p.y,
+                                              config.BombRadius, 0f, chaseWarn));
+                }
             }
             if (tick < nextTick)
             {
@@ -111,20 +130,24 @@ namespace LOP
                 case DodgePatternKind.Ring:
                     into.Add(new DodgePattern(nextId++, kind, start, RingGap, thrower.x, thrower.y,
                                               RingCount(at.Intensity), rng.Range(0f, 2f * Mathf.PI)));
+                    AddStream(ref rng, start, thrower, alivePositions, into);
                     break;
                 case DodgePatternKind.Spiral:
                     {
                         float turn = rng.Range(SpiralTurnMin, SpiralTurnMax) * (rng.Range(0, 2) == 0 ? -1f : 1f);
                         into.Add(new DodgePattern(nextId++, kind, start, 0, thrower.x, thrower.y, SpiralArms(at.Intensity), turn));
+                        AddStream(ref rng, start, thrower, alivePositions, into);
                     }
                     break;
                 case DodgePatternKind.Bomb:
-                    foreach (var p in alivePositions)
                     {
-                        float angle = rng.Range(0f, 2f * Mathf.PI), off = rng.Range(BombNearMin, BombNearMax);
-                        float x = Mathf.Clamp(p.x + Mathf.Cos(angle) * off, -h, h), z = Mathf.Clamp(p.y + Mathf.Sin(angle) * off, -h, h);
-                        into.Add(new DodgePattern(nextId++, kind, start, 0, x, z, config.BombRadius, 0f,
-                                                  Mathf.Max(warn, BombMinWarnTicks)));
+                        int bombWarn = Mathf.Max(warn, BombMinWarnTicks);
+                        for (int j = 0; j < alivePositions.Count; j++)
+                        {
+                            var p = alivePositions[j];
+                            into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, bombWarn));
+                            for (int k = 1; k < ChaseShots; k++) chase.Add((tick + k * ChaseGapTicks, j, bombWarn));
+                        }
                     }
                     break;
                 case DodgePatternKind.Laser:
@@ -132,31 +155,73 @@ namespace LOP
                     {
                         float pos = rng.Range(-h + 1f, h - 1f);
                         bool vertical = rng.Range(0, 2) == 0;
+                        // 첫 줄은 산 사람 하나의 자리를 지난다 — "나를 노리는 게 없다"(사람 판 소감).
+                        if (i == LaserCount(at.Intensity) && alivePositions.Count > 0)
+                        {
+                            var target = alivePositions[rng.Range(0, alivePositions.Count)];
+                            pos = vertical ? target.x : target.y;
+                        }
                         into.Add(vertical
                             ? new DodgePattern(nextId++, kind, start, 0, pos, -h, pos, h, warn)
                             : new DodgePattern(nextId++, kind, start, 0, -h, pos, h, pos, warn));
                     }
                     break;
                 case DodgePatternKind.Rock:
-                    for (int i = 0; i < RockCount(at.Intensity); i++)
                     {
-                        into.Add(new DodgePattern(nextId++, kind, start + i * SecondRockDelayTicks, 0, rng.Range(0, 4),
-                                                  rng.Range(-h + 2f, h - 2f), rng.Range(-0.35f, 0.35f), 0f, warn));
+                        // 사람 쪽으로 굴린다. 둘째는 맞은편 벽에서 시간차로 — 교차해 한 방향 도망을 막는다.
+                        int firstSide = rng.Range(0, 4);
+                        for (int i = 0; i < RockCount(at.Intensity); i++)
+                        {
+                            int side = i == 0 ? firstSide : (firstSide + 2) % 4;
+                            float along = rng.Range(-h + 2f, h - 2f), twist = rng.Range(-0.35f, 0.35f);
+                            if (alivePositions.Count > 0)
+                            {
+                                var target = alivePositions[rng.Range(0, alivePositions.Count)];
+                                along = Mathf.Clamp((side % 2 == 0 ? target.x : target.y) + rng.Range(-RockAimJitter, RockAimJitter),
+                                                    -h + 1.5f, h - 1.5f);
+                                Vector2 entry = DodgeHazards.EdgePoint(side, along, config.EdgeDistance);
+                                twist = Mathf.Clamp(Vector2.SignedAngle(DodgeHazards.Inward(side), target - entry) * Mathf.Deg2Rad, -0.6f, 0.6f);
+                            }
+                            into.Add(new DodgePattern(nextId++, kind, start + i * SecondRockDelayTicks, 0, side, along, twist, 0f, warn));
+                        }
                     }
                     break;
                 case DodgePatternKind.Tiles:
                     {
-                        int n = Mathf.Max(1, config.TileCount);
-                        int parity = rng.Range(0, 2);
-                        ulong mask = 0;
-                        for (int i = 0; i < n * n && i < 64; i++)
+                        // 한 번에 한 판 — 경고가 겹치면 바닥 전체가 경고색이 돼 못 읽는다(WildStar 회고, 사람 판).
+                        int tileWarn = Mathf.Max(warn, TileMinWarnTicks);
+                        if (start <= tileClearTick)
                         {
-                            if (((i % n) + (i / n)) % 2 == parity) mask |= 1UL << i;   // 체크무늬 한쪽
+                            nextTick = System.Math.Max(nextTick, tileClearTick - config.LeadTicks + 1);
+                            break;
                         }
-                        into.Add(new DodgePattern(nextId++, kind, start, mask, 0f, 0f, 0f, 0f, Mathf.Max(warn, TileMinWarnTicks)));
+                        // 안전 칸 N개만 남긴다(Hexagon Heat·Perfect Match) — 무작위로 섞어 앞 N칸.
+                        int n = Mathf.Max(1, config.TileCount), cells = Mathf.Min(n * n, 64);
+                        var order = new int[cells];
+                        for (int i = 0; i < cells; i++) order[i] = i;
+                        for (int i = cells - 1; i > 0; i--)
+                        {
+                            int j = rng.Range(0, i + 1);
+                            (order[i], order[j]) = (order[j], order[i]);
+                        }
+                        ulong mask = 0;
+                        int safe = Mathf.Min(SafeTiles(at.Intensity), cells);
+                        for (int i = safe; i < cells; i++) mask |= 1UL << order[i];
+                        var tiles = new DodgePattern(nextId++, kind, start, mask, 0f, 0f, 0f, 0f, tileWarn);
+                        into.Add(tiles);
+                        tileClearTick = start + DodgeHazards.LifetimeTicks(tiles, config);
                     }
                     break;
             }
+        }
+
+        // 고정 탄막 위에 겹치는 조준 연사(스트리밍) — 고정은 장애물, 조준은 압박(Boghog·Sparen).
+        private void AddStream(ref DeterministicRandom rng, long start, Vector2 thrower, IReadOnlyList<Vector2> alivePositions,
+                               List<DodgePattern> into)
+        {
+            if (alivePositions.Count == 0) return;
+            var target = alivePositions[rng.Range(0, alivePositions.Count)];
+            into.Add(new DodgePattern(nextId++, DodgePatternKind.BulletStream, start, 0, thrower.x, thrower.y, target.x, target.y));
         }
     }
 }

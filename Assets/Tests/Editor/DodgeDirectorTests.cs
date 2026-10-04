@@ -37,7 +37,8 @@ namespace LOP.Tests
             var c = Config();
             var d = new DodgeDirector(1UL, c, Flat());
             var got = Run(d, 100, 100 + c.FirstPatternDelayTicks, 100);
-            Assert.AreEqual(1, got.Count);
+            Assert.AreEqual(2, got.Count);   // 첫 종류는 링 — 조준 연사가 같이 나온다
+            Assert.AreEqual(got[0].StartTick, got[1].StartTick);
             Assert.AreEqual(100 + c.FirstPatternDelayTicks + c.LeadTicks, got[0].StartTick);
         }
 
@@ -57,26 +58,6 @@ namespace LOP.Tests
             }
         }
 
-        // 발밑을 정확히 노리면 예고 1초에 2.2m를 뛰어야 해 보통 사람은 못 피한다(4a 측정: 수박에서 95% 탈락).
-        // 사람마다 하나씩, 그 사람 근처(1~1.8m 옆)에 떨어진다 — 여전히 그 사람을 덮지만 빠져나갈 길이 짧다.
-        [Test]
-        public void 폭탄은_산_사람마다_하나씩_근처에_떨어진다()
-        {
-            Assert.AreEqual(0.5f, DodgeDirector.BombNearMin);
-            Assert.AreEqual(1.2f, DodgeDirector.BombNearMax);
-            var d = new DodgeDirector(1UL, Config((int)DodgePatternKind.Bomb), Flat());
-            var got = Run(d, 0, Config().FirstPatternDelayTicks, 0);
-            Assert.AreEqual(2, got.Count);
-            var targets = Two;
-            for (int i = 0; i < 2; i++)
-            {
-                float off = (new Vector2(got[i].P0, got[i].P1) - targets[i]).magnitude;
-                Assert.GreaterOrEqual(off, DodgeDirector.BombNearMin - 1e-4f);
-                Assert.LessOrEqual(off, DodgeDirector.BombNearMax + 1e-4f);
-            }
-        }
-
-        // 탄 벽은 구멍으로만 지나간다 — 탄 사이가 판정 지름보다 넓으면 정가운데로 빠지는 틈이 생기는데, 그림으로는 몸을 뚫고 지나가 보인다.
         [Test]
         public void 탄_벽은_구멍_말고는_못_지나간다()
         {
@@ -101,7 +82,7 @@ namespace LOP.Tests
         public void 링은_가운데에서_정해진_개수로_퍼진다()
         {
             var got = Run(new DodgeDirector(1UL, Config((int)DodgePatternKind.Ring), Flat()), 0, Config().FirstPatternDelayTicks, 0);
-            Assert.AreEqual(1, got.Count);
+            Assert.AreEqual(DodgePatternKind.Ring, got[0].Kind);   // 둘째는 함께 나오는 조준 연사
             Assert.AreEqual(DodgeReferee.Spot, new Vector2(got[0].P0, got[0].P1));
             Assert.AreEqual(DodgeDirector.RingCount(1f), (int)got[0].P2);
             Assert.AreEqual((ulong)DodgeDirector.RingGap, got[0].Seed);   // 부채꼴 틈
@@ -135,7 +116,7 @@ namespace LOP.Tests
             var kinds = new HashSet<DodgePatternKind>();
             var ids = new HashSet<int>();
             foreach (var p in got) { kinds.Add(p.Kind); Assert.IsTrue(ids.Add(p.Id)); }
-            Assert.AreEqual(7, kinds.Count);
+            Assert.AreEqual(8, kinds.Count);   // 7종 + 링·나선에 붙는 조준 연사
         }
 
         [Test]
@@ -164,7 +145,7 @@ namespace LOP.Tests
             var got = Run(new DodgeDirector(9UL, Config(), new DodgeStageTable(new DodgeStage[0])), 0, 3000, 0);
             var kinds = new HashSet<DodgePatternKind>();
             foreach (var p in got) kinds.Add(p.Kind);
-            Assert.AreEqual(7, kinds.Count);
+            Assert.AreEqual(8, kinds.Count);   // 7종 + 링·나선에 붙는 조준 연사
         }
 
         [Test]
@@ -236,15 +217,105 @@ namespace LOP.Tests
             Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.TileMinWarnTicks);
         }
 
-        // 수박 예고는 세기가 올라도 1.2초 밑으로 안 내려간다 — 0.8초 하한으로는 반응 + 2m 탈출이 안 된다.
+        // 수박 예고는 세기가 올라도 1초 밑으로 안 내려간다 — 0.8초 하한으로는 반응 + 2m 탈출이 안 된다.
         [Test]
-        public void 폭탄_예고는_1점2초_밑으로_안_내려간다()
+        public void 폭탄_예고는_1초_밑으로_안_내려간다()
         {
             var c = Config((int)DodgePatternKind.Bomb);
             var stages = new DodgeStageTable(new[] { new DodgeStage("수박", 60f, new[] { DodgePatternKind.Bomb }, 3f, 0f, 1.6f) });
             var got = Run(new DodgeDirector(1UL, c, stages), 0, c.FirstPatternDelayTicks, 0);
-            Assert.AreEqual(60, DodgeDirector.BombMinWarnTicks);   // 사람 판: 1.5초·1~1.8m 옆은 너무 쉬웠다 → 중간으로
+            Assert.AreEqual(50, DodgeDirector.BombMinWarnTicks);   // 추격 장판(정조준 3연발) — 반응 0.35초 + 2.2m 탈출 ≈ 0.9초
             Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.BombMinWarnTicks);
+        }
+
+        // ── 패턴 v2(업계 대조 — 조사 보고: 온돌 겹침, 조준 없음, 고정+조준 동시, 추격 장판) ──
+
+        static DodgeStageTable Only(DodgePatternKind k, float intensity) =>
+            new DodgeStageTable(new[] { new DodgeStage("한 종류", 600f, new[] { k }, intensity, 0f, 1.6f) });
+
+        static bool Passes(in DodgePattern laser, Vector2 p) =>
+            DodgeGeometry.SegmentDistance(p, p, new Vector2(laser.P0, laser.P1), new Vector2(laser.P2, laser.P3)) < 1e-3f;
+
+        // 바닥 경고가 겹치면 바닥 전체가 경고색이 돼 못 읽는다 — 앞 판이 꺼진 뒤에만 다음 예고.
+        [Test]
+        public void 온돌은_한_번에_한_판만()
+        {
+            var c = Config();
+            var got = Run(new DodgeDirector(3UL, c, Only(DodgePatternKind.Tiles, 3f)), 0, 3000, 0);
+            Assert.Greater(got.Count, 3);
+            for (int i = 1; i < got.Count; i++)
+            {
+                long prevEnd = got[i - 1].StartTick + DodgeHazards.LifetimeTicks(got[i - 1], c);
+                Assert.Greater(got[i].StartTick, prevEnd, $"{i}번째 온돌이 앞 판과 겹친다");
+            }
+        }
+
+        // 체크무늬(반) 대신 "안전 칸 N개만 남김" — 세기가 오르면 N이 준다.
+        [Test]
+        public void 온돌은_안전_칸만_남기고_세기에_따라_준다()
+        {
+            var c = Config();
+            var got = Run(new DodgeDirector(3UL, c, Only(DodgePatternKind.Tiles, 1f)), 0, c.FirstPatternDelayTicks, 0);
+            int hot = 0; for (int i = 0; i < 36; i++) if ((got[0].Seed & (1UL << i)) != 0) hot++;
+            Assert.AreEqual(36 - DodgeDirector.SafeTiles(1f), hot);
+            Assert.Less(DodgeDirector.SafeTiles(2f), DodgeDirector.SafeTiles(1f));
+        }
+
+        // "나를 노리는 게 없다" — 줄 하나는 반드시 산 사람 자리를 지난다.
+        [Test]
+        public void 줄넘기_첫_줄은_사람을_지난다()
+        {
+            for (ulong seed = 1; seed <= 6; seed++)
+            {
+                var got = Run(new DodgeDirector(seed, Config((int)DodgePatternKind.Laser), Flat()), 0, Config().FirstPatternDelayTicks, 0);
+                Assert.IsTrue(Passes(got[0], Two[0]) || Passes(got[0], Two[1]), $"seed {seed}");
+            }
+        }
+
+        // 장독은 사람 쪽으로 굴러오고, 둘째는 맞은편 벽에서 와 교차한다.
+        [Test]
+        public void 장독은_사람을_겨누고_둘째는_맞은편에서()
+        {
+            var c = Config();
+            var got = Run(new DodgeDirector(5UL, c, Only(DodgePatternKind.Rock, 2f)), 0, c.FirstPatternDelayTicks, 0);
+            Assert.AreEqual(2, got.Count);
+            Assert.AreEqual(((int)got[0].P0 + 2) % 4, (int)got[1].P0);
+            foreach (var r in got)
+            {
+                Vector2 start = DodgeHazards.EdgePoint((int)r.P0, r.P1, c.EdgeDistance);
+                float best = float.MaxValue;
+                foreach (var t in Two) best = Mathf.Min(best, Vector2.Angle(DodgeHazards.RockDirection(r), t - start));
+                Assert.Less(best, 1f, "장독이 아무도 안 겨눈다");
+            }
+        }
+
+        // 고정 탄막(링·나선) 위에 조준 연사를 겹친다 — 고정은 장애물, 조준은 압박.
+        [Test]
+        public void 링과_나선에는_조준_연사가_함께_나온다()
+        {
+            foreach (var k in new[] { DodgePatternKind.Ring, DodgePatternKind.Spiral })
+            {
+                var got = Run(new DodgeDirector(1UL, Config((int)k), Flat()), 0, Config().FirstPatternDelayTicks, 0);
+                Assert.AreEqual(2, got.Count, k.ToString());
+                Assert.AreEqual(DodgePatternKind.BulletStream, got[1].Kind);
+                Assert.AreEqual(got[0].StartTick, got[1].StartTick);
+                var target = new Vector2(got[1].P2, got[1].P3);
+                Assert.IsTrue(target == Two[0] || target == Two[1]);
+            }
+        }
+
+        // 수박은 추격 장판 — 사람마다 0.4초 간격으로 3발, 떨어질 때마다 그 순간의 발밑.
+        [Test]
+        public void 수박은_사람마다_세_번_쫓아온다()
+        {
+            var c = Config((int)DodgePatternKind.Bomb);
+            long first = c.FirstPatternDelayTicks;
+            var got = Run(new DodgeDirector(1UL, c, Flat()), 0, first + 2 * DodgeDirector.ChaseGapTicks, 0);
+            Assert.AreEqual(6, got.Count);
+            var starts = new SortedSet<long>(); foreach (var b in got) starts.Add(b.StartTick);
+            CollectionAssert.AreEqual(new[] { first + c.LeadTicks, first + c.LeadTicks + DodgeDirector.ChaseGapTicks,
+                                              first + c.LeadTicks + 2 * DodgeDirector.ChaseGapTicks }, starts);
+            foreach (var b in got) Assert.IsTrue(new Vector2(b.P0, b.P1) == Two[0] || new Vector2(b.P0, b.P1) == Two[1]);
         }
     }
 }

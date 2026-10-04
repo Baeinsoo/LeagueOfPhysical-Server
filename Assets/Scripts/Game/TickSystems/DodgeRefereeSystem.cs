@@ -38,6 +38,9 @@ namespace LOP
             transform.Rotation = Quaternion.LookRotation(face, Vector3.up).ToNumerics();
             var velocity = e.Get<GameFramework.World.Velocity>();
             if (velocity != null) velocity.Linear = new System.Numerics.Vector3(pose.Velocity.x, 0f, pose.Velocity.y);
+            // 시뮬을 안 받으니 땅에 섰다고 써 줘야 한다 — 클라 달리기 애니가 "땅 위 + 속도"로 켜진다.
+            var ground = e.Get<GameFramework.World.GroundState>();
+            if (ground != null) ground.IsGrounded = true;
             var body = e.Get<GameFramework.World.PhysicsBody>();
             if (body != null)
             {

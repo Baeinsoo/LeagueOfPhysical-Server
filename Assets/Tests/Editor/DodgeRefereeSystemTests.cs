@@ -21,6 +21,7 @@ namespace LOP.Tests
             var e = new GameFramework.World.Entity("ref");
             e.Add(new GameFramework.World.Transform());
             e.Add(new GameFramework.World.Velocity());
+            e.Add(new GameFramework.World.GroundState());
             world.EntityRegistry.Add(e);
             var state = new DodgeMatchState { RefereeId = "ref" };
             var sys = new DodgeRefereeSystem(state, world, T, C);
@@ -33,6 +34,8 @@ namespace LOP.Tests
                 Assert.AreEqual(want.Position.x, p.X, 1e-4f, "tick " + tick);
                 Assert.AreEqual(want.Position.y, p.Z, 1e-4f, "tick " + tick);
                 Assert.AreEqual(want.Velocity.y, e.Get<GameFramework.World.Velocity>().Linear.Z, 1e-4f, "tick " + tick);
+                // 시뮬을 안 받으니 아무도 땅에 섰다고 안 써 준다 — 클라 달리기 애니는 "땅 위 + 속도"를 본다.
+                Assert.IsTrue(e.Get<GameFramework.World.GroundState>().IsGrounded, "tick " + tick);
             }
         }
     }

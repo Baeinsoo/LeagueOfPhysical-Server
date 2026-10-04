@@ -314,5 +314,64 @@ namespace LOP.Tests
             Assert.AreEqual(Two[0], new Vector2(got[0].P0, got[0].P1));
             Assert.AreEqual(Two[1], new Vector2(got[1].P0, got[1].P1));
         }
+
+        // ── 인원 비례(한 사람이 받는 압박을 인원과 무관하게) ──
+
+        static readonly Vector2[] Eight =
+        {
+            new Vector2(4, 0), new Vector2(2.8f, 2.8f), new Vector2(0, 4), new Vector2(-2.8f, 2.8f),
+            new Vector2(-4, 0), new Vector2(-2.8f, -2.8f), new Vector2(0, -4), new Vector2(2.8f, -2.8f),
+        };
+
+        static List<DodgePattern> RunWith(DodgeDirector d, Vector2[] alive, long to)
+        {
+            var all = new List<DodgePattern>();
+            for (long t = 0; t <= to; t++) d.Next(t, 0, alive, all);
+            return all;
+        }
+
+        [Test]
+        public void 노리는_사람_수는_네_명당_한_명()
+        {
+            Assert.AreEqual(1, DodgeDirector.TargetCount(1));
+            Assert.AreEqual(1, DodgeDirector.TargetCount(4));
+            Assert.AreEqual(2, DodgeDirector.TargetCount(5));
+            Assert.AreEqual(2, DodgeDirector.TargetCount(8));
+        }
+
+        // 8명이면 조준 연사 두 줄, 서로 다른 사람에게 — 각자 노려지는 빈도가 혼자일 때와 비슷하게.
+        [Test]
+        public void 여덟_명이면_조준_연사가_두_사람을_노린다()
+        {
+            var got = RunWith(new DodgeDirector(1UL, Config((int)DodgePatternKind.Ring), Flat()), Eight, Config().FirstPatternDelayTicks);
+            var streams = got.FindAll(p => p.Kind == DodgePatternKind.BulletStream);
+            Assert.AreEqual(2, streams.Count);
+            Assert.AreNotEqual(new Vector2(streams[0].P2, streams[0].P3), new Vector2(streams[1].P2, streams[1].P3));
+        }
+
+        [Test]
+        public void 여덟_명이면_줄넘기_두_줄이_서로_다른_사람을_지난다()
+        {
+            var got = RunWith(new DodgeDirector(2UL, Config((int)DodgePatternKind.Laser), Flat()), Eight, Config().FirstPatternDelayTicks);
+            Assert.GreaterOrEqual(got.Count, 2);
+            int a = -1, b = -1;
+            for (int i = 0; i < Eight.Length; i++) { if (Passes(got[0], Eight[i]) && a < 0) a = i; }
+            for (int i = 0; i < Eight.Length; i++) { if (Passes(got[1], Eight[i]) && i != a && b < 0) b = i; }
+            Assert.IsTrue(a >= 0 && b >= 0, "두 줄이 서로 다른 사람을 지나야 한다");
+        }
+
+        // 수박은 한 번에 최대 MaxBombs개 — 8명 모두에게 떨어뜨리면 경기장이 덮인다. 대상은 돌아가며 모두에게.
+        [Test]
+        public void 수박은_한_번에_셋까지_돌아가며_모두에게()
+        {
+            var c = Config((int)DodgePatternKind.Bomb);
+            var d = new DodgeDirector(1UL, c, Flat());
+            var got = RunWith(d, Eight, c.FirstPatternDelayTicks + 3 * DodgeDirector.IntervalTicksAt(Flat().At(0, 0, c), c));
+            var byStart = new Dictionary<long, int>();
+            var hit = new HashSet<Vector2>();
+            foreach (var p in got) { byStart[p.StartTick] = byStart.TryGetValue(p.StartTick, out var n) ? n + 1 : 1; hit.Add(new Vector2(p.P0, p.P1)); }
+            foreach (var kv in byStart) Assert.LessOrEqual(kv.Value, DodgeDirector.MaxBombs);
+            Assert.AreEqual(8, hit.Count, "세 번 고르면(3×3) 여덟 명 모두가 한 번씩은 노려진다");
+        }
     }
 }

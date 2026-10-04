@@ -203,7 +203,7 @@ namespace LOP.Tests
         {
             var c = Config((int)DodgePatternKind.Bomb);
             var got = Run(new DodgeDirector(1UL, c, Flat()), 0, c.FirstPatternDelayTicks, 0);
-            Assert.AreEqual(Mathf.Max(DodgeDirector.WarnTicksAt(1f, c), DodgeDirector.BombMinWarnTicks), got[0].WarnTicks);
+            Assert.AreEqual(DodgeDirector.WarnTicksAt(1f, c), got[0].WarnTicks);
         }
 
         // 온돌 예고는 1.2초 밑으로 안 내려간다 — 0.8초로는 반응 후 옆 칸(최대 ~1.5m)까지 못 간다(4b 측정: 온돌에서 53% 탈락).
@@ -217,15 +217,14 @@ namespace LOP.Tests
             Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.TileMinWarnTicks);
         }
 
-        // 수박 예고는 세기가 올라도 1초 밑으로 안 내려간다 — 0.8초 하한으로는 반응 + 2m 탈출이 안 된다.
+        // 수박 예고는 따로 하한이 없다 — 세기가 오르면 공통 최소 예고(0.8초)까지 줄어든다(처음 버전, 10-04 되돌림).
         [Test]
-        public void 폭탄_예고는_1초_밑으로_안_내려간다()
+        public void 폭탄_예고는_공통_하한까지_줄어든다()
         {
             var c = Config((int)DodgePatternKind.Bomb);
             var stages = new DodgeStageTable(new[] { new DodgeStage("수박", 60f, new[] { DodgePatternKind.Bomb }, 3f, 0f, 1.6f) });
             var got = Run(new DodgeDirector(1UL, c, stages), 0, c.FirstPatternDelayTicks, 0);
-            Assert.AreEqual(50, DodgeDirector.BombMinWarnTicks);   // 추격 장판(정조준 3연발) — 반응 0.35초 + 2.2m 탈출 ≈ 0.9초
-            Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.BombMinWarnTicks);
+            Assert.AreEqual(c.MinWarnTicks, got[0].WarnTicks);
         }
 
         // ── 패턴 v2(업계 대조 — 조사 보고: 온돌 겹침, 조준 없음, 고정+조준 동시, 추격 장판) ──
@@ -304,18 +303,16 @@ namespace LOP.Tests
             }
         }
 
-        // 수박은 추격 장판 — 사람마다 0.4초 간격으로 3발, 떨어질 때마다 그 순간의 발밑.
+        // 수박은 처음 버전 — 산 사람마다 한 개, 정확히 발밑. 근처(0.5~1.8m)·하한 1.2~1.5초·추격 3연발을 차례로 해 봤지만
+        // 사람 판에서 "여유가 없던" 처음 것이 낫다는 결론(10-04).
         [Test]
-        public void 수박은_사람마다_세_번_쫓아온다()
+        public void 수박은_사람마다_발밑에_하나씩이다()
         {
             var c = Config((int)DodgePatternKind.Bomb);
-            long first = c.FirstPatternDelayTicks;
-            var got = Run(new DodgeDirector(1UL, c, Flat()), 0, first + 2 * DodgeDirector.ChaseGapTicks, 0);
-            Assert.AreEqual(6, got.Count);
-            var starts = new SortedSet<long>(); foreach (var b in got) starts.Add(b.StartTick);
-            CollectionAssert.AreEqual(new[] { first + c.LeadTicks, first + c.LeadTicks + DodgeDirector.ChaseGapTicks,
-                                              first + c.LeadTicks + 2 * DodgeDirector.ChaseGapTicks }, starts);
-            foreach (var b in got) Assert.IsTrue(new Vector2(b.P0, b.P1) == Two[0] || new Vector2(b.P0, b.P1) == Two[1]);
+            var got = Run(new DodgeDirector(1UL, c, Flat()), 0, c.FirstPatternDelayTicks + 60, 0);
+            Assert.AreEqual(2, got.Count);
+            Assert.AreEqual(Two[0], new Vector2(got[0].P0, got[0].P1));
+            Assert.AreEqual(Two[1], new Vector2(got[1].P0, got[1].P1));
         }
     }
 }

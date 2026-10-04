@@ -18,7 +18,6 @@ namespace LOP
         private int nextId = 1;
         private long nextTick = long.MinValue;
         private long tileClearTick = long.MinValue;
-        private readonly List<(long due, int index, int warn)> chase = new List<(long, int, int)>();
 
         public DodgeDirector(ulong matchSeed, DodgeConfig config, DodgeStageTable stages)
         {
@@ -51,11 +50,6 @@ namespace LOP
 
         private const int SecondRockDelayTicks = 20;
 
-        // 수박은 추격 장판 — 사람마다 ChaseGapTicks 간격으로 ChaseShots발, 떨어질 때마다 그 순간의 발밑(FFXIV 추격 장판 계열).
-        public const int ChaseShots = 3;
-        public const int ChaseGapTicks = 20;   // 0.4초
-        /// <summary>수박 예고 하한(1초) — 반응 0.35초 + 2.2m 탈출(0.55초). 근처에 떨어뜨린 1.2초는 사람 판에서 너무 쉬웠다.</summary>
-        public const int BombMinWarnTicks = 50;
         /// <summary>온돌 안전 칸 수(36칸 중) — 세기가 오르면 준다. 18 = 예전 체크무늬와 같은 넓이.</summary>
         public static int SafeTiles(float intensity) => Mathf.Clamp(Mathf.RoundToInt(18f / Mathf.Max(intensity, 0.01f)), 6, 18);
         /// <summary>장독이 사람을 겨눌 때 들어오는 자리 흔들림(m) — 겨누되 매번 같은 길은 아니게.</summary>
@@ -74,19 +68,6 @@ namespace LOP
             if (nextTick == long.MinValue)
             {
                 nextTick = gameplayStartTick + config.FirstPatternDelayTicks;
-            }
-            // 추격 수박 — 앞서 예약한 다음 발을 그 순간 그 사람 발밑에(간격과 무관하게 따로 돈다).
-            for (int i = chase.Count - 1; i >= 0; i--)
-            {
-                var (due, index, chaseWarn) = chase[i];
-                if (tick < due) continue;
-                chase.RemoveAt(i);
-                if (index < alivePositions.Count)
-                {
-                    var p = alivePositions[index];
-                    into.Add(new DodgePattern(nextId++, DodgePatternKind.Bomb, tick + config.LeadTicks, 0, p.x, p.y,
-                                              config.BombRadius, 0f, chaseWarn));
-                }
             }
             if (tick < nextTick)
             {
@@ -140,14 +121,11 @@ namespace LOP
                     }
                     break;
                 case DodgePatternKind.Bomb:
+                    // 처음 버전 — 산 사람마다 발밑에 하나, 예고는 세기에 따라 공통 하한(0.8초)까지.
+                    // 근처·하한 1.2~1.5초·추격 3연발을 차례로 해 봤지만 사람 판에서 "여유가 없던" 이것이 낫다(10-04).
+                    foreach (var p in alivePositions)
                     {
-                        int bombWarn = Mathf.Max(warn, BombMinWarnTicks);
-                        for (int j = 0; j < alivePositions.Count; j++)
-                        {
-                            var p = alivePositions[j];
-                            into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, bombWarn));
-                            for (int k = 1; k < ChaseShots; k++) chase.Add((tick + k * ChaseGapTicks, j, bombWarn));
-                        }
+                        into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, warn));
                     }
                     break;
                 case DodgePatternKind.Laser:

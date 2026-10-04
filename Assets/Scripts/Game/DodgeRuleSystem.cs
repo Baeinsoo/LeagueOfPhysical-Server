@@ -73,7 +73,33 @@ namespace LOP
                     currentExp = 0,
                 });
             }
+            SpawnReferee();
             state.MarkChanged();
+        }
+
+        // 탄막 투척 심판 — 선수가 아닌 캐릭터. 관중석 너머(Gate)에서 기다리다 탄막 스테이지에 들어온다(DodgeRefereeSystem).
+        // 월드 시뮬을 빼야 벽·중력에 안 걸리고 식대로 선다. 목숨·판정·등수에는 안 든다(state.Players 밖).
+        private void SpawnReferee()
+        {
+            string id = entitySpawner.GenerateEntityId();
+            entitySpawner.Spawn(new CharacterCreationData
+            {
+                userId = null,
+                entityId = id,
+                visualId = BodyVisualId,
+                characterCode = BodyCharacterCode,
+                position = new Vector3(DodgeReferee.Gate.x, 0f, DodgeReferee.Gate.y),
+                rotation = new Vector3(0f, 180f, 0f),
+                velocity = Vector3.zero,
+                maxHP = 100000,
+                currentHP = 100000,
+                maxMP = 1000,
+                currentMP = 1000,
+                level = 1,
+                currentExp = 0,
+                scriptedMotion = true,
+            });
+            state.RefereeId = id;
         }
 
         public void Deinitialize() { }

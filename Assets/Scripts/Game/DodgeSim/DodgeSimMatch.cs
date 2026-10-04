@@ -18,8 +18,11 @@ namespace LOP
     {
         public const float BodyRadius = 0.37f;
         public const float MoveSpeed = 4f;
-        /// <summary>가운데 투척 심판의 맵 충돌체 반지름(DodgeMap "Thrower").</summary>
-        public const float ThrowerRadius = 0.45f;
+        /// <summary>투척 심판도 캐릭터 — 선수와 같은 몸 반지름.</summary>
+        public const float RefereeRadius = BodyRadius;
+
+        /// <summary>이번 틱 심판 자리(동선 식). 서버 DodgeRefereeSystem과 같은 식이다.</summary>
+        public Vector2 Referee => DodgeReferee.PoseAt(System.Math.Max(Tick, 0), 0, Stages, Config).Position;
         private const float Dt = 1f / DodgeConfig.TicksPerSecond;
 
         /// <summary>DodgeMap SpawnPoint1~8(2026-10-03 에디터에서 읽은 값).</summary>
@@ -128,8 +131,8 @@ namespace LOP
             Vector2 to = from + step;
             to.x = Mathf.Clamp(to.x, -Limit, Limit);
             to.y = Mathf.Clamp(to.y, -Limit, Limit);
-            // 심판은 맵 충돌체라 충돌 끄기(Collide)와 무관하게 막는다.
-            if ((to - DodgeDirector.Thrower).sqrMagnitude < (ThrowerRadius + BodyRadius) * (ThrowerRadius + BodyRadius))
+            // 심판은 선수끼리 충돌 끄기(Collide)와 무관하게 막는다 — "막혀서 맞음"은 선수끼리만 잰다.
+            if ((to - Referee).sqrMagnitude < (RefereeRadius + BodyRadius) * (RefereeRadius + BodyRadius))
             {
                 return;
             }

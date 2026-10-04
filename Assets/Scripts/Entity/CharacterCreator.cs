@@ -64,7 +64,14 @@ namespace LOP
             // 지금까지 EntityBinder가 하드코딩하던 값을 그대로 옮긴 것 — 거동 변화 없음.
             worldEntity.Add(new GameFramework.World.PhysicsConfig(
                 GameFramework.World.BodyKind.Kinematic, freezeRotation: true, isTrigger: false));
-            worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 캐릭터를 시뮬
+            if (creationData.scriptedMotion)
+            {
+                worldEntity.Add(new ScriptedMotion());   // 식으로 움직인다 — 시뮬·AI 없음(생성 이벤트 전에 붙여야 바인더가 본다)
+            }
+            else
+            {
+                worldEntity.Add(new GameFramework.World.Simulated());   // 서버는 모든 캐릭터를 시뮬
+            }
             entityRegistry.Add(worldEntity);
 
             var loadout = characterLoadoutProvider.Get(creationData.characterCode);

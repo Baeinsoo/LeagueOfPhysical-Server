@@ -23,6 +23,9 @@ namespace LOP
 
         public int Version { get; private set; }
 
+        /// <summary>탄막 투척 심판 캐릭터(선수 아님 — 목숨·판정·등수에 안 든다).</summary>
+        public string RefereeId;
+
         /// <summary>판정 시스템이 마지막으로 돈 틱 — 룰이 "마지막 탈락 뒤 얼마나 지났나"를 잰다.</summary>
         public long LastTick;
 

@@ -39,8 +39,8 @@ namespace LOP
         public static int RingCount(float intensity) => Mathf.Clamp(Mathf.RoundToInt(12f * intensity), 8, 28);
         public static int SpiralArms(float intensity) => intensity >= 1.2f ? 4 : 3;
 
-        /// <summary>탄막 투척기(경기장 가운데의 심판). 맵에도 같은 자리에 충돌체가 있다.</summary>
-        public static readonly Vector2 Thrower = DodgeHazards.Thrower;
+        /// <summary>링의 부채꼴 틈(탄 수) — 바깥 탄 벽의 "구멍 찾기"를 심판 기준으로 옮겼다.</summary>
+        public const int RingGap = 3;
         // rad/틱 — 반지름 4m에서 접선 속도 3~5 m/s. 사람(4 m/s)이 따라 돌거나 갈래 사이로 비킬 수 있게.
         private const float SpiralTurnMin = 0.015f, SpiralTurnMax = 0.025f;
 
@@ -86,6 +86,8 @@ namespace LOP
             counter++;
 
             long start = tick + config.LeadTicks;
+            // 탄은 전부 심판이 쏜다 — 나타나는 틱에 심판이 서 있는(또는 걸어오는) 자리에서.
+            Vector2 thrower = DodgeReferee.PoseAt(start, gameplayStartTick, stages, config).Position;
             int warn = WarnTicksAt(at.Intensity, config);
             float h = config.ArenaHalf;
             switch (kind)
@@ -103,17 +105,17 @@ namespace LOP
                     {
                         Vector2 target = alivePositions[rng.Range(0, alivePositions.Count)];
                         // 가운데 투척기에서 그 사람 쪽으로 3갈래(탄막 규칙 — 발사원은 한 곳).
-                        into.Add(new DodgePattern(nextId++, kind, start, 0, Thrower.x, Thrower.y, target.x, target.y));
+                        into.Add(new DodgePattern(nextId++, kind, start, 0, thrower.x, thrower.y, target.x, target.y));
                     }
                     break;
                 case DodgePatternKind.Ring:
-                    into.Add(new DodgePattern(nextId++, kind, start, 0, Thrower.x, Thrower.y,
+                    into.Add(new DodgePattern(nextId++, kind, start, RingGap, thrower.x, thrower.y,
                                               RingCount(at.Intensity), rng.Range(0f, 2f * Mathf.PI)));
                     break;
                 case DodgePatternKind.Spiral:
                     {
                         float turn = rng.Range(SpiralTurnMin, SpiralTurnMax) * (rng.Range(0, 2) == 0 ? -1f : 1f);
-                        into.Add(new DodgePattern(nextId++, kind, start, 0, Thrower.x, Thrower.y, SpiralArms(at.Intensity), turn));
+                        into.Add(new DodgePattern(nextId++, kind, start, 0, thrower.x, thrower.y, SpiralArms(at.Intensity), turn));
                     }
                     break;
                 case DodgePatternKind.Bomb:

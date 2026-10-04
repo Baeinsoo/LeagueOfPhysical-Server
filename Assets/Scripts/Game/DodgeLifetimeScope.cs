@@ -30,6 +30,7 @@ namespace LOP
                     UnityEngine.Debug.Log(DodgeHitLog.Format(at, tick, world.GameplayStartTick, lives));
                 }), Lifetime.Singleton);
             builder.Register<DodgeStateBroadcastSystem>(Lifetime.Singleton);
+            builder.Register<DodgeRefereeSystem>(Lifetime.Singleton);
 
             builder.Register<IGameRuleSystem, DodgeRuleSystem>(Lifetime.Singleton);
 
@@ -37,6 +38,7 @@ namespace LOP
             // 러너→룰→시스템→러너 순환으로 컨테이너가 안 만들어진다 — 빌드 콜백에서 붙인다.
             builder.RegisterBuildCallback(container =>
             {
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<DodgeRefereeSystem>());   // 심판이 먼저 선다 — 진행기가 그 자리에서 쏜다
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<DodgeDirectorSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<DodgeHazardSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<DodgeStateBroadcastSystem>());

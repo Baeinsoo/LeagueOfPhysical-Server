@@ -83,7 +83,8 @@ namespace LOP
             if (kind.Kind == EntityType.Character)
             {
                 bool isPlayer = worldEntity.Has<GameFramework.World.Ownership>();
-                if (isPlayer == false)
+                // 식으로 움직이는 캐릭터(투척 심판 등)는 두뇌가 없다 — 적 AI를 붙이면 선수를 쫓아간다.
+                if (isPlayer == false && worldEntity.Has<ScriptedMotion>() == false)
                 {
                     LOPAIController aiController = root.AddComponent<LOPAIController>();
                     objectResolver.Inject(aiController);

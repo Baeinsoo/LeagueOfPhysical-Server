@@ -97,9 +97,11 @@ namespace LOP.Tests
         public void 가운데_심판은_못_지나간다()
         {
             var m = new DodgeSimMatch(1, C, S, 1);
+            int walkIn = DodgeConfig.Ticks(DodgeReferee.WalkSeconds);
+            for (int i = 0; i <= walkIn; i++) m.Step(new Stand());   // 심판이 가운데에 설 때까지
             for (int i = 0; i < 300; i++) m.Step(new Go(new Vector2(-4f, 0f)));   // (4,0)에서 가운데를 가로질러
-            Assert.GreaterOrEqual((m.Positions[0] - DodgeDirector.Thrower).magnitude,
-                                  DodgeSimMatch.ThrowerRadius + DodgeSimMatch.BodyRadius - 1e-3f);
+            Assert.GreaterOrEqual((m.Positions[0] - DodgeReferee.Spot).magnitude,
+                                  DodgeSimMatch.RefereeRadius + DodgeSimMatch.BodyRadius - 1e-3f);
         }
     }
 }

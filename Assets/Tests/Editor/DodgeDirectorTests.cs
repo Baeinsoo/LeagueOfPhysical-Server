@@ -373,5 +373,36 @@ namespace LOP.Tests
             foreach (var kv in byStart) Assert.LessOrEqual(kv.Value, DodgeDirector.MaxBombs);
             Assert.AreEqual(8, hit.Count, "세 번 고르면(3×3) 여덟 명 모두가 한 번씩은 노려진다");
         }
+
+        // 무작위 안전 칸은 내 근처에 하나도 없을 수 있다(스테이지 5 끝 16%, 서든데스 25% — 예고 본 뒤엔 못 닿음).
+        // 검사기는 다음 안전 칸을 미리 아는 사람이라 이걸 못 잡는다. 산 사람마다 닿는 거리 안에 안전 칸을 하나 보장한다
+        // — 지금 선 칸은 빼서 매번 한 칸은 움직이게.
+        [Test]
+        public void 온돌은_사람마다_닿는_거리_안에_안전_칸이_있다()
+        {
+            var c = Config();
+            int n = c.TileCount; float size = c.ArenaHalf * 2f / n;
+            for (ulong seed = 1; seed <= 40; seed++)
+            {
+                var got = RunWith(new DodgeDirector(seed, c, Only(DodgePatternKind.Tiles, 3f)), Eight, 2000);
+                foreach (var t in got)
+                {
+                    float reach = DodgeDirector.TileReach(t.WarnTicks);
+                    foreach (var p in Eight)
+                    {
+                        int own = Mathf.Clamp((int)((p.x + c.ArenaHalf) / size), 0, n - 1) + Mathf.Clamp((int)((p.y + c.ArenaHalf) / size), 0, n - 1) * n;
+                        bool ok = false;
+                        for (int i = 0; i < n * n && !ok; i++)
+                        {
+                            if ((t.Seed & (1UL << i)) != 0 || i == own) continue;   // 뜨거운 칸, 지금 선 칸은 보장으로 안 친다
+                            float x0 = -c.ArenaHalf + (i % n) * size, z0 = -c.ArenaHalf + (i / n) * size;
+                            float dx = Mathf.Max(x0 - p.x, 0f, p.x - (x0 + size)), dz = Mathf.Max(z0 - p.y, 0f, p.y - (z0 + size));
+                            ok = Mathf.Sqrt(dx * dx + dz * dz) <= reach;
+                        }
+                        Assert.IsTrue(ok, $"seed {seed} tick {t.StartTick}: {p} 근처에 닿는 안전 칸이 없다");
+                    }
+                }
+            }
+        }
     }
 }

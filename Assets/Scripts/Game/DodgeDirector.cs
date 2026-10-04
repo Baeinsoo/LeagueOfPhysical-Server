@@ -59,6 +59,14 @@ namespace LOP
         /// <summary>수박 한 번에 떨어지는 최대 개수 — 사람마다 하나씩이면 8인에서 경기장이 덮인다. 대상은 돌아가며 모두에게.</summary>
         public const int MaxBombs = 3;
 
+        /// <summary>
+        /// 온돌 예고를 본 뒤 닿을 수 있는 거리(m) — 반응 0.35초 뒤 사람 걸음(4 m/s, #Character speed)으로, 15% 여유를 뺀다.
+        /// 안전 칸을 무작위로만 고르면 내 근처에 하나도 없는 판이 생긴다(스테이지 5 끝 16%, 서든데스 25%).
+        /// </summary>
+        public static float TileReach(int warnTicks) =>
+            Mathf.Max(0f, PlayerSpeed * (warnTicks / (float)DodgeConfig.TicksPerSecond - 0.35f) * 0.85f);
+        private const float PlayerSpeed = 4f;
+
         /// <summary>온돌 안전 칸 수(36칸 중) — 세기가 오르면 준다. 18 = 예전 체크무늬와 같은 넓이.</summary>
         public static int SafeTiles(float intensity) => Mathf.Clamp(Mathf.RoundToInt(18f / Mathf.Max(intensity, 0.01f)), 6, 18);
         /// <summary>장독이 사람을 겨눌 때 들어오는 자리 흔들림(m) — 겨누되 매번 같은 길은 아니게.</summary>
@@ -197,9 +205,30 @@ namespace LOP
                             int j = rng.Range(0, i + 1);
                             (order[i], order[j]) = (order[j], order[i]);
                         }
-                        ulong mask = 0;
+                        // 산 사람마다 닿는 거리 안(지금 선 칸 말고)에 안전 칸을 하나 보장하고, 나머지는 무작위로 채운다.
+                        var safeSet = new HashSet<int>();
+                        float size = config.ArenaHalf * 2f / n, reach = TileReach(tileWarn) * 0.9f;
+                        foreach (var p in alivePositions)
+                        {
+                            int own = Mathf.Clamp((int)((p.x + config.ArenaHalf) / size), 0, n - 1)
+                                    + Mathf.Clamp((int)((p.y + config.ArenaHalf) / size), 0, n - 1) * n;
+                            var near = new List<int>();
+                            bool covered = false;
+                            for (int i = 0; i < cells; i++)
+                            {
+                                if (i == own) continue;
+                                float x0 = -config.ArenaHalf + (i % n) * size, z0 = -config.ArenaHalf + (i / n) * size;
+                                float dx = Mathf.Max(x0 - p.x, 0f, p.x - (x0 + size)), dz = Mathf.Max(z0 - p.y, 0f, p.y - (z0 + size));
+                                if (Mathf.Sqrt(dx * dx + dz * dz) > reach) continue;
+                                near.Add(i);
+                                covered |= safeSet.Contains(i);
+                            }
+                            if (!covered && near.Count > 0) safeSet.Add(near[rng.Range(0, near.Count)]);
+                        }
                         int safe = Mathf.Min(SafeTiles(at.Intensity), cells);
-                        for (int i = safe; i < cells; i++) mask |= 1UL << order[i];
+                        for (int i = 0; i < cells && safeSet.Count < safe; i++) safeSet.Add(order[i]);
+                        ulong mask = 0;
+                        for (int i = 0; i < cells; i++) if (!safeSet.Contains(i)) mask |= 1UL << i;
                         var tiles = new DodgePattern(nextId++, kind, start, mask, 0f, 0f, 0f, 0f, tileWarn);
                         into.Add(tiles);
                         tileClearTick = start + DodgeHazards.LifetimeTicks(tiles, config);

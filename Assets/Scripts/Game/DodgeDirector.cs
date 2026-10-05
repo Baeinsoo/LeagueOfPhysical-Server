@@ -24,7 +24,7 @@ namespace LOP
         private IReadOnlyList<Vector2> velocities = System.Array.Empty<Vector2>();
 
         /// <summary>
-        /// 노리는 패턴은 LeadEvery번에 한 번, 그 사람이 지금 속도로 가면 위험이 닿을 때 있을 자리를 노린다(예측 조준).
+        /// 조준탄·연사는 LeadEvery번에 한 번(수박은 매번 발밑과 함께), 그 사람이 지금 속도로 가면 위험이 닿을 때 있을 자리를 노린다(예측 조준).
         /// 고른 순간 자리만 노리면 예약 0.5초 + 예고 동안 계속 뛰는 사람은 늘 뒤에 떨어진다(사람 판 소감, 10-05).
         /// 피하는 법 = 방향을 틀거나 멈추기.
         /// </summary>
@@ -159,15 +159,22 @@ namespace LOP
                     }
                     break;
                 case DodgePatternKind.Bomb:
-                    // 처음 버전 — 발밑에 하나, 예고는 세기에 따라 공통 하한(0.8초)까지(10-04 사람 판 결론).
-                    // 한 번에 MaxBombs개까지, 대상은 돌아가며 — 인원이 많아도 경기장이 수박으로 덮이지 않게.
+                    // 발밑에 하나 + 뛰고 있으면 터질 때 있을 자리에 하나 더(매번). 발밑만이면 뛰기만 해도 늘 뒤에 떨어졌다(10-05 사람 판).
+                    // 곧장 뛰면 앞 수박, 멈추면 발밑 수박 — 방향을 틀어야 산다. 예고는 세기에 따라 공통 하한(0.8초)까지.
+                    // 대상은 한 번에 MaxBombs명까지 돌아가며 — 인원이 많아도 경기장이 수박으로 덮이지 않게.
                     {
                         int count = Mathf.Min(alivePositions.Count, MaxBombs);
+                        float lead = (config.LeadTicks + warn) / (float)DodgeConfig.TicksPerSecond;
                         for (int k = 0; k < count; k++)
                         {
                             int who = (bombRotation + k) % alivePositions.Count;
-                            var p = Lead(alivePositions, who, (config.LeadTicks + warn) / (float)DodgeConfig.TicksPerSecond);
+                            var p = alivePositions[who];
                             into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, warn));
+                            var q = Ahead(alivePositions, who, lead);
+                            if ((q - p).magnitude > config.BombRadius)
+                            {
+                                into.Add(new DodgePattern(nextId++, kind, start, 0, q.x, q.y, config.BombRadius, 0f, warn));
+                            }
                         }
                         bombRotation += count;
                     }
@@ -291,10 +298,14 @@ namespace LOP
         }
 
         // 이번 고르기가 내다보는 차례면 그 사람이 leadSeconds 뒤 있을 자리(경기장 안으로), 아니면 지금 자리.
-        private Vector2 Lead(IReadOnlyList<Vector2> alivePositions, int who, float leadSeconds)
+        private Vector2 Lead(IReadOnlyList<Vector2> alivePositions, int who, float leadSeconds) =>
+            leadThisPick ? Ahead(alivePositions, who, leadSeconds) : alivePositions[who];
+
+        // 그 사람이 지금 속도로 leadSeconds 뒤 있을 자리(경기장 안으로). 속도를 모르면 지금 자리.
+        private Vector2 Ahead(IReadOnlyList<Vector2> alivePositions, int who, float leadSeconds)
         {
             var p = alivePositions[who];
-            if (!leadThisPick || who >= velocities.Count) return p;
+            if (who >= velocities.Count) return p;
             float h = config.ArenaHalf - 0.5f;
             var q = p + velocities[who] * leadSeconds;
             return new Vector2(Mathf.Clamp(q.x, -h, h), Mathf.Clamp(q.y, -h, h));

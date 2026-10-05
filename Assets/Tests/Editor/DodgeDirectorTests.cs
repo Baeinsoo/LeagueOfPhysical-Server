@@ -418,13 +418,14 @@ namespace LOP.Tests
 
         static Vector2 Clamp(Vector2 v, float h) => new Vector2(Mathf.Clamp(v.x, -h, h), Mathf.Clamp(v.y, -h, h));
 
-        // LeadEvery번에 한 번은 그 사람이 지금 속도로 가면 터질 때 있을 자리에 떨어진다. 나머지는 지금 자리.
+        // 수박은 매번 발밑과 가는 쪽(터질 때 있을 자리)에 함께 떨어진다 — 뛰기만 하면 늘 뒤에 떨어져 너무 쉬웠다(사람 판, 10-05).
+        // 곧장 뛰면 앞 수박, 멈추면 발밑 수박 → 방향을 틀어야 산다.
         [Test]
-        public void 수박은_가끔_가는_쪽을_내다보고_떨어진다()
+        public void 수박은_발밑과_가는_쪽에_함께_떨어진다()
         {
             var c = Config((int)DodgePatternKind.Bomb);
             int interval = DodgeDirector.IntervalTicksAt(Flat().At(0, 0, c), c);
-            var got = RunV(new DodgeDirector(1UL, c, Flat()), c.FirstPatternDelayTicks + interval * (DodgeDirector.LeadEvery - 1));
+            var got = RunV(new DodgeDirector(1UL, c, Flat()), c.FirstPatternDelayTicks + interval * 2);
             int predicted = 0, plain = 0;
             foreach (var b in got)
             {
@@ -436,16 +437,17 @@ namespace LOP.Tests
                     else if ((at - Clamp(Two[i] + TwoVel[i] * lead, c.ArenaHalf - 0.5f)).sqrMagnitude < 1e-4f) predicted++;
                 }
             }
-            Assert.AreEqual(2, predicted, "한 번 고를 때 두 사람 모두 내다본다");
-            Assert.AreEqual(2 * (DodgeDirector.LeadEvery - 1), plain);
+            Assert.AreEqual(6, plain, "세 번 고를 때마다 두 사람 발밑");
+            Assert.AreEqual(6, predicted, "세 번 고를 때마다 두 사람 가는 쪽");
         }
 
         [Test]
-        public void 멈춰_있으면_내다봐도_지금_자리다()
+        public void 멈춰_있으면_수박은_발밑에_하나다()
         {
             var c = Config((int)DodgePatternKind.Bomb);
             int interval = DodgeDirector.IntervalTicksAt(Flat().At(0, 0, c), c);
-            var got = Run(new DodgeDirector(1UL, c, Flat()), 0, c.FirstPatternDelayTicks + interval * DodgeDirector.LeadEvery, 0);
+            var got = Run(new DodgeDirector(1UL, c, Flat()), 0, c.FirstPatternDelayTicks + interval * 2, 0);
+            Assert.AreEqual(6, got.Count);
             foreach (var b in got) Assert.IsTrue(new Vector2(b.P0, b.P1) == Two[0] || new Vector2(b.P0, b.P1) == Two[1]);
         }
 

@@ -14,6 +14,7 @@ namespace LOP
         private readonly GameFramework.World.IWorld world;
         private readonly DodgeConfig config;
         private readonly List<Vector2> alive = new List<Vector2>();
+        private readonly List<Vector2> aliveVelocities = new List<Vector2>();
         private readonly List<DodgePattern> fresh = new List<DodgePattern>();
         private readonly List<string> ids = new List<string>();
 
@@ -35,6 +36,7 @@ namespace LOP
             }
 
             alive.Clear();
+            aliveVelocities.Clear();
             ids.Clear();
             ids.AddRange(state.Players.Keys);
             ids.Sort(string.CompareOrdinal);
@@ -44,11 +46,14 @@ namespace LOP
                 {
                     var p = e.Get<GameFramework.World.Transform>().Position;
                     alive.Add(new Vector2(p.X, p.Z));
+                    // 예측 조준용 — 수평 속도(없으면 0, 내다봐도 지금 자리).
+                    var v = e.Get<GameFramework.World.Velocity>();
+                    aliveVelocities.Add(v != null ? new Vector2(v.Linear.X, v.Linear.Z) : Vector2.zero);
                 }
             }
 
             fresh.Clear();
-            director.Next(tick, world.GameplayStartTick, alive, fresh);
+            director.Next(tick, world.GameplayStartTick, alive, aliveVelocities, fresh);
             if (fresh.Count > 0)
             {
                 state.Patterns.AddRange(fresh);

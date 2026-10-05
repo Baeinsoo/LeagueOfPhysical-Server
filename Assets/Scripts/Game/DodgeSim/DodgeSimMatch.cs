@@ -49,6 +49,7 @@ namespace LOP
         private readonly string[] ids;
         private readonly bool[] alive;
         private readonly int[] lives;
+        private Vector2[] lastMove;
 
         public IReadOnlyList<bool> Alive => alive;
 
@@ -62,6 +63,7 @@ namespace LOP
             hazards = new DodgeHazardSystem(State, world.EntityRegistry, config, id => world.EntityRegistry.Remove(id));
 
             Positions = new Vector2[players];
+            lastMove = new Vector2[players];
             ids = new string[players];
             alive = new bool[players];
             lives = new int[players];
@@ -73,6 +75,7 @@ namespace LOP
                 lives[i] = config.Lives;
                 var e = new GameFramework.World.Entity(ids[i]);
                 e.Add(new GameFramework.World.Transform());
+                e.Add(new GameFramework.World.Velocity());   // 진행기의 예측 조준이 읽는다
                 world.EntityRegistry.Add(e);
                 State.Players[ids[i]] = new DodgePlayerLife { Lives = config.Lives };
             }
@@ -127,6 +130,7 @@ namespace LOP
         private void MoveTo(int i, Vector2 want)
         {
             Vector2 from = Positions[i];
+            lastMove[i] = Vector2.zero;
             Vector2 step = Vector2.ClampMagnitude(want - from, MoveSpeed * Dt);
             Vector2 to = from + step;
             to.x = Mathf.Clamp(to.x, -Limit, Limit);
@@ -146,6 +150,7 @@ namespace LOP
                     }
                 }
             }
+            lastMove[i] = (to - from) / Dt;
             Positions[i] = to;
         }
 
@@ -156,6 +161,8 @@ namespace LOP
                 if (alive[i] && world.EntityRegistry.TryGet(ids[i], out var e))
                 {
                     e.Get<GameFramework.World.Transform>().Position = new System.Numerics.Vector3(Positions[i].x, 0f, Positions[i].y);
+                    var v = e.Get<GameFramework.World.Velocity>();
+                    if (v != null) v.Linear = new System.Numerics.Vector3(lastMove[i].x, 0f, lastMove[i].y);
                 }
             }
         }

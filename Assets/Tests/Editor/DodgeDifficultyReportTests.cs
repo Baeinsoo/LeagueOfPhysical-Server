@@ -14,6 +14,7 @@ namespace LOP.Tests
             StringAssert.Contains("가장 좁은 순간", md);
             StringAssert.Contains("서든데스 불가능", md);
             StringAssert.Contains("막혀서 맞은 비율", md);
+            StringAssert.Contains("예고 뒤 못 닿는 비율", md);   // 공정성 — 검사기가 못 잡는 것(feasibility-is-not-fairness)
         }
 
         // 같은 시드면 같은 숫자 — 4b 튜닝 전후를 비교할 수 있어야 한다.

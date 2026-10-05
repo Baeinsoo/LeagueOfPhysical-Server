@@ -404,5 +404,60 @@ namespace LOP.Tests
                 }
             }
         }
+
+        // ── 예측 조준(가끔) — 계속 뛰면 고른 순간 자리를 노리는 패턴은 늘 뒤에 떨어진다(사람 판 소감) ──
+
+        static readonly Vector2[] TwoVel = { new Vector2(3f, 0f), new Vector2(0f, -3f) };
+
+        static List<DodgePattern> RunV(DodgeDirector d, long to)
+        {
+            var all = new List<DodgePattern>();
+            for (long t = 0; t <= to; t++) d.Next(t, 0, Two, TwoVel, all);
+            return all;
+        }
+
+        static Vector2 Clamp(Vector2 v, float h) => new Vector2(Mathf.Clamp(v.x, -h, h), Mathf.Clamp(v.y, -h, h));
+
+        // LeadEvery번에 한 번은 그 사람이 지금 속도로 가면 터질 때 있을 자리에 떨어진다. 나머지는 지금 자리.
+        [Test]
+        public void 수박은_가끔_가는_쪽을_내다보고_떨어진다()
+        {
+            var c = Config((int)DodgePatternKind.Bomb);
+            int interval = DodgeDirector.IntervalTicksAt(Flat().At(0, 0, c), c);
+            var got = RunV(new DodgeDirector(1UL, c, Flat()), c.FirstPatternDelayTicks + interval * (DodgeDirector.LeadEvery - 1));
+            int predicted = 0, plain = 0;
+            foreach (var b in got)
+            {
+                var at = new Vector2(b.P0, b.P1);
+                for (int i = 0; i < 2; i++)
+                {
+                    float lead = (c.LeadTicks + b.WarnTicks) / (float)DodgeConfig.TicksPerSecond;
+                    if ((at - Two[i]).sqrMagnitude < 1e-6f) plain++;
+                    else if ((at - Clamp(Two[i] + TwoVel[i] * lead, c.ArenaHalf - 0.5f)).sqrMagnitude < 1e-4f) predicted++;
+                }
+            }
+            Assert.AreEqual(2, predicted, "한 번 고를 때 두 사람 모두 내다본다");
+            Assert.AreEqual(2 * (DodgeDirector.LeadEvery - 1), plain);
+        }
+
+        [Test]
+        public void 멈춰_있으면_내다봐도_지금_자리다()
+        {
+            var c = Config((int)DodgePatternKind.Bomb);
+            int interval = DodgeDirector.IntervalTicksAt(Flat().At(0, 0, c), c);
+            var got = Run(new DodgeDirector(1UL, c, Flat()), 0, c.FirstPatternDelayTicks + interval * DodgeDirector.LeadEvery, 0);
+            foreach (var b in got) Assert.IsTrue(new Vector2(b.P0, b.P1) == Two[0] || new Vector2(b.P0, b.P1) == Two[1]);
+        }
+
+        // 장독 둘째는 첫째를 피한 뒤 다시 피할 시간을 둔다(7.6% 못 닿음 → 교차가 너무 빠듯했다).
+        [Test]
+        public void 장독_둘째는_넉넉히_뒤에_온다()
+        {
+            var c = Config();
+            var got = Run(new DodgeDirector(5UL, c, Only(DodgePatternKind.Rock, 2f)), 0, c.FirstPatternDelayTicks, 0);
+            Assert.AreEqual(2, got.Count);
+            Assert.GreaterOrEqual(got[1].StartTick - got[0].StartTick, 50);
+            Assert.GreaterOrEqual(got[0].WarnTicks, DodgeDirector.RockMinWarnTicks);   // 세기 2라도 예고 1초 — 반경 1.51m를 빠져나갈 시간
+        }
     }
 }

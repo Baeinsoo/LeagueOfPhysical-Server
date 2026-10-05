@@ -19,6 +19,17 @@ namespace LOP
         private long nextTick = long.MinValue;
         private long tileClearTick = long.MinValue;
         private int bombRotation;
+        // 이번에 고르는 패턴이 내다보고 노리나, 그때 산 사람 속도(위치와 같은 순서).
+        private bool leadThisPick;
+        private IReadOnlyList<Vector2> velocities = System.Array.Empty<Vector2>();
+
+        /// <summary>
+        /// 노리는 패턴은 LeadEvery번에 한 번, 그 사람이 지금 속도로 가면 위험이 닿을 때 있을 자리를 노린다(예측 조준).
+        /// 고른 순간 자리만 노리면 예약 0.5초 + 예고 동안 계속 뛰는 사람은 늘 뒤에 떨어진다(사람 판 소감, 10-05).
+        /// 피하는 법 = 방향을 틀거나 멈추기.
+        /// </summary>
+        public const int LeadEvery = 3;
+        private const float AimedSpeedScale = 1.3f, StreamSpeedScale = 1.35f;   // DodgeHazards와 같은 값
 
         public DodgeDirector(ulong matchSeed, DodgeConfig config, DodgeStageTable stages)
         {
@@ -49,7 +60,10 @@ namespace LOP
         public static int LaserCount(float intensity) => Mathf.Clamp(Mathf.FloorToInt(intensity), 1, 3);
         public static int RockCount(float intensity) => intensity >= 1.6f ? 2 : 1;
 
-        private const int SecondRockDelayTicks = 20;
+        // 장독 둘째는 첫째를 피한 뒤 다시 피할 시간을 둔다(0.4초 교차는 예고 뒤 7.6% 못 닿음).
+        private const int SecondRockDelayTicks = 50;
+        /// <summary>장독 예고 하한(1초) — 판정 반경 1.51m(장독 1.35 + 몸 0.16)를 반응 뒤 빠져나갈 시간. 0.8초면 1.8m라 빠듯했다.</summary>
+        public const int RockMinWarnTicks = 50;
 
         /// <summary>
         /// 한 번에 노리는 사람 수 — 4명당 1명. 노리는 패턴(조준·연사·줄넘기 첫 줄·장독)은 한 사람만 노리면 인원이 늘수록
@@ -77,7 +91,13 @@ namespace LOP
         public const float WallBulletSpacing = 0.7f;   // 두 개 연달아 — 첫 것을 피한 자리를 둘째가 지난다
 
         public void Next(long tick, long gameplayStartTick, IReadOnlyList<Vector2> alivePositions, List<DodgePattern> into)
+            => Next(tick, gameplayStartTick, alivePositions, System.Array.Empty<Vector2>(), into);
+
+        /// <param name="aliveVelocities">산 사람 속도(xz, 위치와 같은 순서). 비었으면 예측 조준이 지금 자리를 노린다.</param>
+        public void Next(long tick, long gameplayStartTick, IReadOnlyList<Vector2> alivePositions,
+                         IReadOnlyList<Vector2> aliveVelocities, List<DodgePattern> into)
         {
+            velocities = aliveVelocities ?? System.Array.Empty<Vector2>();
             if (gameplayStartTick == long.MaxValue || tick < gameplayStartTick)
             {
                 return;
@@ -101,6 +121,7 @@ namespace LOP
             // 뽑는 순서가 계약이다 — 같은 씨앗에서 같은 판이 나와야 재현·디버깅이 된다.
             var rng = new DeterministicRandom(Hashing.Combine(seed, (ulong)counter));
             counter++;
+            leadThisPick = counter % LeadEvery == 0;
 
             long start = tick + config.LeadTicks;
             // 탄은 전부 심판이 쏜다 — 나타나는 틱에 심판이 서 있는(또는 걸어오는) 자리에서.
@@ -119,8 +140,9 @@ namespace LOP
                     break;
                 case DodgePatternKind.BulletAimed:
                     // 투척기에서 노리는 사람마다 3갈래(탄막 규칙 — 발사원은 한 곳).
-                    foreach (var target in Targets(ref rng, alivePositions))
+                    foreach (int who in Targets(ref rng, alivePositions))
                     {
+                        var target = Aim(alivePositions, who, thrower, config.BulletSpeed * AimedSpeedScale);
                         into.Add(new DodgePattern(nextId++, kind, start, 0, thrower.x, thrower.y, target.x, target.y));
                     }
                     break;
@@ -143,7 +165,8 @@ namespace LOP
                         int count = Mathf.Min(alivePositions.Count, MaxBombs);
                         for (int k = 0; k < count; k++)
                         {
-                            var p = alivePositions[(bombRotation + k) % alivePositions.Count];
+                            int who = (bombRotation + k) % alivePositions.Count;
+                            var p = Lead(alivePositions, who, (config.LeadTicks + warn) / (float)DodgeConfig.TicksPerSecond);
                             into.Add(new DodgePattern(nextId++, kind, start, 0, p.x, p.y, config.BombRadius, 0f, warn));
                         }
                         bombRotation += count;
@@ -152,7 +175,7 @@ namespace LOP
                 case DodgePatternKind.Laser:
                     {
                     // 앞 줄들은 노리는 사람마다 하나씩 그 자리를 지난다 — "나를 노리는 게 없다"(사람 판 소감).
-                    var aimed = Targets(ref rng, alivePositions);
+                    var aimed = Targets(ref rng, alivePositions).ConvertAll(i => alivePositions[i]);
                     int lines = Mathf.Max(LaserCount(at.Intensity), aimed.Count);
                     for (int i = 0; i < lines; i++)
                     {
@@ -169,7 +192,7 @@ namespace LOP
                     {
                         // 사람 쪽으로 굴린다. 둘째는 맞은편 벽에서 시간차로 — 교차해 한 방향 도망을 막는다.
                         int firstSide = rng.Range(0, 4);
-                        var aimed = Targets(ref rng, alivePositions);
+                        var aimed = Targets(ref rng, alivePositions).ConvertAll(i => alivePositions[i]);
                         int rocks = Mathf.Max(RockCount(at.Intensity), aimed.Count);
                         for (int i = 0; i < rocks; i++)
                         {
@@ -183,7 +206,8 @@ namespace LOP
                                 Vector2 entry = DodgeHazards.EdgePoint(side, along, config.EdgeDistance);
                                 twist = Mathf.Clamp(Vector2.SignedAngle(DodgeHazards.Inward(side), target - entry) * Mathf.Deg2Rad, -0.6f, 0.6f);
                             }
-                            into.Add(new DodgePattern(nextId++, kind, start + i * SecondRockDelayTicks, 0, side, along, twist, 0f, warn));
+                            into.Add(new DodgePattern(nextId++, kind, start + i * SecondRockDelayTicks, 0, side, along, twist, 0f,
+                                                      Mathf.Max(warn, RockMinWarnTicks)));
                         }
                     }
                     break;
@@ -241,16 +265,17 @@ namespace LOP
         private void AddStream(ref DeterministicRandom rng, long start, Vector2 thrower, IReadOnlyList<Vector2> alivePositions,
                                List<DodgePattern> into)
         {
-            foreach (var target in Targets(ref rng, alivePositions))
+            foreach (int who in Targets(ref rng, alivePositions))
             {
+                var target = Aim(alivePositions, who, thrower, config.BulletSpeed * StreamSpeedScale);
                 into.Add(new DodgePattern(nextId++, DodgePatternKind.BulletStream, start, 0, thrower.x, thrower.y, target.x, target.y));
             }
         }
 
         // 서로 다른 TargetCount명 — 섞어서 앞에서부터. 산 사람이 없으면 빈 목록.
-        private static List<Vector2> Targets(ref DeterministicRandom rng, IReadOnlyList<Vector2> alivePositions)
+        private static List<int> Targets(ref DeterministicRandom rng, IReadOnlyList<Vector2> alivePositions)
         {
-            var picked = new List<Vector2>();
+            var picked = new List<int>();
             int n = alivePositions.Count;
             if (n == 0) return picked;
             var order = new int[n];
@@ -261,8 +286,25 @@ namespace LOP
                 (order[i], order[j]) = (order[j], order[i]);
             }
             int k = Mathf.Min(TargetCount(n), n);
-            for (int i = 0; i < k; i++) picked.Add(alivePositions[order[i]]);
+            for (int i = 0; i < k; i++) picked.Add(order[i]);
             return picked;
+        }
+
+        // 이번 고르기가 내다보는 차례면 그 사람이 leadSeconds 뒤 있을 자리(경기장 안으로), 아니면 지금 자리.
+        private Vector2 Lead(IReadOnlyList<Vector2> alivePositions, int who, float leadSeconds)
+        {
+            var p = alivePositions[who];
+            if (!leadThisPick || who >= velocities.Count) return p;
+            float h = config.ArenaHalf - 0.5f;
+            var q = p + velocities[who] * leadSeconds;
+            return new Vector2(Mathf.Clamp(q.x, -h, h), Mathf.Clamp(q.y, -h, h));
+        }
+
+        // 탄 조준 — 예약 시간 + 투척기에서 그 사람까지 날아가는 시간만큼 내다본다.
+        private Vector2 Aim(IReadOnlyList<Vector2> alivePositions, int who, Vector2 thrower, float speed)
+        {
+            float travel = (alivePositions[who] - thrower).magnitude / Mathf.Max(speed, 0.01f);
+            return Lead(alivePositions, who, config.LeadTicks / (float)DodgeConfig.TicksPerSecond + travel);
         }
     }
 }

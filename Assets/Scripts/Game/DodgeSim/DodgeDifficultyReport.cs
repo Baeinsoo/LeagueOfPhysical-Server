@@ -29,10 +29,27 @@ namespace LOP
                 var lengths = new List<double>();
                 int hitsCollide = 0, hitsFree = 0;
                 double aliveCollide = 0, aliveFree = 0;
+                // 예고 뒤 닿을 수 있나 — 예고가 뜨는 틱에 산 사람마다(종류별 [전체, 못 닿음]).
+                var fair = new SortedDictionary<DodgePatternKind, int[]>();
                 for (ulong seed = 1; seed <= (ulong)seeds; seed++)
                 {
                     var m = new DodgeSimMatch(seed, c, s, n);
-                    m.Run(new DodgeHumanBot(seed), MaxTicks);
+                    var bot = new DodgeHumanBot(seed);
+                    while (!m.Over && m.Tick < MaxTicks)
+                    {
+                        m.Step(bot);
+                        foreach (var p in m.State.Patterns)
+                        {
+                            if (p.StartTick != m.Tick || !DodgeFairness.Warned(p.Kind)) continue;
+                            if (!fair.TryGetValue(p.Kind, out var f)) fair[p.Kind] = f = new int[2];
+                            for (int i = 0; i < m.Players; i++)
+                            {
+                                if (!m.Alive[i]) continue;
+                                f[0]++;
+                                if (!DodgeFairness.Reachable(p, m.Positions[i], c, m.Limit)) f[1]++;
+                            }
+                        }
+                    }
                     foreach (var (_, t) in m.Hits) hits[SlotOf(t)]++;
                     for (long t = 0; t <= m.Tick; t++) seconds[SlotOf(t)] += (double)AliveAt(m, t) / DodgeConfig.TicksPerSecond;
                     foreach (var (_, t) in m.Eliminations) elimSlot[SlotOf(t)]++;
@@ -67,8 +84,44 @@ namespace LOP
                     double blocked = BlockedPercent(hitsCollide, aliveCollide, hitsFree, aliveFree);
                     sb.AppendLine($"- 다른 선수에 막혀서 맞은 비율: {blocked:F0}% (살아 있던 1분당 맞음 — 충돌 {Rate(hitsCollide, aliveCollide):F2} / 충돌 없음 {Rate(hitsFree, aliveFree):F2})");
                 }
+                // 공정성: 반응 0.35초 뒤 4 m/s로 그 패턴이 켜진 동안 내내 안전한 자리에 닿나. 검사기(미래를 아는 사람)가 못 잡는 것.
+                var parts = new List<string>();
+                foreach (var kv in fair) parts.Add($"{kv.Key} {100.0 * kv.Value[1] / System.Math.Max(1, kv.Value[0]):F1}% ({kv.Value[1]}/{kv.Value[0]})");
+                sb.AppendLine("- 예고 뒤 못 닿는 비율: " + (parts.Count == 0 ? "—" : string.Join(" · ", parts)));
                 sb.AppendLine();
             }
+
+            // 공정성은 모든 스테이지를 봐야 한다 — 봇이 일찍 탈락하면 뒤 스테이지(장독·온돌)가 안 잡힌다. 목숨을 무한으로 끝까지.
+            sb.AppendLine("## 예고 뒤 닿을 수 있나(목숨 무한 1인, 서든데스 1분까지)");
+            sb.AppendLine();
+            sb.AppendLine("| 종류 | 예고 뒤 못 닿는 비율 |");
+            sb.AppendLine("|---|---|");
+            var endless = WithLives(c, 100000);
+            long fairEnd = DodgeFeasibility.StagesEndTick(s, c) + 60 * DodgeConfig.TicksPerSecond;
+            var allFair = new SortedDictionary<DodgePatternKind, int[]>();
+            for (ulong seed = 1; seed <= (ulong)seeds; seed++)
+            {
+                var m = new DodgeSimMatch(seed, endless, s, 1);
+                var bot = new DodgeHumanBot(seed);
+                while (m.Tick < fairEnd)
+                {
+                    m.Step(bot);
+                    foreach (var p in m.State.Patterns)
+                    {
+                        if (p.StartTick != m.Tick || !DodgeFairness.Warned(p.Kind)) continue;
+                        if (!allFair.TryGetValue(p.Kind, out var f)) allFair[p.Kind] = f = new int[2];
+                        f[0]++;
+                        if (!DodgeFairness.Reachable(p, m.Positions[0], c, m.Limit)) f[1]++;
+                    }
+                }
+            }
+            foreach (var kv in allFair)
+            {
+                sb.AppendLine($"| {kv.Key} | {100.0 * kv.Value[1] / System.Math.Max(1, kv.Value[0]):F1}% ({kv.Value[1]}/{kv.Value[0]}) |");
+            }
+            sb.AppendLine();
+            sb.AppendLine("> 반응 0.35초 뒤 4 m/s로, 그 패턴이 켜진 동안 내내 안전한 자리에 닿나(DodgeFairness). 검사기는 다음 패턴을 미리 아는 사람이라 이것을 못 잡는다.");
+            sb.AppendLine();
 
             sb.AppendLine("## 검사기(완벽한 1인)");
             sb.AppendLine();
@@ -119,6 +172,13 @@ namespace LOP
             for (long t = 0; t <= m.Tick; t++) sum += AliveAt(m, t);
             return sum / DodgeConfig.TicksPerSecond;
         }
+
+        private static DodgeConfig WithLives(in DodgeConfig c, int lives) =>
+            new DodgeConfig(lives, c.InvulnerableSeconds, c.HitRadius, c.LeadSeconds, c.ArenaHalf,
+                            c.TileCount, c.FirstPatternDelaySeconds, c.PatternIntervalSeconds, c.OnlyKind,
+                            c.WarnSeconds, c.BulletSpeed, c.BulletRadius, c.BombRadius, c.BombActiveSeconds,
+                            c.LaserWidth, c.LaserOnSeconds, c.RockSpeed, c.RockRadius, c.TileOnSeconds,
+                            c.MinIntervalSeconds, c.MinWarnSeconds, c.SuddenDeathBase, c.SuddenDeathGrowth);
 
         private static int AliveAt(DodgeSimMatch m, long t)
         {

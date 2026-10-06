@@ -15,6 +15,7 @@ namespace LOP
         private readonly GameFramework.World.EntityRegistry entityRegistry;
         private readonly SkydiveConfig config;
         private readonly CheckpointField checkpoints;
+        private readonly SavePadField savePads;   // 비어 있으면 옛 자동 체크포인트
 
         //  선반별 부활 순번 — 레이저·문과 공유하지 않는다(SkydiveRespawn 주석 참고).
         private readonly Dictionary<float, int> respawnCounts = new Dictionary<float, int>();
@@ -22,11 +23,13 @@ namespace LOP
 
         public SkydiveLandingSystem(GameFramework.World.EntityRegistry entityRegistry,
                                     SkydiveConfig config,
-                                    CheckpointField checkpoints)
+                                    CheckpointField checkpoints,
+                                    SavePadField savePads = null)
         {
             this.entityRegistry = entityRegistry;
             this.config = config;
             this.checkpoints = checkpoints;
+            this.savePads = savePads;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -51,7 +54,7 @@ namespace LOP
             var respawnPoints = checkpoints.RespawnPoints;
             float shelfY = SkydiveCheckpoints.LastPassedShelfY(deathY, shelfYs, spawnY);
             respawnCounts.TryGetValue(shelfY, out int order);
-            SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order);
+            SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order, savePads);
             respawnCounts[shelfY] = order;
         }
 

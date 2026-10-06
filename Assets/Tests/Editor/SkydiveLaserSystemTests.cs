@@ -186,5 +186,32 @@ namespace LOP.Tests
             Assert.AreEqual(expected.y, p.Y, 0.001f);
             Assert.AreEqual(expected.z, p.Z, 0.001f);
         }
+
+        [Test]
+        public void 발판_맵에서_레이저에_죽으면_내가_저장한_발판으로()
+        {
+            //  아래(2000)에 자동 체크포인트가 있어도 저장한 발판(1700)이 이긴다 — 각자 고른 저장이 부활을 정한다.
+            var registry = new GameFramework.World.EntityRegistry();
+            var diver = Diver("diver-1", new Vector3(0f, 1650f, 0f));
+            diver.Add(new SkydiveSave { PadId = 7 });
+            registry.Add(diver);
+            var laserField = new LaserField();
+            laserField.Add(CrossingLaser());
+            var checkpoints = new CheckpointField();
+            checkpoints.Add(3600f, new Vector3(0f, 3600f, 0f));
+            checkpoints.Add(2000f, new Vector3(-25f, 2000f, -10f));
+            var pads = new SavePadField();
+            pads.Add(7, new Bounds(new Vector3(40f, 1699f, 40f), new Vector3(10f, 2f, 10f)), "테라스");
+            var system = new SkydiveLaserSystem(registry, laserField, Config(), checkpoints, pads);
+
+            system.Tick(1, DeltaTime);
+            diver.Get<GameFramework.World.Transform>().Position = new Vector3(0f, 1550f, 0f).ToNumerics();
+            system.Tick(2, DeltaTime);
+
+            var p = diver.Get<GameFramework.World.Transform>().Position;
+            Assert.AreEqual(40f + 2f, p.X, 0.001f);   // 발판 가운데 + 첫 흩뿌림(각도 0)
+            Assert.AreEqual(1700f, p.Y, 0.001f);
+            Assert.AreEqual(40f, p.Z, 0.001f);
+        }
     }
 }

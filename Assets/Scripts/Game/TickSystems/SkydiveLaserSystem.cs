@@ -21,6 +21,7 @@ namespace LOP
         private readonly LaserField laserField;
         private readonly SkydiveConfig config;
         private readonly CheckpointField checkpoints;
+        private readonly SavePadField savePads;   // 비어 있으면 옛 자동 체크포인트
 
         //  틱 N의 끝 위치 == 틱 N+1의 시작 위치. 이 캐시가 이번 틱에 지나온 경로를 만든다.
         private readonly Dictionary<string, Vector3> previousPositions = new Dictionary<string, Vector3>();
@@ -32,12 +33,14 @@ namespace LOP
         public SkydiveLaserSystem(GameFramework.World.EntityRegistry entityRegistry,
                                   LaserField laserField,
                                   SkydiveConfig config,
-                                  CheckpointField checkpoints)
+                                  CheckpointField checkpoints,
+                                  SavePadField savePads = null)
         {
             this.entityRegistry = entityRegistry;
             this.laserField = laserField;
             this.config = config;
             this.checkpoints = checkpoints;
+            this.savePads = savePads;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -124,7 +127,7 @@ namespace LOP
             var respawnPoints = checkpoints.RespawnPoints;
             float shelfY = SkydiveCheckpoints.LastPassedShelfY(deathY, shelfYs, spawnY);
             respawnCounts.TryGetValue(shelfY, out int order);
-            SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order);
+            SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order, savePads);
             respawnCounts[shelfY] = order;
 
             previousPositions[diver.Id] = GameFramework.World.EntityMotionExtensions.GetPosition(diver);

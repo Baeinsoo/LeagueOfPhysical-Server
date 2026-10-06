@@ -80,8 +80,10 @@ namespace LOP
                 }
 
                 //  중심이 아니라 꼬리로 잰다 — 결승선도 형상으로 재므로(부리가 닿는 순간),
-                //  여기만 중심으로 재면 화면에서 보이는 것과 결과가 어긋난다.
-                if (body.Position.X - config.BodyRadius > wallX)
+                //  여기만 중심으로 재면 화면에서 보이는 것과 결과가 어긋난다. 누운 캡슐이면
+                //  꼬리는 중심에서 길이의 절반 뒤다 — 선 캡슐(BodyLength 0)이면 반지름 그대로.
+                float tailOffset = config.BodyLength > 0f ? config.BodyLength * 0.5f : config.BodyRadius;
+                if (body.Position.X - tailOffset > wallX)
                 {
                     continue;
                 }

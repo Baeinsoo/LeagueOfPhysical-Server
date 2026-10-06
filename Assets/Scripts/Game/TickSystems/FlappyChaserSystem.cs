@@ -18,6 +18,7 @@ namespace LOP
         private readonly EntitySpawner entitySpawner;
         private readonly FinishLineBounds finishLine;
         private readonly FlappyConfig config;
+        private readonly FlappyMapRulesField rules;
 
         private readonly List<string> watched = new List<string>();
         private readonly List<string> eliminated = new List<string>();
@@ -27,7 +28,8 @@ namespace LOP
                                   FinishTrackingSystem finishSystem,
                                   EntitySpawner entitySpawner,
                                   FinishLineBounds finishLine,
-                                  FlappyConfig config)
+                                  FlappyConfig config,
+                                  FlappyMapRulesField rules)
         {
             this.entityRegistry = entityRegistry;
             this.world = world;
@@ -35,6 +37,7 @@ namespace LOP
             this.entitySpawner = entitySpawner;
             this.finishLine = finishLine;
             this.config = config;
+            this.rules = rules;
         }
 
         /// <summary>먼저 잡힌 순. 등수는 이 역순이다 — 오래 버틴 사람이 위다.</summary>
@@ -55,6 +58,13 @@ namespace LOP
             //  출발 전엔 벽이 시작점에 멈춰 있다. 출발틱이 아직 안 정해졌으면 long.MaxValue라
             //  이 비교가 그 경우도 같이 막는다.
             if (tick < world.GameplayStartTick)
+            {
+                return;
+            }
+
+            //  맵이 추격자를 꺼 두면(FlappyMapRules.Chaser == false) 아무도 안 잡는다 —
+            //  마커가 없는 맵(지금의 라이브 맵)이 이 상태다.
+            if (rules.Chaser == false)
             {
                 return;
             }

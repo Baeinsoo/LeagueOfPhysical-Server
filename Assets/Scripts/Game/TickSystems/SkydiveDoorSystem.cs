@@ -17,6 +17,7 @@ namespace LOP
         private readonly DoorField doorField;
         private readonly SkydiveConfig config;
         private readonly CheckpointField checkpoints;
+        private readonly SavePadField savePads;   // 비어 있으면 옛 자동 체크포인트
 
         //  선반별 부활 순번(spread용) — 문 판정만의 상태다. 레이저의 respawnCounts와 공유하지
         //  않는다(SkydiveRespawn 주석 참고 — 공유하면 서로 다른 위험이 한 카운터로 뒤섞인다).
@@ -26,12 +27,14 @@ namespace LOP
         public SkydiveDoorSystem(GameFramework.World.EntityRegistry entityRegistry,
                                  DoorField doorField,
                                  SkydiveConfig config,
-                                 CheckpointField checkpoints)
+                                 CheckpointField checkpoints,
+                                 SavePadField savePads = null)
         {
             this.entityRegistry = entityRegistry;
             this.doorField = doorField;
             this.config = config;
             this.checkpoints = checkpoints;
+            this.savePads = savePads;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -65,7 +68,7 @@ namespace LOP
             var respawnPoints = checkpoints.RespawnPoints;
             float shelfY = SkydiveCheckpoints.LastPassedShelfY(deathY, shelfYs, spawnY);
             respawnCounts.TryGetValue(shelfY, out int order);
-            SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order);
+            SkydiveRespawn.To(diver, deathY, config, shelfYs, spawnY, respawnPoints, ref order, savePads);
             respawnCounts[shelfY] = order;
         }
 

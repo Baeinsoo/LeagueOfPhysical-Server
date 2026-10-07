@@ -45,7 +45,8 @@ namespace LOP
                 c.Resolve<GameFramework.World.IMotionBridge>(),
                 // 클라와 같은 마스크여야 예측이 권위와 갈리지 않는다.
                 UnityEngine.LayerMask.GetMask("Default"),
-                c.Resolve<SavePadField>()), Lifetime.Singleton);
+                c.Resolve<SavePadField>(),
+                c.Resolve<ObstacleField>()), Lifetime.Singleton);
 
             builder.Register<ICharacterCreator, SkydivePlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, SkydiveRuleSystem>(Lifetime.Singleton);
@@ -54,6 +55,8 @@ namespace LOP
             builder.Register<CheckpointField>(Lifetime.Singleton);
             //  맵 씬의 SavePad가 맵 로드 시 여기에 자기를 넣는다. 하나라도 있으면 부활은 각자 저장한 발판(없으면 출발).
             builder.Register<SavePadField>(Lifetime.Singleton);
+            //  맵 씬의 도는 원판·날개·조리개가 맵 로드 시 여기에 자기를 넣는다. 시뮬이 매 틱 문과 같이 세운다.
+            builder.Register<ObstacleField>(Lifetime.Singleton);
 
             //  맵 씬의 LaserVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
             builder.Register<LaserField>(Lifetime.Singleton);

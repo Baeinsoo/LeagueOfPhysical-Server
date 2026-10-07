@@ -26,6 +26,11 @@ namespace LOP
         // 남아 있는 사람의 몸 위치를 다시 찾을 때(ResolveOutcome 2단계)도 이걸로 entityId를 얻는다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
+        /// <summary>판 도중 나가 있는 사람 — 판이 그 사람을 기다리지 않게. 시험 등에서 없으면 아무도 안 나간 것으로 본다.</summary>
+        [VContainer.Inject] public PlayerPresence Presence { get; set; }
+
+        private bool IsAway(string userId) => userId != null && Presence != null && Presence.IsAway(userId);
+
         public SkydiveRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                   GameFramework.World.EntityRegistry entityRegistry, FinishTrackingSystem finishSystem)
         {
@@ -60,6 +65,7 @@ namespace LOP
                 string entityId = entitySpawner.GenerateEntityId();
                 entityIdToUserId[entityId] = playerList[i];
                 finishSystem.Watch(entityId);
+                finishSystem.IsAwayEntity = id => entityIdToUserId.TryGetValue(id, out var u) && IsAway(u);
 
                 entitySpawner.Spawn(new CharacterCreationData
                 {

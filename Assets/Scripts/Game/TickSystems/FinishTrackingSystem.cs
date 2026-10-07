@@ -29,6 +29,9 @@ namespace LOP
 
         public bool HasFinished(string entityId) => tracker.HasFinished(entityId);
 
+        /// <summary>판 도중 나가 있는 사람(엔티티)인가 — 그 사람의 완주를 기다리지 않는다. 규칙이 정해 준다. 없으면 아무도 안 나감.</summary>
+        public System.Func<string, bool> IsAwayEntity { get; set; }
+
         public void Watch(string entityId) => watched.Add(entityId);
 
         public void Reset()
@@ -70,9 +73,11 @@ namespace LOP
                 int alive = 0;
                 for (int i = 0; i < watched.Count; i++)
                 {
-                    if (entityRegistry.Get(watched[i]) == null)
+                    //  몸이 없거나(잡힘) 판 도중 나가 있는 사람은 세지 않는다. 세면 한 명 나간 판이 절대 안 끝난다
+                    //  (나간 사람의 몸은 입력 없이 서 있어 결승에 못 간다).
+                    if (entityRegistry.Get(watched[i]) == null || (IsAwayEntity?.Invoke(watched[i]) ?? false))
                     {
-                        continue;   // 나간 사람은 세지 않는다. 세면 한 명 나간 판이 절대 안 끝난다
+                        continue;
                     }
                     alive++;
                     if (tracker.HasFinished(watched[i]) == false)

@@ -26,6 +26,11 @@ namespace LOP
         //  등수를 답할 때 통과 기록(entityId)을 userId로 옮기고, 못 들어온 사람의 몸을 되찾는 데 쓴다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
+        /// <summary>판 도중 나가 있는 사람 — 판이 그 사람을 기다리지 않게. 시험 등에서 없으면 아무도 안 나간 것으로 본다.</summary>
+        [VContainer.Inject] public PlayerPresence Presence { get; set; }
+
+        private bool IsAway(string userId) => userId != null && Presence != null && Presence.IsAway(userId);
+
         public FlappyRaceRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                     GameFramework.World.EntityRegistry entityRegistry,
                                     FinishTrackingSystem finishSystem,
@@ -68,6 +73,7 @@ namespace LOP
                 string entityId = entitySpawner.GenerateEntityId();
                 entityIdToUserId[entityId] = playerList[i];
                 finishSystem.Watch(entityId);
+                finishSystem.IsAwayEntity = id => entityIdToUserId.TryGetValue(id, out var u) && IsAway(u);
                 chaserSystem.Watch(entityId);
 
                 entitySpawner.Spawn(new CharacterCreationData
@@ -129,9 +135,9 @@ namespace LOP
                     {
                         continue;
                     }
-                    if (entityRegistry.Get(pair.Key) != null)
+                    if (entityRegistry.Get(pair.Key) != null && IsAway(pair.Value) == false)
                     {
-                        return false;   // 아직 달리는 새가 있다
+                        return false;   // 아직 달리는 새가 있다(나가 있는 사람의 새는 기다리지 않는다)
                     }
                 }
                 return true;

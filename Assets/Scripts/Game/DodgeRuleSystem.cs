@@ -22,6 +22,11 @@ namespace LOP
         private readonly DodgeConfig config;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
+        /// <summary>판 도중 나가 있는 사람 — 판이 그 사람을 기다리지 않게. 시험 등에서 없으면 아무도 안 나간 것으로 본다.</summary>
+        [VContainer.Inject] public PlayerPresence Presence { get; set; }
+
+        private bool IsAway(string userId) => userId != null && Presence != null && Presence.IsAway(userId);
+
         public DodgeRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                DodgeMatchState state, DodgeConfig config)
         {
@@ -104,8 +109,23 @@ namespace LOP
 
         public void Deinitialize() { }
 
-        public bool IsMatchOver => MatchOver(entityIdToUserId.Count, state.AliveCount,
+        //  나가 있는 사람은 살아 있어도 세지 않는다 — 안 그러면 2명 판에서 한 명이 나가면 서 있는 몸이 죽을 때까지 기다린다.
+        public bool IsMatchOver => MatchOver(entityIdToUserId.Count, AliveConnected(state.Players, entityIdToUserId, IsAway),
             state.Eliminations.Count > 0 ? state.Eliminations[state.Eliminations.Count - 1].tick : -1, state.LastTick);
+
+        /// <summary>살아 있고 판 도중 나가 있지 않은 사람 수.</summary>
+        public static int AliveConnected(IReadOnlyDictionary<string, DodgePlayerLife> players,
+            IReadOnlyDictionary<string, string> entityIdToUser, System.Func<string, bool> isAway)
+        {
+            int n = 0;
+            foreach (var kv in players)
+            {
+                if (kv.Value.Alive == false) continue;
+                if (entityIdToUser.TryGetValue(kv.Key, out var user) && isAway(user)) continue;
+                n++;
+            }
+            return n;
+        }
 
         /// <summary>마지막 탈락 뒤 결과로 넘어가기까지(3초, 50Hz). 클라의 탈락 자막(2.5초)·들것(2초)이 다 보이게.</summary>
         public const int EndGraceTicks = 150;

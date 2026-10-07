@@ -10,7 +10,7 @@ namespace LOP
     /// 누가 먼저 닿았는지 세는 일은 <see cref="FinishTrackingSystem"/>이 매 틱 한다 — 룰에는
     /// 틱이 없어서 나눠 두었다(판치기의 룰/턴 짝과 같은 구조).
     /// </summary>
-    public class FlappyRaceRuleSystem : IGameRuleSystem
+    public class FlappyRaceRuleSystem : IGameRuleSystem, ISettledResults
     {
         // 맵에 스폰 마커가 없을 때만 쓰는 폴백 간격. 같은 자리에 겹쳐 세우면 누가 누군지 안 보인다.
         private const float SpawnSpacingY = 2f;
@@ -26,6 +26,11 @@ namespace LOP
         //  등수를 답할 때 통과 기록(entityId)을 userId로 옮기고, 못 들어온 사람의 몸을 되찾는 데 쓴다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
+        /// <summary>판 도중 나가 있는 사람 — 판이 그 사람을 기다리지 않게. 시험 등에서 없으면 아무도 안 나간 것으로 본다.</summary>
+        [VContainer.Inject] public PlayerPresence Presence { get; set; }
+
+        private bool IsAway(string userId) => userId != null && Presence != null && Presence.IsAway(userId);
+
         public FlappyRaceRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                     GameFramework.World.EntityRegistry entityRegistry,
                                     FinishTrackingSystem finishSystem,
@@ -40,6 +45,8 @@ namespace LOP
 
         public void Initialize()
         {
+            //  나가 있는 사람의 완주는 기다리지 않는다(몸이 입력 없이 서 있어 결승에 못 간다).
+            finishSystem.IsAwayEntity = id => entityIdToUserId.TryGetValue(id, out var u) && IsAway(u);
             //  마커가 없으면 여기서 크게 터뜨린다 — 결승선을 짐작해 세우면 판이 엉뚱한 데서 끝나거나
             //  영영 안 끝나는데, 둘 다 조용히 굴러가 원인을 찾기 어렵다. 실제 판정은 추적 시스템이
             //  같은 마커를 다시 찾아서 한다(형상 기준이라 좌표가 아니라 바운드가 필요해서다).
@@ -109,6 +116,29 @@ namespace LOP
         /// </summary>
         public bool IsMatchOver => finishSystem.AllWatchedFinished || EveryoneAccountedFor;
 
+        /// <summary>완주했거나 벽에 잡혔으면 결과가 정해졌다 — 그 뒤 관전 화면에서 나가도 제자리.</summary>
+        public bool IsResultSettled(string userId)
+        {
+            string entityId = EntityOf(userId);
+            if (entityId == null) return false;
+            if (finishSystem.HasFinished(entityId)) return true;
+            foreach (var id in chaserSystem.EliminatedOrder)
+            {
+                if (id == entityId) return true;
+            }
+            return false;
+        }
+
+        private string EntityOf(string userId)
+        {
+            foreach (var pair in entityIdToUserId)
+            {
+                if (pair.Value == userId) return pair.Key;
+            }
+            return null;
+        }
+
+
         //  전원이 잡히는 판을 위한 조건이다. 결승선 추적은 몸이 없는 사람을 세지 않는데
         //  (나간 사람을 기다리면 판이 영영 안 끝난다), 전원이 잡히면 셀 사람이 하나도 없어져
         //  "전원 통과"가 거짓이 된다. 그대로 두면 90초 상한까지 빈 화면을 기다린다.
@@ -129,9 +159,9 @@ namespace LOP
                     {
                         continue;
                     }
-                    if (entityRegistry.Get(pair.Key) != null)
+                    if (entityRegistry.Get(pair.Key) != null && IsAway(pair.Value) == false)
                     {
-                        return false;   // 아직 달리는 새가 있다
+                        return false;   // 아직 달리는 새가 있다(나가 있는 사람의 새는 기다리지 않는다)
                     }
                 }
                 return true;

@@ -32,6 +32,7 @@ namespace LOP
         [Inject] private ISessionManager sessionManager;
         [Inject] private IRoomDataStore roomDataStore;
         [Inject] private NetworkMessageDispatcher dispatcher;
+        [Inject] private PlayerPresence presence;
 
         public IRunner runner { get; private set; }
 
@@ -74,6 +75,9 @@ namespace LOP
             InvokeRepeating("SendHeartbeat", 0, HEARTBEAT_INTERVAL);
 
             await runner.InitializeAsync();
+
+            //  명단이 정해졌다 — 전원 "아직 안 들어옴"에서 시작한다. 접속은 방 서버가 열린 뒤에 온다.
+            presence.Begin(roomDataStore.match?.playerList ?? Array.Empty<string>());
 
             if (!EnvironmentSettings.active.Standalone)
             {
@@ -427,6 +431,9 @@ namespace LOP
 
             //  연결이 자기 세션을 가리키게 한다. 이후 수신·해제는 이 값으로 세션을 찾는다.
             identity.SessionId = session.sessionId;
+
+            //  재접속이면 나감 기록이 지워진다 — 판이 끝나기 전에 돌아오면 평소대로 등수를 받는다(롤 방식).
+            presence.MarkJoined(identity.UserId);
         }
 
         public void OnPlayerDisconnect(IConnectionData connectionData)
@@ -461,6 +468,10 @@ namespace LOP
             }
 
             session.networkConnection = null;
+
+            //  "새 연결로 갈아탄 세션" 가드 뒤에서만 기록한다 — 옛 연결의 해제가 재접속보다 늦게 와도 나간 사람으로 남지 않게.
+            //  끝까지 안 돌아오면 꼴찌, 그동안 판은 이 사람을 기다리지 않는다.
+            presence.MarkLeft(identity.UserId);
         }
     }
 }

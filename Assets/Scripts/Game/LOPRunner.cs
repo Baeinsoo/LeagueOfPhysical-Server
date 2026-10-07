@@ -20,6 +20,7 @@ namespace LOP
         [Inject] private IGameRuleSystem gameRuleSystem;
         [Inject] private INetworkTime networkTimeSource;
         [Inject] private IRoomDataStore roomDataStore;
+        [Inject] private PlayerPresence presence;
         [Inject] private LOP.MasterData.LOPMasterData masterData;
 
         // Slice 5-B: 파이프라인 스텝 — 순서대로 직접 호출(넷코드 순서 불변식이 코드에 명시).
@@ -117,7 +118,9 @@ namespace LOP
 
             //  등수는 지금 뽑는다 — 게임이 아직 살아 있을 때만 알 수 있는 값이라(엔티티·점수),
             //  방이 닫히는 시점에는 이미 늦다. 보고는 LOPRoom이 방을 닫기 전에 한다.
-            roomDataStore.outcome = gameRuleSystem.ResolveOutcome();
+            //  끝까지 안 돌아온 사람은 꼴찌(늦게 나간 쪽이 위) — 게임마다 등수 코드를 고치지 않고 여기 한 곳에서 덮는다.
+            roomDataStore.outcome = LeaverRanking.Apply(gameRuleSystem.ResolveOutcome(), presence.LeftLatestFirst, presence.NeverJoined,
+                gameRuleSystem is ISettledResults settled ? settled.IsResultSettled : null);
 
             //  [진단용 임시] 등수가 실제로 어떻게 나왔는지 눈으로 볼 데가 없어서 남긴다.
             //  결과 화면이 완주 시간까지 보여 주게 되면 지운다.
@@ -140,6 +143,8 @@ namespace LOP
             RunPhase<Begin>(tickUpdater.tick, (float)tickUpdater.deltaTime);
             //  이번 틱이 출발틱인지가 먼저 정해져야 월드가 그걸 보고 굴린다.
             matchStartSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
+            //  출발한 뒤에만 "나간 사람은 기다리지 않는다"를 건다 — 대기 화면에서 잠깐 끊긴 사람 때문에 판이 시작 전에 흐트러지지 않게.
+            if (matchStartSystem.Phase == MatchPhase.InProgress) presence.MarkMatchStarted();
             serverInputSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             world.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             physicsSimulationSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);

@@ -7,7 +7,7 @@ namespace LOP
     /// Dodge 룰(서버). 참가자마다 맵의 자리에 몸을 세우고 목숨을 준다. 산 사람이 한 명 이하가 되면 끝나고,
     /// 등수는 탈락 순서의 역순이다(스펙 §1). 맞음·탈락 자체는 DodgeHazardSystem이 정한다.
     /// </summary>
-    public class DodgeRuleSystem : IGameRuleSystem
+    public class DodgeRuleSystem : IGameRuleSystem, ISettledResults
     {
         // 맵에 SpawnPoint가 없을 때만 쓰는 폴백 간격(m). 겹쳐 세우면 누가 누군지 안 보인다.
         private const float FallbackSpacingX = 2f;
@@ -21,6 +21,7 @@ namespace LOP
         private readonly DodgeMatchState state;
         private readonly DodgeConfig config;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
+
 
         public DodgeRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                DodgeMatchState state, DodgeConfig config)
@@ -104,6 +105,17 @@ namespace LOP
 
         public void Deinitialize() { }
 
+        /// <summary>탈락했으면 결과가 정해졌다 — 그 뒤 관전하다 나가도 탈락 순서 그대로.</summary>
+        public bool IsResultSettled(string userId)
+        {
+            foreach (var pair in entityIdToUserId)
+            {
+                if (pair.Value == userId) return state.Players.TryGetValue(pair.Key, out var life) && life.Alive == false;
+            }
+            return false;
+        }
+
+        //  나간 사람도 살아 있는 몸으로 센다 — 목숨이 적고 위험물이 계속 와서 금방 탈락한다(10-07 결정). 등수는 끝날 때 꼴찌로 내린다.
         public bool IsMatchOver => MatchOver(entityIdToUserId.Count, state.AliveCount,
             state.Eliminations.Count > 0 ? state.Eliminations[state.Eliminations.Count - 1].tick : -1, state.LastTick);
 

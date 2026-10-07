@@ -83,8 +83,20 @@ namespace LOP
             for (int i = 0; i < playerList.Length && i < playerEntityIds.Count; i++)
             {
                 userToEntity[playerList[i]] = playerEntityIds[i];
+                entityToUser[playerEntityIds[i]] = playerList[i];
             }
         }
+
+        /// <summary>판 도중 나가 있는 사람 — 판이 그 사람을 기다리지 않게. 시험 등에서 없으면 아무도 안 나간 것으로 본다.</summary>
+        [VContainer.Inject] public PlayerPresence Presence { get; set; }
+
+        private bool IsAway(string userId) => userId != null && Presence != null && Presence.IsAway(userId);
+
+        private readonly Dictionary<string, string> entityToUser = new Dictionary<string, string>();
+
+        /// <summary>지금 조준할 차례인 사람이 판 도중 나가 있으면 조준 시간을 다 기다리지 않고 바로 0점으로 넘긴다.</summary>
+        public static bool ShouldForfeitNow(PanchigiPhase phase, string currentUserId, System.Func<string, bool> isAway) =>
+            phase == PanchigiPhase.Aiming && currentUserId != null && isAway(currentUserId);
 
         public bool CanStrike(string userId)
         {
@@ -143,7 +155,8 @@ namespace LOP
             {
                 TickSettling(config);
             }
-            else if (tick >= aimDeadlineTick)
+            else if (tick >= aimDeadlineTick
+                     || ShouldForfeitNow(turn.Phase, turn.CurrentEntityId != null && entityToUser.TryGetValue(turn.CurrentEntityId, out var current) ? current : null, IsAway))
             {
                 Apply(turn.OnAimTimeout());
             }

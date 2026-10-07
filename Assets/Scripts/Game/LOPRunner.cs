@@ -33,6 +33,7 @@ namespace LOP
         [Inject] private EntitySnapshotBroadcastSystem entitySnapshotBroadcastSystem;
         [Inject] private EntityInputBroadcastSystem entityInputBroadcastSystem;
         [Inject] private UserEntitySnapshotSystem userEntitySnapshotSystem;
+        [Inject] private PresenceBroadcastSystem presenceBroadcastSystem;
         [Inject] private DespawnFlushSystem despawnFlushSystem;
 
         private readonly Restorer restorer = new Restorer();
@@ -156,6 +157,8 @@ namespace LOP
             //  스냅샷과 같은 틱의 입력을 함께 보낸다 — 받는 쪽이 둘을 같은 틱으로 짝지어 쓴다.
             entityInputBroadcastSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             userEntitySnapshotSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
+            //  판 도중 끊긴 사람 — 바뀔 때만 보낸다(다시 들어온 사람은 한 번 더 받는다).
+            presenceBroadcastSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
             despawnFlushSystem.Tick(tickUpdater.tick, (float)tickUpdater.interval);
 
             //  이번 틱을 다 굴리고 내보낸 뒤에 끝을 본다 — 마지막 상태까지 클라에 가고 나서 끝난다.

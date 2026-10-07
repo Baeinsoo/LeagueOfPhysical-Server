@@ -77,5 +77,39 @@ namespace LOP.Tests
             Assert.IsFalse(p.IsAway("x"));
             Assert.IsEmpty(p.LeftLatestFirst);
         }
+
+        //  판 도중 "연결 끊김" 표시 — 바뀔 때만 판본이 오르고, 끊긴 사람은 명단 순번과 함께 나온다.
+        [Test]
+        public void 판본은_바뀔_때만_오른다()
+        {
+            var p = Begun("a", "b");
+            int v0 = p.Version;
+            p.MarkJoined("a");
+            int v1 = p.Version;
+            p.MarkJoined("a");
+            Assert.Greater(v1, v0);
+            Assert.AreEqual(v1, p.Version, "같은 사람이 또 들어온 건 바뀐 게 아니다");
+            p.MarkLeft("a");
+            Assert.Greater(p.Version, v1);
+        }
+
+        [Test]
+        public void 끊긴_사람은_명단_순번과_함께()
+        {
+            var p = Begun("a", "b", "c");
+            p.MarkJoined("a"); p.MarkJoined("b"); p.MarkJoined("c");
+            p.MarkLeft("c");
+            CollectionAssert.AreEqual(new[] { ("c", 3) }, p.AwaySlots);
+        }
+
+        [Test]
+        public void 시작_전엔_끊긴_사람이_없다()
+        {
+            var p = new PlayerPresence();
+            p.Begin(new[] { "a" });
+            p.MarkJoined("a");
+            p.MarkLeft("a");
+            Assert.IsEmpty(p.AwaySlots);
+        }
     }
 }

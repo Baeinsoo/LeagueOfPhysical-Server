@@ -4,7 +4,7 @@ using NUnit.Framework;
 
 namespace LOP.Tests
 {
-    /// <summary>판 도중 나가 있는 사람은 판이 기다리지 않는다 — 완주 판정·생존 판정·판치기 차례에서 뺀다.</summary>
+    /// <summary>판 도중 나가 있는 사람은 판이 기다리지 않는다 — 완주 판정·판치기 차례에서 뺀다. 피하기는 몸이 금방 탈락하니 기다린다(10-07 결정).</summary>
     public class LeaverStallTests
     {
         static Entity Body(EntityRegistry registry, string id, bool finished)
@@ -40,21 +40,6 @@ namespace LOP.Tests
             var finish = new FinishTrackingSystem(registry) { IsAwayEntity = _ => true };
             finish.Watch("a");
             Assert.IsFalse(finish.AllWatchedFinished, "남은 사람이 없으면 시간 상한으로 끝난다(즉시 끝내지 않는다)");
-        }
-
-        [Test]
-        public void 피하기_생존자는_나가_있는_사람을_빼고_센다()
-        {
-            var players = new Dictionary<string, DodgePlayerLife>
-            {
-                ["e1"] = new DodgePlayerLife(),
-                ["e2"] = new DodgePlayerLife(),
-                ["e3"] = new DodgePlayerLife { EliminatedTick = 50 },
-            };
-            var users = new Dictionary<string, string> { ["e1"] = "u1", ["e2"] = "u2", ["e3"] = "u3" };
-
-            Assert.AreEqual(2, DodgeRuleSystem.AliveConnected(players, users, _ => false));
-            Assert.AreEqual(1, DodgeRuleSystem.AliveConnected(players, users, u => u == "u2"));
         }
 
         [Test]

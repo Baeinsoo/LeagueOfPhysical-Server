@@ -9,6 +9,7 @@ namespace LOP.Tests
         {
             var p = new PlayerPresence();
             p.Begin(roster);
+            p.MarkMatchStarted();
             return p;
         }
 
@@ -30,6 +31,20 @@ namespace LOP.Tests
             Assert.IsTrue(p.IsAway("a"));
             CollectionAssert.AreEqual(new[] { "a" }, p.LeftLatestFirst);
             CollectionAssert.AreEqual(new[] { "b" }, p.NeverJoined);
+        }
+
+        //  판이 시작되기 전엔 기다리지 않기를 안 건다 — 대기 화면에서 잠깐 끊긴 사람 때문에 판이 시작 전에 끝나면 안 된다.
+        [Test]
+        public void 시작_전엔_나가_있음으로_치지_않는다()
+        {
+            var p = new PlayerPresence();
+            p.Begin(new[] { "a" });
+            p.MarkJoined("a");
+            p.MarkLeft("a");
+            Assert.IsFalse(p.IsAway("a"));
+            CollectionAssert.AreEqual(new[] { "a" }, p.LeftLatestFirst, "등수에서는 그대로 나간 사람이다");
+            p.MarkMatchStarted();
+            Assert.IsTrue(p.IsAway("a"));
         }
 
         [Test]

@@ -70,6 +70,14 @@ namespace LOP.Tests
             Assert.AreEqual("a1 b2", Shape(o));
         }
 
+        //  결과가 이미 정해진 사람(완주·탈락)은 나가도 규칙이 매긴 자리 그대로 — 1등으로 들어와 관전 화면에서 나간 사람이 꼴찌가 되면 안 된다.
+        [Test]
+        public void 결과가_정해진_사람은_나가도_제자리()
+        {
+            var o = LeaverRanking.Apply(Outcome(("a", 1), ("b", 2), ("c", 3)), new[] { "a", "c" }, None, u => u == "a");
+            Assert.AreEqual("a1 b2 c3", Shape(o));
+        }
+
         [Test]
         public void 명단_전원이_정확히_한_번_지표도_그대로()
         {

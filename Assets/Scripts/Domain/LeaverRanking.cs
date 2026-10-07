@@ -11,8 +11,20 @@ namespace LOP
     /// </summary>
     public static class LeaverRanking
     {
-        public static MatchOutcome Apply(MatchOutcome outcome, IReadOnlyList<string> leftLatestFirst, IReadOnlyList<string> neverJoined)
+        public static MatchOutcome Apply(MatchOutcome outcome, IReadOnlyList<string> leftLatestFirst, IReadOnlyList<string> neverJoined,
+            System.Func<string, bool> isSettled = null)
         {
+            //  결과가 이미 정해진 사람(완주·탈락)은 나갔어도 규칙이 매긴 자리 그대로 둔다.
+            if (isSettled != null)
+            {
+                var unsettled = new List<string>();
+                foreach (var u in leftLatestFirst)
+                {
+                    if (isSettled(u) == false) unsettled.Add(u);
+                }
+                leftLatestFirst = unsettled;
+            }
+
             var byUser = new Dictionary<string, MatchPlacement>();
             foreach (var p in outcome.placements) byUser[p.userId] = p;
 

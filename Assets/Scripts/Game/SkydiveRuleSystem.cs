@@ -7,7 +7,7 @@ namespace LOP
     /// Skydive 룰(서버). 참가자마다 몸을 하늘에 세우고, 전원이 바닥에 닿으면 판을 끝내며 도착 순서로
     /// 등수를 매긴다. 죽음 처리는 슬라이스 4가 여기에 붙는다.
     /// </summary>
-    public class SkydiveRuleSystem : IGameRuleSystem
+    public class SkydiveRuleSystem : IGameRuleSystem, ISettledResults
     {
         // 맵에 스폰 마커가 없을 때만 쓰는 폴백. 같은 자리에 겹쳐 세우면 누가 누군지 안 보인다.
         private const float FallbackSpawnY = 200f;
@@ -42,6 +42,8 @@ namespace LOP
 
         public void Initialize()
         {
+            //  나가 있는 사람의 완주는 기다리지 않는다(몸이 입력 없이 서 있어 결승에 못 간다).
+            finishSystem.IsAwayEntity = id => entityIdToUserId.TryGetValue(id, out var u) && IsAway(u);
             // 정리는 Deinitialize가 하지만, 그게 안 불린 채 다시 시작하는 경로가 생기면 지난 판의
             // 엔티티 id가 남아 결과 꼬리에 "나간 사람"으로 둔갑해 붙는다. 시작할 때도 비워 둔다.
             entityIdToUserId.Clear();
@@ -65,7 +67,6 @@ namespace LOP
                 string entityId = entitySpawner.GenerateEntityId();
                 entityIdToUserId[entityId] = playerList[i];
                 finishSystem.Watch(entityId);
-                finishSystem.IsAwayEntity = id => entityIdToUserId.TryGetValue(id, out var u) && IsAway(u);
 
                 entitySpawner.Spawn(new CharacterCreationData
                 {
@@ -88,6 +89,23 @@ namespace LOP
 
         /// <summary>남아 있는 사람이 전원 바닥에 닿으면 끝난다. 시간 상한은 러너가 따로 본다.</summary>
         public bool IsMatchOver => finishSystem.AllWatchedFinished;
+
+        /// <summary>결승에 닿았으면 결과가 정해졌다 — 그 뒤 나가도 제자리.</summary>
+        public bool IsResultSettled(string userId)
+        {
+            string entityId = EntityOf(userId);
+            return entityId != null && finishSystem.HasFinished(entityId);
+        }
+
+        private string EntityOf(string userId)
+        {
+            foreach (var pair in entityIdToUserId)
+            {
+                if (pair.Value == userId) return pair.Key;
+            }
+            return null;
+        }
+
 
         // 50Hz × 300초. 대자(60m/s)로 3000m를 51초, 다이브(90m/s)로 35초에 내려온다.
         // 그런데 패러세일은 6m/s라, 스태미나를 발판에서 채워 가며 타면 훨씬 오래 걸린다 —

@@ -13,6 +13,10 @@ namespace LOP
         private readonly HashSet<string> joined = new HashSet<string>();
         private readonly Dictionary<string, long> leftOrder = new Dictionary<string, long>();
         private long nextOrder;
+        private bool matchStarted;
+
+        /// <summary>판이 출발했다. 그 전엔 <see cref="IsAway"/>가 늘 false — 기다리지 않기를 시작 전엔 안 건다.</summary>
+        public void MarkMatchStarted() => matchStarted = true;
 
         public void Begin(IReadOnlyList<string> playerList)
         {
@@ -20,6 +24,7 @@ namespace LOP
             joined.Clear();
             leftOrder.Clear();
             nextOrder = 0;
+            matchStarted = false;
             foreach (var userId in playerList) roster.Add(userId);
         }
 
@@ -42,7 +47,7 @@ namespace LOP
         /// 들어왔다가 지금 끊겨 있나 — 판이 이 사람을 기다리지 말아야 하는지. 한 번도 안 들어온 사람은 아니다:
         /// 그들까지 빼면 시작 전(아무도 안 들어온 순간)에 "남은 사람 없음"으로 판이 끝난다.
         /// </summary>
-        public bool IsAway(string userId) => leftOrder.ContainsKey(userId);
+        public bool IsAway(string userId) => matchStarted && leftOrder.ContainsKey(userId);
 
         /// <summary>지금 끊겨 있는 사람, 늦게 나간 순(등수가 위인 순).</summary>
         public IReadOnlyList<string> LeftLatestFirst

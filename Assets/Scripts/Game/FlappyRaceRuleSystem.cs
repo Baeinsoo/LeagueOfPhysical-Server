@@ -10,7 +10,7 @@ namespace LOP
     /// 누가 먼저 닿았는지 세는 일은 <see cref="FinishTrackingSystem"/>이 매 틱 한다 — 룰에는
     /// 틱이 없어서 나눠 두었다(판치기의 룰/턴 짝과 같은 구조).
     /// </summary>
-    public class FlappyRaceRuleSystem : IGameRuleSystem
+    public class FlappyRaceRuleSystem : IGameRuleSystem, ISettledResults
     {
         // 맵에 스폰 마커가 없을 때만 쓰는 폴백 간격. 같은 자리에 겹쳐 세우면 누가 누군지 안 보인다.
         private const float SpawnSpacingY = 2f;
@@ -45,6 +45,8 @@ namespace LOP
 
         public void Initialize()
         {
+            //  나가 있는 사람의 완주는 기다리지 않는다(몸이 입력 없이 서 있어 결승에 못 간다).
+            finishSystem.IsAwayEntity = id => entityIdToUserId.TryGetValue(id, out var u) && IsAway(u);
             //  마커가 없으면 여기서 크게 터뜨린다 — 결승선을 짐작해 세우면 판이 엉뚱한 데서 끝나거나
             //  영영 안 끝나는데, 둘 다 조용히 굴러가 원인을 찾기 어렵다. 실제 판정은 추적 시스템이
             //  같은 마커를 다시 찾아서 한다(형상 기준이라 좌표가 아니라 바운드가 필요해서다).
@@ -73,7 +75,6 @@ namespace LOP
                 string entityId = entitySpawner.GenerateEntityId();
                 entityIdToUserId[entityId] = playerList[i];
                 finishSystem.Watch(entityId);
-                finishSystem.IsAwayEntity = id => entityIdToUserId.TryGetValue(id, out var u) && IsAway(u);
                 chaserSystem.Watch(entityId);
 
                 entitySpawner.Spawn(new CharacterCreationData
@@ -114,6 +115,29 @@ namespace LOP
         /// 시간 상한은 러너가 따로 본다.
         /// </summary>
         public bool IsMatchOver => finishSystem.AllWatchedFinished || EveryoneAccountedFor;
+
+        /// <summary>완주했거나 벽에 잡혔으면 결과가 정해졌다 — 그 뒤 관전 화면에서 나가도 제자리.</summary>
+        public bool IsResultSettled(string userId)
+        {
+            string entityId = EntityOf(userId);
+            if (entityId == null) return false;
+            if (finishSystem.HasFinished(entityId)) return true;
+            foreach (var id in chaserSystem.EliminatedOrder)
+            {
+                if (id == entityId) return true;
+            }
+            return false;
+        }
+
+        private string EntityOf(string userId)
+        {
+            foreach (var pair in entityIdToUserId)
+            {
+                if (pair.Value == userId) return pair.Key;
+            }
+            return null;
+        }
+
 
         //  전원이 잡히는 판을 위한 조건이다. 결승선 추적은 몸이 없는 사람을 세지 않는데
         //  (나간 사람을 기다리면 판이 영영 안 끝난다), 전원이 잡히면 셀 사람이 하나도 없어져

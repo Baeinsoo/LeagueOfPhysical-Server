@@ -78,6 +78,28 @@ namespace LOP.Tests
             Assert.AreEqual("a1 b2 c3", Shape(o));
         }
 
+        //  결과 화면·전적이 "나감"이라고 알리게 자루에 표시를 싣는다. 원래 지표는 그대로.
+        [Test]
+        public void 나간_사람은_자루에_나감_표시()
+        {
+            var o = LeaverRanking.Apply(Outcome(("a", 1), ("b", 2), ("c", 3)), new[] { "a" }, new[] { "c" });
+            Assert.AreEqual(1, o.placements.First(p => p.userId == "a").stats[MatchStatKeys.Left]);
+            Assert.AreEqual(1, o.placements.First(p => p.userId == "c").stats[MatchStatKeys.Left]);
+            Assert.IsFalse(o.placements.First(p => p.userId == "b").stats.ContainsKey(MatchStatKeys.Left));
+            Assert.AreEqual(10, o.placements.First(p => p.userId == "a").stats["score"]);
+        }
+
+        [Test]
+        public void 지표가_없던_모드도_나감_표시는_실린다()
+        {
+            var o = new MatchOutcome();
+            o.placements.Add(new MatchPlacement { userId = "a", placement = 1, stats = null });
+            o.placements.Add(new MatchPlacement { userId = "b", placement = 2, stats = null });
+            var r = LeaverRanking.Apply(o, new[] { "a" }, None);
+            Assert.AreEqual(1, r.placements.First(p => p.userId == "a").stats[MatchStatKeys.Left]);
+            Assert.IsNull(r.placements.First(p => p.userId == "b").stats, "남은 사람 자루는 건드리지 않는다");
+        }
+
         [Test]
         public void 명단_전원이_정확히_한_번_지표도_그대로()
         {

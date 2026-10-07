@@ -60,6 +60,12 @@ namespace LOP
             builder.Register<ObstacleField>(Lifetime.Singleton);
             //  맵 씬의 StarVolume(별 조각)이 맵 로드 시 여기에 자기를 넣는다 — 닿으면 결승(별 붙잡기).
             builder.Register<CatchTargetField>(Lifetime.Singleton);
+            //  맵 씬의 RetryVolume이 맵 로드 시 여기에 자기를 넣는다 — 별을 놓치고 구름 아래로 빠지면 다시 떨어지기.
+            builder.Register<RetryField>(Lifetime.Singleton);
+            builder.Register(c => new SkydiveRetrySystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<RetryField>(),
+                c.Resolve<SkydiveConfig>()), Lifetime.Singleton);
 
             //  맵 씬의 LaserVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
             builder.Register<LaserField>(Lifetime.Singleton);
@@ -105,6 +111,9 @@ namespace LOP
                     container.Resolve<SkydiveLaserSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<SkydiveDoorSystem>());
+                //  다시 떨어지기는 착지보다 먼저 — 별을 놓치고 구름에 세게 닿은 틱에 착지 사망(저장 발판으로 되돌림)이 먼저 가로채면 안 된다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<SkydiveRetrySystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<SkydiveLandingSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(

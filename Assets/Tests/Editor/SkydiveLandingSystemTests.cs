@@ -33,7 +33,7 @@ namespace LOP.Tests
         }
 
         static SkydiveLandingSystem System(GameFramework.World.EntityRegistry registry)
-            => new SkydiveLandingSystem(registry, Config(), new CheckpointField());
+            => new SkydiveLandingSystem(registry, Config(), SkydiveTestCourse.Checkpoints());
 
         [Test]
         public void 치명_속도로_착지하면_마지막_선반으로_되돌린다()
@@ -49,7 +49,7 @@ namespace LOP.Tests
             //  SkydiveDoorSystemTests.닫힌_문_안에_있으면_마지막_선반으로_되돌아간다와 같은 방식으로
             //  기대 좌표를 구한다 — 부활 순번이 비어 있던 참이라 spread 각도는 0(=+X로 2m).
             var transform = diver.Get<GameFramework.World.Transform>();
-            Vector3 expected = SkydiveCourseLayout.RespawnPoints[200f] + new Vector3(2f, 0f, 0f);
+            Vector3 expected = SkydiveTestCourse.RespawnPoints[200f] + new Vector3(2f, 0f, 0f);
             Assert.AreEqual(expected.x, transform.Position.X, 0.001f, "마지막으로 지난 선반이 아니라 엉뚱한 자리로 갔다(x)");
             Assert.AreEqual(expected.y, transform.Position.Y, 0.001f, "마지막으로 지난 선반이 아니라 엉뚱한 자리로 갔다(y)");
             Assert.AreEqual(expected.z, transform.Position.Z, 0.001f, "마지막으로 지난 선반이 아니라 엉뚱한 자리로 갔다(z)");
@@ -115,8 +115,8 @@ namespace LOP.Tests
             //  이 틱의 더 앞선 시스템(레이저/문)이 다른 사고로 이미 부활시켰다고 가정한다.
             int order = 0;
             SkydiveRespawn.To(diver, 800f, Config(),
-                              SkydiveCourseLayout.ShelfYs, SkydiveCourseLayout.SpawnY,
-                              SkydiveCourseLayout.RespawnPoints, ref order);
+                              SkydiveTestCourse.ShelfYs, SkydiveTestCourse.SpawnY,
+                              SkydiveTestCourse.RespawnPoints, ref order);
             float shelfYAfterFirstRespawn = GameFramework.World.EntityMotionExtensions.GetPosition(diver).y;
 
             //  착지 충격은 그 부활과 무관하게 아직 60으로 남아 있을 수 있다(고치기 전 코드) —

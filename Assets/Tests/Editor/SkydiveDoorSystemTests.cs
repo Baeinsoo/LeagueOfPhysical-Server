@@ -53,7 +53,7 @@ namespace LOP.Tests
         }
 
         static SkydiveDoorSystem BuildSystem(GameFramework.World.EntityRegistry registry, DoorField doorField)
-            => new SkydiveDoorSystem(registry, doorField, Config(), new CheckpointField());
+            => new SkydiveDoorSystem(registry, doorField, Config(), SkydiveTestCourse.Checkpoints());
 
         [Test]
         public void 닫힌_문_안에_있으면_마지막_선반으로_되돌아간다()
@@ -72,7 +72,7 @@ namespace LOP.Tests
                 system.Tick(12, DeltaTime);   // 완전히 닫힌 틱
 
                 var transform = diver.Get<GameFramework.World.Transform>();
-                var expected = SkydiveCourseLayout.RespawnPoints[200f] + new Vector3(2f, 0f, 0f);   // 첫 부활은 spread 각도 0
+                var expected = SkydiveTestCourse.RespawnPoints[200f] + new Vector3(2f, 0f, 0f);   // 첫 부활은 spread 각도 0
                 Assert.AreEqual(expected.x, transform.Position.X, 0.001f);
                 Assert.AreEqual(expected.y, transform.Position.Y, 0.001f);
                 Assert.AreEqual(expected.z, transform.Position.Z, 0.001f);

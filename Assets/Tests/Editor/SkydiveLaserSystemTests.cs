@@ -46,7 +46,7 @@ namespace LOP.Tests
 
         static SkydiveLaserSystem BuildSystem(GameFramework.World.EntityRegistry registry, LaserField laserField,
                                               CheckpointField checkpoints = null)
-            => new SkydiveLaserSystem(registry, laserField, Config(), checkpoints ?? new CheckpointField());
+            => new SkydiveLaserSystem(registry, laserField, Config(), checkpoints ?? SkydiveTestCourse.Checkpoints());
 
         [Test]
         public void 레이저를_지나면_마지막_선반으로_되돌아가고_스태미나가_찬다()
@@ -65,7 +65,7 @@ namespace LOP.Tests
             system.Tick(2, DeltaTime);   // 이번 틱에 지나온 경로가 빔을 가로지른다
 
             var transform = diver.Get<GameFramework.World.Transform>();
-            var expected = SkydiveCourseLayout.RespawnPoints[1800f] + new Vector3(2f, 0f, 0f);   // 첫 부활은 spread 각도 0
+            var expected = SkydiveTestCourse.RespawnPoints[1800f] + new Vector3(2f, 0f, 0f);   // 첫 부활은 spread 각도 0
             Assert.AreEqual(expected.x, transform.Position.X, 0.001f);
             Assert.AreEqual(expected.y, transform.Position.Y, 0.001f);
             Assert.AreEqual(expected.z, transform.Position.Z, 0.001f);

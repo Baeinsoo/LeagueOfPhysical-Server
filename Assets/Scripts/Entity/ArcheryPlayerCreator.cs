@@ -29,6 +29,7 @@ namespace LOP
             worldEntity.Add(new GameFramework.World.Velocity());
             worldEntity.Add(new EntityKind(EntityType.Character));
             worldEntity.Add(new Appearance(creationData.visualId));
+            PlayerLookAttach.Attach(worldEntity, creationData.look);
             worldEntity.Add(new ArcheryAim());
             worldEntity.Add(new ArcheryScore());
 

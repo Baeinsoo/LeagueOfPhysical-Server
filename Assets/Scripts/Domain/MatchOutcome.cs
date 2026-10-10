@@ -17,5 +17,8 @@ namespace LOP
 
         // 모드별 결과 지표. 키는 모드가 정한다(활쏘기: ArcheryStatKeys). 점수 개념이 없는 모드는 비운다.
         public Dictionary<string, int> stats;
+
+        //  로비가 이 값으로 보상(코인·경험치)을 계산한다. 나간 사람은 로비가 left로 보고 0 처리한다.
+        public int playedSeconds;
     }
 }

@@ -63,6 +63,26 @@ namespace LOP
                 Vitality = BaseStatInt(stats, GameFramework.World.EntityStatType.Vitality),
             };
 
+            // 룩이 없는 몸(몬스터·심판 등)은 proto 기본값(빈 map·""·0) 그대로 둔다.
+            PlayerLook look = worldEntity.Get<PlayerLook>();
+            if (look != null)
+            {
+                foreach (var (slot, itemCode) in look.Slots)
+                {
+                    //  로비 응답이 슬롯 값에 null을 실어 보낼 수 있다 — proto map(MapField)은 null 키·값을
+                    //  거부해 그대로 넘기면 캐릭터 생성 자체가 예외로 죽는다. 그런 자리는 "장착 없음"으로
+                    //  보고 건너뛴다.
+                    if (slot == null || itemCode == null)
+                    {
+                        continue;
+                    }
+
+                    characterCreationData.Look.Add(slot, itemCode);
+                }
+                characterCreationData.DisplayName = look.DisplayName;
+                characterCreationData.AccountLevel = look.AccountLevel;
+            }
+
             return new EntityCreationData
             {
                 CharacterCreationData = characterCreationData

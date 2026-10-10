@@ -41,6 +41,12 @@ namespace LOP
             => SendAsync<GetMatchResponse>(
                 HttpRequestMessage.Get($"{EnvironmentSettings.active.matchmakingBaseURL}/match/{matchId}"), cancellationToken);
 
+        //  참가자 룩(장비·이름·레벨) — 로비가 유저 데이터의 주인이라 여기서 받는다. 실패해도 방은
+        //  열려야 해서 호출부(ConfigureRoomComponent)가 따로 try/catch로 감싼다.
+        public static UniTask<GetMatchLooksResponse> GetMatchLooks(string matchId, CancellationToken cancellationToken = default)
+            => SendAsync<GetMatchLooksResponse>(
+                HttpRequestMessage.Get($"{EnvironmentSettings.active.lobbyBaseURL}/internal/match/{matchId}/looks"), cancellationToken);
+
         //  결과는 lobby가 받는다 — 레이팅과 유저 데이터의 주인이고, 확정 세 가지(매치 상태·참가자·
         //  점수)가 거기서 한 트랜잭션에 들어간다.
         //  전역 발행(SendAsync<T>)을 쓰지 않는다 — Introspect와 같은 이유. 이 타입은

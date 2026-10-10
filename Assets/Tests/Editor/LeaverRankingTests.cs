@@ -107,5 +107,27 @@ namespace LOP.Tests
             CollectionAssert.AreEquivalent(new[] { "a", "b", "c" }, o.placements.Select(p => p.userId));
             Assert.AreEqual(10, o.placements.First(p => p.userId == "a").stats["score"]);
         }
+
+        //  Apply가 placement마다 새 객체를 만든다(Copy/CopyLeft) — 그 과정에서 입력에 이미 찍혀 있던
+        //  playedSeconds를 날리면, MatchOutcomeFinalizer가 그 뒤에 값을 채우는 순서와 무관하게
+        //  누군가 Apply 전에 값을 찍는 경로가 생기는 순간 조용히 0으로 되돌아간다. Copy/CopyLeft가
+        //  그 값을 옮기는지 여기서 고정한다(나간 사람 포함).
+        [Test]
+        public void 입력에_찍힌_플레이시간이_Copy_CopyLeft를_거쳐도_유지된다()
+        {
+            var o = Outcome(("a", 1), ("b", 2));
+            foreach (var placement in o.placements)
+            {
+                placement.playedSeconds = 37;
+            }
+
+            var r = LeaverRanking.Apply(o, new[] { "b" }, None);
+
+            Assert.AreEqual(2, r.placements.Count);
+            foreach (var placement in r.placements)
+            {
+                Assert.AreEqual(37, placement.playedSeconds);
+            }
+        }
     }
 }

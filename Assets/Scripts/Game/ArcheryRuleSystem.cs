@@ -104,6 +104,7 @@ namespace LOP
                     position = position,
                     rotation = rotation,
                     velocity = Vector3.zero,
+                    look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i),
                 });
             }
         }

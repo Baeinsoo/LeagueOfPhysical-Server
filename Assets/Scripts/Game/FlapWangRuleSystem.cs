@@ -132,6 +132,7 @@ namespace LOP
                     currentMP = 1000,
                     level = 1,
                     currentExp = 0,
+                    look = PlayerLookResolver.Resolve(roomDataStore.looks, playerId, i),
                 };
 
                 entitySpawner.Spawn(data);

@@ -77,6 +77,7 @@ namespace LOP
                     position = position,
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
+                    look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i),
                 });
             }
         }

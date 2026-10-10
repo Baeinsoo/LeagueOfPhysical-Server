@@ -84,6 +84,54 @@ namespace LOP.Tests
             Assert.IsNull(referee.look);   // 심판은 선수가 아니다 — 이름표가 붙으면 안 된다
         }
 
+        /// <summary>
+        /// 위 테스트는 looks가 null인 경로만 본다 — 로비 조회가 실제로 성공했을 때
+        /// (<see cref="DodgeRuleSystem.Initialize"/>가 roomDataStore.looks를 그대로 넘기는 경로)는
+        /// 그동안 아무 테스트도 덮지 않았다. 조회에 없는 유저는 여전히 기본값("플레이어 N")을 받는지도 같이 본다.
+        /// </summary>
+        [Test]
+        public void 초기화하면_조회된_룩이_실제로_실린다()
+        {
+            var creator = new CapturingCharacterCreator();
+            var spawner = new EntitySpawner(
+                sessionManager: null,
+                entityRegistry: new GameFramework.World.EntityRegistry(),
+                characterCreator: creator,
+                itemCreator: null,
+                coinCreator: null,
+                entityCreatedPublisher: new FakePublisher<EntityCreated>(),
+                entityDestroyedPublisher: new FakePublisher<EntityDestroyed>());
+
+            var looks = new Dictionary<string, PlayerLookDto>
+            {
+                ["user-a"] = new PlayerLookDto
+                {
+                    displayName = "Kim",
+                    level = 3,
+                    slots = new Dictionary<string, string> { ["hat"] = "hat_cube_red" },
+                },
+            };
+
+            var roomDataStore = new FakeRoomDataStore
+            {
+                match = new Match { playerList = new[] { "user-a", "user-b" } },
+                looks = looks,
+            };
+
+            var rule = new DodgeRuleSystem(roomDataStore, spawner, new DodgeMatchState(), TestConfig());
+
+            rule.Initialize();
+
+            var userA = creator.Created[0];
+            Assert.AreEqual("Kim", userA.look.DisplayName);
+            Assert.AreEqual(3, userA.look.AccountLevel);
+            Assert.AreEqual("hat_cube_red", userA.look.SlotOrNull("hat"));
+
+            //  조회 결과에 없는 유저는 기본값으로 — rosterIndex(1)에서 "플레이어 2".
+            var userB = creator.Created[1];
+            Assert.AreEqual("플레이어 2", userB.look.DisplayName);
+        }
+
         [Test]
         public void 자리가_있으면_순서대로_쓴다()
         {

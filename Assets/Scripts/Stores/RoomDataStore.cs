@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using MessagePipe;
+using UnityEngine;
 
 namespace LOP
 {
@@ -41,6 +42,11 @@ namespace LOP
         //  방을 여는 데 필수 조건이 아니다.
         private void HandleGetMatchLooks(GetMatchLooksResponse response)
         {
+            if (response.code != 200)
+            {
+                Debug.LogWarning($"룩 조회 응답이 실패 코드(code={response.code}) — 전원 기본 룩으로 진행");
+            }
+
             looks = response.code == 200 ? response.looks : null;
         }
 

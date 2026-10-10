@@ -119,16 +119,12 @@ namespace LOP
 
             //  등수는 지금 뽑는다 — 게임이 아직 살아 있을 때만 알 수 있는 값이라(엔티티·점수),
             //  방이 닫히는 시점에는 이미 늦다. 보고는 LOPRoom이 방을 닫기 전에 한다.
-            //  끝까지 안 돌아온 사람은 꼴찌(늦게 나간 쪽이 위) — 게임마다 등수 코드를 고치지 않고 여기 한 곳에서 덮는다.
-            roomDataStore.outcome = LeaverRanking.Apply(gameRuleSystem.ResolveOutcome(), presence.LeftLatestFirst, presence.NeverJoined,
-                gameRuleSystem is ISettledResults settled ? settled.IsResultSettled : null);
-
-            //  로비가 이 값으로 보상을 계산한다. 나간 사람도 똑같이 채운다 — 로비가 left 표시로 보고 0 처리한다.
-            int playedSeconds = PlayedSeconds.Compute(tickUpdater.tick, matchStartSystem.StartTick, tickUpdater.interval);
-            foreach (var placement in roomDataStore.outcome.placements)
-            {
-                placement.playedSeconds = playedSeconds;
-            }
+            //  끝까지 안 돌아온 사람은 꼴찌(늦게 나간 쪽이 위), 플레이 시간은 전원 같은 값(나간 사람
+            //  포함 — 로비가 left 표시로 보고 0 처리한다) — 둘 다 보상의 유일한 입력이라 한 곳에서 묶는다.
+            roomDataStore.outcome = MatchOutcomeFinalizer.Finalize(
+                gameRuleSystem.ResolveOutcome(), presence.LeftLatestFirst, presence.NeverJoined,
+                gameRuleSystem is ISettledResults settled ? settled.IsResultSettled : null,
+                tickUpdater.tick, matchStartSystem.StartTick, tickUpdater.interval);
 
             //  [진단용 임시] 등수가 실제로 어떻게 나왔는지 눈으로 볼 데가 없어서 남긴다.
             //  결과 화면이 완주 시간까지 보여 주게 되면 지운다.

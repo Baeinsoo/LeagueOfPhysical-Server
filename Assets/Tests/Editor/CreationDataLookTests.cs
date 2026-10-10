@@ -99,6 +99,27 @@ namespace LOP.Tests
             Assert.IsNull(entityRegistry.Get("e4").Get<PlayerLook>());
         }
 
+        //  로비 응답이 슬롯 값에 null을 실어 보낼 수 있다(M1) — PlayerLook 생성자가 그 값을
+        //  그대로 복사해 들여오므로(Dictionary<string,string>은 null 값을 허용), 그 자리를
+        //  proto MapField.Add(key, null)로 그대로 옮기면 null을 거부하는 MapField가 예외를 던진다.
+        //  그런 슬롯은 "장착 없음"으로 보고 건너뛰어야 한다.
+        [Test]
+        public void 슬롯_값이_null이면_건너뛴다()
+        {
+            var entity = new GameFramework.World.Entity("e5");
+            entity.Add(new GameFramework.World.Transform());
+            entity.Add(new GameFramework.World.Velocity());
+            entity.Add(new Appearance("visual"));
+            entity.Add(new PlayerLook(
+                new Dictionary<string, string> { ["hat"] = "hat_cube_red", ["top"] = null },
+                "Kim", 7));
+
+            var creationData = new CharacterCreationDataCreator().Create(entity);
+
+            Assert.AreEqual(1, creationData.CharacterCreationData.Look.Count);
+            Assert.AreEqual("hat_cube_red", creationData.CharacterCreationData.Look["hat"]);
+        }
+
         [Test]
         public void 룩이_없는_엔티티는_빈_맵_빈_이름_레벨0을_내보낸다()
         {

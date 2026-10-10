@@ -66,6 +66,21 @@ namespace LOP.Tests
             Assert.AreEqual(3, look.AccountLevel);
         }
 
+        //  백엔드가 유저 키는 있는데 값 자체가 null인 행을 보낼 수 있다(M1) — TryGetValue는 성공해도
+        //  dto가 null이면 "조회 안 됨"과 같게 기본값으로 가야 한다. 그대로 쓰면 dto.displayName에서
+        //  NullReferenceException이 난다.
+        [Test]
+        public void dto_자체가_null이면_기본값()
+        {
+            var looks = new Dictionary<string, PlayerLookDto> { ["user-a"] = null };
+
+            var look = PlayerLookResolver.Resolve(looks, "user-a", 0);
+
+            Assert.AreEqual("플레이어 1", look.DisplayName);
+            Assert.AreEqual(1, look.AccountLevel);
+            Assert.AreEqual(0, look.Slots.Count);
+        }
+
         //  userId가 null이면(몬스터·심판 등) looks에 뭐가 있든 조회를 시도하지 않고 기본값으로 간다.
         [Test]
         public void userId가_null이면_looks에_값이_있어도_기본값()

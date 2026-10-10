@@ -108,20 +108,23 @@ namespace LOP.Tests
             Assert.AreEqual(10, o.placements.First(p => p.userId == "a").stats["score"]);
         }
 
-        //  LeaverRanking.Apply가 placement마다 새 객체를 만들어도(Copy/CopyLeft), LOPRunner.EndMatch는
-        //  그 뒤에 playedSeconds를 모든 placement(나간 사람 포함)에 같은 값으로 채운다 — 여기서 그 순서를 고정한다.
+        //  Apply가 placement마다 새 객체를 만든다(Copy/CopyLeft) — 그 과정에서 입력에 이미 찍혀 있던
+        //  playedSeconds를 날리면, MatchOutcomeFinalizer가 그 뒤에 값을 채우는 순서와 무관하게
+        //  누군가 Apply 전에 값을 찍는 경로가 생기는 순간 조용히 0으로 되돌아간다. Copy/CopyLeft가
+        //  그 값을 옮기는지 여기서 고정한다(나간 사람 포함).
         [Test]
-        public void 나간_사람_포함_모든_자리에_같은_플레이시간이_실린다()
+        public void 입력에_찍힌_플레이시간이_Copy_CopyLeft를_거쳐도_유지된다()
         {
-            var o = LeaverRanking.Apply(Outcome(("a", 1), ("b", 2)), new[] { "b" }, None);
-
+            var o = Outcome(("a", 1), ("b", 2));
             foreach (var placement in o.placements)
             {
                 placement.playedSeconds = 37;
             }
 
-            Assert.AreEqual(2, o.placements.Count);
-            foreach (var placement in o.placements)
+            var r = LeaverRanking.Apply(o, new[] { "b" }, None);
+
+            Assert.AreEqual(2, r.placements.Count);
+            foreach (var placement in r.placements)
             {
                 Assert.AreEqual(37, placement.playedSeconds);
             }

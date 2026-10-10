@@ -76,14 +76,14 @@ namespace LOP
         }
 
         private static MatchPlacement Copy(MatchPlacement p, int placement) =>
-            new MatchPlacement { userId = p.userId, placement = placement, stats = p.stats };
+            new MatchPlacement { userId = p.userId, placement = placement, stats = p.stats, playedSeconds = p.playedSeconds };
 
         //  나간 사람은 자루에 표시를 싣는다 — 결과 화면·전적이 "나감"이라고 알린다. 원래 자루는 고치지 않고 복사한다.
         private static MatchPlacement CopyLeft(MatchPlacement p, int placement)
         {
             var stats = p.stats != null ? new Dictionary<string, int>(p.stats) : new Dictionary<string, int>();
             stats[MatchStatKeys.Left] = 1;
-            return new MatchPlacement { userId = p.userId, placement = placement, stats = stats };
+            return new MatchPlacement { userId = p.userId, placement = placement, stats = stats, playedSeconds = p.playedSeconds };
         }
     }
 }

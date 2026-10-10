@@ -84,6 +84,13 @@ namespace LOP
                 {
                     Debug.LogWarning($"룩 조회 실패 — 전원 기본 룩으로 진행: {e.Message}");
                 }
+
+                //  예외 없이 끝났어도(타임아웃이 아니라 4xx/5xx 응답 코드) looks가 null로 남을 수 있다 —
+                //  그 경로는 지금까지 로그가 전혀 없어 운영 중 조용히 전원 기본 룩으로 빠졌다.
+                if (roomDataStore.looks == null)
+                {
+                    Debug.LogWarning($"룩 조회가 비어 있음 — 전원 기본 룩으로 진행 (matchId={getRoom.room.matchId})");
+                }
 #endif
             }
             catch (Exception e)

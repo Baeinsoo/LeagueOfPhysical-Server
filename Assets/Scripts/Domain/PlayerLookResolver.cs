@@ -10,7 +10,9 @@ namespace LOP
     {
         public static PlayerLook Resolve(IReadOnlyDictionary<string, PlayerLookDto> looks, string userId, int rosterIndex)
         {
-            if (looks != null && userId != null && looks.TryGetValue(userId, out var dto))
+            //  dto 자체가 null일 수 있다(백엔드가 유저 키는 보냈는데 값이 null인 경우) — 그런 자리는
+            //  "조회 안 됨"과 똑같이 기본값으로 가야 한다. 아니면 dto.displayName에서 예외가 난다.
+            if (looks != null && userId != null && looks.TryGetValue(userId, out var dto) && dto != null)
             {
                 //  백엔드가 유저 행을 못 찾으면 displayName: ''을 보낸다 — 그걸 그대로 쓰면 빈 이름표가
                 //  뜬다. 슬롯·레벨은 조회된 값 그대로 두고 이름만 기본값으로 대체한다.

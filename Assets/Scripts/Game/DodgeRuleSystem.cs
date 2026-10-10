@@ -72,6 +72,7 @@ namespace LOP
                     currentMP = 1000,
                     level = 1,
                     currentExp = 0,
+                    look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i),
                 });
             }
             SpawnReferee();

@@ -63,6 +63,18 @@ namespace LOP
                 Vitality = BaseStatInt(stats, GameFramework.World.EntityStatType.Vitality),
             };
 
+            // 룩이 없는 몸(몬스터·심판 등)은 proto 기본값(빈 map·""·0) 그대로 둔다.
+            PlayerLook look = worldEntity.Get<PlayerLook>();
+            if (look != null)
+            {
+                foreach (var (slot, itemCode) in look.Slots)
+                {
+                    characterCreationData.Look.Add(slot, itemCode);
+                }
+                characterCreationData.DisplayName = look.DisplayName;
+                characterCreationData.AccountLevel = look.AccountLevel;
+            }
+
             return new EntityCreationData
             {
                 CharacterCreationData = characterCreationData

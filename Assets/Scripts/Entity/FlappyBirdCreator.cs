@@ -28,6 +28,7 @@ namespace LOP
             worldEntity.Add(new GameFramework.World.Velocity { Linear = creationData.velocity.ToNumerics() });
             worldEntity.Add(new EntityKind(EntityType.Character));
             worldEntity.Add(new Appearance(creationData.visualId));
+            PlayerLookAttach.Attach(worldEntity, creationData.look);
             worldEntity.Add(new MotionContributions());
             // 새 몸은 시뮬이 쓰는 그 값(TbFlappyConfig)에서 온다 — 물리 팔로워가 다른 몸을 세우면
             // 겹침 밀어내기가 시뮬이 모르는 위치 점프를 만든다. BodyLength가 지름보다 크면 누운

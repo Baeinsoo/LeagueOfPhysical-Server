@@ -27,5 +27,8 @@ namespace LOP
 
         /// <summary>식으로 움직이는 캐릭터(<see cref="ScriptedMotion"/>) — 월드 시뮬·AI 두뇌 없이 모드 시스템이 자리를 쓴다.</summary>
         public bool scriptedMotion { get; set; }
+
+        /// <summary>그 판의 룩·이름·레벨 — null이면 사람이 아닌 몸.</summary>
+        public PlayerLook look { get; set; }
     }
 }

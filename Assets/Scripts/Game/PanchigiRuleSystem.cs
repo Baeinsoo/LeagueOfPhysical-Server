@@ -52,6 +52,7 @@ namespace LOP
                     position = new Vector3(0f, -10f, 0f),
                     rotation = Vector3.zero,
                     velocity = Vector3.zero,
+                    look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i),
                 });
                 playerEntityIds.Add(playerId);
             }

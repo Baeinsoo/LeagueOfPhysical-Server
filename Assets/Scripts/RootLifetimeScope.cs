@@ -23,6 +23,7 @@ namespace LOP
 
             // WebResponse — WebAPI가 GlobalMessagePipe로 발행하므로 SetProvider 필요.
             builder.RegisterOrderedMessageBroker<GetMatchResponse>();
+            builder.RegisterOrderedMessageBroker<GetMatchLooksResponse>();
             builder.RegisterOrderedMessageBroker<GetRoomResponse>();
             builder.RegisterOrderedMessageBroker<UpdateRoomStatusResponse>();
             builder.RegisterOrderedMessageBroker<HttpResponse>();

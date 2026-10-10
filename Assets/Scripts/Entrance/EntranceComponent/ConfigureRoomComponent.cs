@@ -2,6 +2,7 @@ using GameFramework;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using UnityEngine;
 using System.Threading.Tasks;
 
@@ -67,6 +68,18 @@ namespace LOP
                 
                 var getRoom = await WebAPI.GetRoom(roomId);
                 var getMatch = await WebAPI.GetMatch(getRoom.room.matchId);
+
+                //  룩 조회는 방을 여는 데 필수 조건이 아니다 — 로비가 죽어 있거나 늦어도
+                //  방은 열려야 한다(실패하면 roomDataStore.looks가 null로 남아 전원 기본 룩으로 진행).
+                try
+                {
+                    using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+                    await WebAPI.GetMatchLooks(getMatch.match.id, cts.Token);
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"룩 조회 실패 — 전원 기본 룩으로 진행: {e.Message}");
+                }
 #endif
             }
             catch (Exception e)

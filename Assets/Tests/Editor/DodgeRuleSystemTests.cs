@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using LOP.Event.Entity;
+using MessagePipe;
 using NUnit.Framework;
 using UnityEngine;
 
@@ -7,6 +9,81 @@ namespace LOP.Tests
     //  몸을 어디에 세우나. 맵이 자리를 정하고, 자리가 없거나 모자라도 판이 멈추면 안 된다.
     public class DodgeRuleSystemTests
     {
+        //  크리에이터가 실제로 무엇을 받았는지 기록만 한다 — EntitySpawnerTests의 Fake 패턴과 같되
+        //  빈 Create 대신 받은 값을 보관해 룰 시스템이 넘긴 look을 들여다볼 수 있게 한다.
+        private sealed class CapturingCharacterCreator : ICharacterCreator
+        {
+            public readonly List<CharacterCreationData> Created = new List<CharacterCreationData>();
+            public void Create(CharacterCreationData creationData) => Created.Add(creationData);
+        }
+
+        private sealed class FakePublisher<T> : IPublisher<T>
+        {
+            public void Publish(T message) { }
+        }
+
+        private sealed class FakeRoomDataStore : IRoomDataStore
+        {
+            public Room room { get; set; }
+            public Match match { get; set; }
+            public MatchOutcome outcome { get; set; }
+            public IReadOnlyDictionary<string, PlayerLookDto> looks { get; set; }
+            public void Clear() { }
+        }
+
+        private static DodgeConfig TestConfig() => new DodgeConfig(
+            lives: 3, invulnerableSeconds: 1.5f, hitRadius: 0.3f, leadSeconds: 0.5f, arenaHalf: 9f,
+            tileCount: 6, firstPatternDelaySeconds: 1f, patternIntervalSeconds: 2f, onlyKind: 0,
+            warnSeconds: 1f, bulletSpeed: 10f, bulletRadius: 0.3f, bombRadius: 1f, bombActiveSeconds: 0.5f,
+            laserWidth: 0.3f, laserOnSeconds: 0.3f, rockSpeed: 8f, rockRadius: 1f, tileOnSeconds: 1f);
+
+        /// <summary>
+        /// 룰 시스템이 스폰에 넘기는 <see cref="CharacterCreationData.look"/>을 들여다본다 — 이 단언이
+        /// 없으면 <see cref="DodgeRuleSystem"/>의 "look = PlayerLookResolver.Resolve(...)" 줄이나
+        /// 크리에이터의 <see cref="PlayerLookAttach"/> 호출이 지워져도 아무 테스트도 안 깨진다.
+        /// </summary>
+        [Test]
+        public void 초기화하면_유저_몸은_기본_룩을_받고_심판은_룩이_없다()
+        {
+            var creator = new CapturingCharacterCreator();
+            var spawner = new EntitySpawner(
+                sessionManager: null,
+                entityRegistry: new GameFramework.World.EntityRegistry(),
+                characterCreator: creator,
+                itemCreator: null,
+                coinCreator: null,
+                entityCreatedPublisher: new FakePublisher<EntityCreated>(),
+                entityDestroyedPublisher: new FakePublisher<EntityDestroyed>());
+
+            var roomDataStore = new FakeRoomDataStore
+            {
+                match = new Match { playerList = new[] { "user-a", "user-b" } },
+                looks = null,   // 로비 조회 실패/미조회 — 전원 기본 룩으로 가야 한다
+            };
+
+            var rule = new DodgeRuleSystem(roomDataStore, spawner, new DodgeMatchState(), TestConfig());
+
+            rule.Initialize();
+
+            //  유저 둘 + 심판 하나.
+            Assert.AreEqual(3, creator.Created.Count);
+
+            var userA = creator.Created[0];
+            Assert.AreEqual("user-a", userA.userId);
+            Assert.IsNotNull(userA.look);
+            Assert.AreEqual("플레이어 1", userA.look.DisplayName);
+            Assert.AreEqual(1, userA.look.AccountLevel);
+
+            var userB = creator.Created[1];
+            Assert.AreEqual("user-b", userB.userId);
+            Assert.IsNotNull(userB.look);
+            Assert.AreEqual("플레이어 2", userB.look.DisplayName);   // rosterIndex가 제대로 넘어가는지도 함께 본다
+
+            var referee = creator.Created[2];
+            Assert.IsNull(referee.userId);
+            Assert.IsNull(referee.look);   // 심판은 선수가 아니다 — 이름표가 붙으면 안 된다
+        }
+
         [Test]
         public void 자리가_있으면_순서대로_쓴다()
         {

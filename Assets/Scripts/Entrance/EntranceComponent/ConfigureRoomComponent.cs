@@ -61,20 +61,24 @@ namespace LOP
                     }
                 };
                 roomDataStore.match = match;
+                roomDataStore.looks = null;   // 에디터는 로비에 안 묻는다 — 전원 기본 룩으로 명시
 #else
                 roomId = Environment.GetEnvironmentVariable("ROOM_ID");
                 port = ushort.Parse(Environment.GetEnvironmentVariable("PORT"));
                 Blackboard.Write("port", port);
                 
                 var getRoom = await WebAPI.GetRoom(roomId);
-                var getMatch = await WebAPI.GetMatch(getRoom.room.matchId);
+                //  반환값은 쓰지 않는다 — roomDataStore.match는 메시지 브로커 쪽(HandleGetMatch)이 채운다.
+                await WebAPI.GetMatch(getRoom.room.matchId);
 
                 //  룩 조회는 방을 여는 데 필수 조건이 아니다 — 로비가 죽어 있거나 늦어도
                 //  방은 열려야 한다(실패하면 roomDataStore.looks가 null로 남아 전원 기본 룩으로 진행).
                 try
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
-                    await WebAPI.GetMatchLooks(getMatch.match.id, cts.Token);
+                    //  getMatch.match.id가 아니라 바로 위에서 이미 검증된 getRoom.room.matchId를 쓴다 —
+                    //  매치 응답 DTO 자체의 id 필드에 의존하지 않는다.
+                    await WebAPI.GetMatchLooks(getRoom.room.matchId, cts.Token);
                 }
                 catch (Exception e)
                 {

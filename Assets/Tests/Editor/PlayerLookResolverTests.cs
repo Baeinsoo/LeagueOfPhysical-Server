@@ -65,5 +65,40 @@ namespace LOP.Tests
             Assert.AreEqual("이름", look.DisplayName);
             Assert.AreEqual(3, look.AccountLevel);
         }
+
+        //  userId가 null이면(몬스터·심판 등) looks에 뭐가 있든 조회를 시도하지 않고 기본값으로 간다.
+        [Test]
+        public void userId가_null이면_looks에_값이_있어도_기본값()
+        {
+            var looks = Looks(("user-a", new PlayerLookDto { displayName = "용감한전사", level = 7, slots = null }));
+
+            var look = PlayerLookResolver.Resolve(looks, null, 0);
+
+            Assert.AreEqual("플레이어 1", look.DisplayName);
+            Assert.AreEqual(1, look.AccountLevel);
+            Assert.AreEqual(0, look.Slots.Count);
+        }
+
+        //  백엔드가 유저 행을 못 찾으면 displayName: ''(빈 문자열, null 아님)을 보낸다 — 그대로 쓰면
+        //  빈 이름표가 뜬다. 슬롯·레벨은 조회된 값 그대로 두고 이름만 기본값으로 대체해야 한다.
+        [TestCase("")]
+        [TestCase(" ")]
+        [TestCase(null)]
+        public void 백엔드_이름이_비었으면_기본_이름으로_대체하되_슬롯_레벨은_유지(string blankName)
+        {
+            var dto = new PlayerLookDto
+            {
+                displayName = blankName,
+                level = 5,
+                slots = new Dictionary<string, string> { ["hat"] = "hat_009" },
+            };
+            var looks = Looks(("user-a", dto));
+
+            var look = PlayerLookResolver.Resolve(looks, "user-a", 2);
+
+            Assert.AreEqual("플레이어 3", look.DisplayName);
+            Assert.AreEqual(5, look.AccountLevel);
+            Assert.AreEqual("hat_009", look.SlotOrNull("hat"));
+        }
     }
 }

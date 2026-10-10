@@ -41,13 +41,62 @@ namespace LOP.Tests
             entity.Add(new GameFramework.World.Transform());
             entity.Add(new GameFramework.World.Velocity());
             entity.Add(new Appearance("visual"));
-            entity.Add(new PlayerLook(new Dictionary<string, string> { ["hat"] = "hat_cube_red" }, "Kim", 7));
+            entity.Add(new PlayerLook(
+                new Dictionary<string, string> { ["hat"] = "hat_cube_red", ["top"] = "top_tint_blue" },
+                "Kim", 7));
 
             var creationData = new CharacterCreationDataCreator().Create(entity);
 
+            //  슬롯을 하나만 단언하면 "한 슬롯만 옮기고 나머지는 빠뜨리는" 구현도 통과한다 —
+            //  두 슬롯 다 확인해야 전체 Slots를 순회해 옮기는지가 드러난다.
+            Assert.AreEqual(2, creationData.CharacterCreationData.Look.Count);
             Assert.AreEqual("hat_cube_red", creationData.CharacterCreationData.Look["hat"]);
+            Assert.AreEqual("top_tint_blue", creationData.CharacterCreationData.Look["top"]);
             Assert.AreEqual("Kim", creationData.CharacterCreationData.DisplayName);
             Assert.AreEqual(7, creationData.CharacterCreationData.AccountLevel);
+        }
+
+        /// <summary>
+        /// 아바타가 없는 모드(판치기)의 실제 크리에이터를 거쳐도 같은 규칙이 지켜지는지 —
+        /// 마스터데이터가 필요 없는 유일한 크리에이터라 실제 클래스로 검증할 수 있다.
+        /// 나머지 네 크리에이터(CharacterCreator/ArcheryPlayerCreator/FlappyBirdCreator/
+        /// SkydivePlayerCreator)는 마스터데이터 로드가 있어야 실제 경로를 못 만든다 — A4 리뷰
+        /// 라운드1 보고서의 "우려 사항" 참고.
+        /// </summary>
+        [Test]
+        public void 판치기_크리에이터는_룩이_있으면_실제로_붙인다()
+        {
+            var entityRegistry = new GameFramework.World.EntityRegistry();
+            var creator = new PanchigiPlayerCreator(entityRegistry);
+            var look = new PlayerLook(new Dictionary<string, string>(), "Kim", 3);
+
+            creator.Create(new CharacterCreationData
+            {
+                userId = "user-a",
+                entityId = "e3",
+                visualId = "",
+                characterCode = "",
+                look = look,
+            });
+
+            Assert.AreSame(look, entityRegistry.Get("e3").Get<PlayerLook>());
+        }
+
+        [Test]
+        public void 판치기_크리에이터는_룩이_없으면_안_붙인다()
+        {
+            var entityRegistry = new GameFramework.World.EntityRegistry();
+            var creator = new PanchigiPlayerCreator(entityRegistry);
+
+            creator.Create(new CharacterCreationData
+            {
+                userId = null,
+                entityId = "e4",
+                visualId = "",
+                characterCode = "",
+            });
+
+            Assert.IsNull(entityRegistry.Get("e4").Get<PlayerLook>());
         }
 
         [Test]

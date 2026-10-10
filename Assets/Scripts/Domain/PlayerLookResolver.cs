@@ -12,7 +12,12 @@ namespace LOP
         {
             if (looks != null && userId != null && looks.TryGetValue(userId, out var dto))
             {
-                return new PlayerLook(dto.slots, dto.displayName, dto.level);
+                //  백엔드가 유저 행을 못 찾으면 displayName: ''을 보낸다 — 그걸 그대로 쓰면 빈 이름표가
+                //  뜬다. 슬롯·레벨은 조회된 값 그대로 두고 이름만 기본값으로 대체한다.
+                string displayName = string.IsNullOrWhiteSpace(dto.displayName)
+                    ? $"플레이어 {rosterIndex + 1}"
+                    : dto.displayName;
+                return new PlayerLook(dto.slots, displayName, dto.level);
             }
 
             return new PlayerLook(null, $"플레이어 {rosterIndex + 1}", 1);

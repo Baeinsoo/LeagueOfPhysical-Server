@@ -20,11 +20,12 @@ namespace LOP
         private const double TICK_INTERVAL = 1 / 50d;   //  sec
         private const double CLOSE_TIMEOUT_SECONDS = 1.5;
         private const double DRAIN_TIMEOUT_SECONDS = 10;
-        //  CLOSE_TIMEOUT_SECONDS와 달리 이 값은 룸서버 정리 주기가 아니라 백엔드 트랜잭션
-        //  상한(Prisma 기본 5초)과 견줘 정해진다 — 그보다 짧으면 호출자가 서버 처리가 끝나기도
-        //  전에 먼저 포기한다. 재시도 1회까지 최악 2×6=12초라도 하트비트 만료 임계값(60초)에
-        //  한참 못 미쳐 방이 좀비로 판정되지 않는다.
-        private const double REPORT_TIMEOUT_SECONDS = 6.0;
+        //  CLOSE_TIMEOUT_SECONDS와 달리 이 값은 룸서버 정리 주기가 아니라 로비 confirm 트랜잭션의
+        //  최악 대기(≈45초, 재화·꾸밈 보상 지급 경로 포함)와 견줘 정해진다 — 그보다 짧으면 호출자가
+        //  서버 처리가 끝나기도 전에 먼저 포기해, 보상·랭크가 DB에는 들어갔는데 화면만 비는 창이
+        //  생긴다. 재시도 1회까지 최악 2×15=30초라도 하트비트 만료 임계값(60초)에 못 미쳐
+        //  방이 좀비로 판정되지 않는다.
+        private const double REPORT_TIMEOUT_SECONDS = 15.0;
         private const int REPORT_MAX_ATTEMPTS = 2;   //  보고는 멱등(백엔드가 저장된 결과를 그대로 반환)이라 재시도가 안전하다
 
         [Inject] private IGameFactory gameFactory;

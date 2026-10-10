@@ -107,5 +107,24 @@ namespace LOP.Tests
             CollectionAssert.AreEquivalent(new[] { "a", "b", "c" }, o.placements.Select(p => p.userId));
             Assert.AreEqual(10, o.placements.First(p => p.userId == "a").stats["score"]);
         }
+
+        //  LeaverRanking.Apply가 placement마다 새 객체를 만들어도(Copy/CopyLeft), LOPRunner.EndMatch는
+        //  그 뒤에 playedSeconds를 모든 placement(나간 사람 포함)에 같은 값으로 채운다 — 여기서 그 순서를 고정한다.
+        [Test]
+        public void 나간_사람_포함_모든_자리에_같은_플레이시간이_실린다()
+        {
+            var o = LeaverRanking.Apply(Outcome(("a", 1), ("b", 2)), new[] { "b" }, None);
+
+            foreach (var placement in o.placements)
+            {
+                placement.playedSeconds = 37;
+            }
+
+            Assert.AreEqual(2, o.placements.Count);
+            foreach (var placement in o.placements)
+            {
+                Assert.AreEqual(37, placement.playedSeconds);
+            }
+        }
     }
 }

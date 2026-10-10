@@ -123,6 +123,13 @@ namespace LOP
             roomDataStore.outcome = LeaverRanking.Apply(gameRuleSystem.ResolveOutcome(), presence.LeftLatestFirst, presence.NeverJoined,
                 gameRuleSystem is ISettledResults settled ? settled.IsResultSettled : null);
 
+            //  로비가 이 값으로 보상을 계산한다. 나간 사람도 똑같이 채운다 — 로비가 left 표시로 보고 0 처리한다.
+            int playedSeconds = PlayedSeconds.Compute(tickUpdater.tick, matchStartSystem.StartTick, tickUpdater.interval);
+            foreach (var placement in roomDataStore.outcome.placements)
+            {
+                placement.playedSeconds = playedSeconds;
+            }
+
             //  [진단용 임시] 등수가 실제로 어떻게 나왔는지 눈으로 볼 데가 없어서 남긴다.
             //  결과 화면이 완주 시간까지 보여 주게 되면 지운다.
             {

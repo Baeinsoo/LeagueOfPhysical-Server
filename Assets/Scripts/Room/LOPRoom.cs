@@ -288,7 +288,7 @@ namespace LOP
                 //  구해 준다.
                 try
                 {
-                    session.Send(BuildMatchEndedMessage(confirmed, session.userId));
+                    session.Send(MatchEndedMessageBuilder.Build(confirmed, session.userId, roomDataStore.looks, roomDataStore.match?.playerList));
                 }
                 catch (Exception e)
                 {
@@ -348,60 +348,6 @@ namespace LOP
                     Debug.LogWarning($"Match result report attempt {attempt} failed. Retrying.");
                 }
             }
-        }
-
-        //  수신자마다 다른 메시지를 만든다. 등수는 전원 것을 담지만 점수 변화는 본인 것만 담는다 —
-        //  UI에서 가리는 것으로는 부족하고, 남의 실력 점수가 애초에 그 사람 회선으로 나가면 안 된다.
-        private static MatchEndedToC BuildMatchEndedMessage(ConfirmedParticipantDto[] confirmed, string userId)
-        {
-            var message = new MatchEndedToC();
-
-            //  보고가 실패했으면 확정 결과가 없다. 빈 결과로 보내고 화면은 "매치 종료"로 물러선다.
-            if (confirmed == null)
-            {
-                return message;
-            }
-
-            //  등수는 1부터다. 0이 섞여 오면 확정이 안 된 판을 확정된 것처럼 받은 것이므로 통째로
-            //  버린다 — "0등"을 화면에 그리는 것보다 결과가 없다고 하는 편이 정직하다.
-            foreach (var participant in confirmed)
-            {
-                if (participant.placement < 1)
-                {
-                    Debug.LogError($"Confirmed result has an invalid placement ({participant.placement}). Reporting no result.");
-                    return new MatchEndedToC();
-                }
-            }
-
-            foreach (var participant in confirmed)
-            {
-                var info = new MatchPlacementInfo
-                {
-                    UserId = participant.userId,
-                    Placement = participant.placement,
-                };
-
-                //  자루는 점수 개념이 없는 모드에선 null로 온다 — 그때는 빈 map을 그대로 내보낸다.
-                //  proto의 map 필드는 대입이 아니라 Add로만 채울 수 있다.
-                if (participant.stats != null)
-                {
-                    foreach (var pair in participant.stats)
-                    {
-                        info.Stats.Add(pair.Key, pair.Value);
-                    }
-                }
-
-                message.Placements.Add(info);
-
-                if (participant.userId == userId)
-                {
-                    message.HasRatingChange = true;
-                    message.MyMmrBefore = participant.mmrBefore;
-                    message.MyMmrAfter = participant.mmrAfter;
-                }
-            }
-
-            return message;
         }
 
         public void OnPlayerConnect(IConnectionData connectionData)

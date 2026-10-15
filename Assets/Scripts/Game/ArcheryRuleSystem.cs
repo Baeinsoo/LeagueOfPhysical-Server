@@ -15,11 +15,11 @@ namespace LOP
         private const float FallbackRingRadius = 12f;
 
         private const string KnightVisualId = "Assets/Art/Characters/Knight/Knight.prefab";
-        //  한 발 승부만 새 룩(PolyOne 치비). 프리팹과 원격 등록은 클라 레포(Addressables 키 = 경로).
+        //  한 발 승부·투석기는 새 룩(PolyOne 치비). 프리팹과 원격 등록은 클라 레포(Addressables 키 = 경로).
         private const string ChibiVisualId = "Assets/Characters/Chibi/Chibi.prefab";
 
         public static string BodyVisualFor(ArcheryCourseKind kind)
-            => kind == ArcheryCourseKind.ShootOff ? ChibiVisualId : KnightVisualId;
+            => kind == ArcheryCourseKind.ShootOff || kind == ArcheryCourseKind.Catapult ? ChibiVisualId : KnightVisualId;
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
@@ -45,10 +45,10 @@ namespace LOP
 
             var playerList = roomDataStore.match.playerList;
 
-            //  사거리 맵·한 발 승부는 사대가 레인 위에 있다. 원형 맵은 예전처럼 SpawnPoint를 쓴다 —
+            //  레인 위에 사대가 있는 코스(사거리·한 발 승부·투석기). 원형 맵만 SpawnPoint를 쓴다 —
             //  맵이 값으로 방식을 고르고, 룰은 맵 이름을 모른다.
-            bool laned = config.CourseKind == ArcheryCourseKind.Range
-                      || config.CourseKind == ArcheryCourseKind.ShootOff;
+            bool sharedLane = config.CourseKind == ArcheryCourseKind.ShootOff || config.CourseKind == ArcheryCourseKind.Catapult;
+            bool laned = config.CourseKind == ArcheryCourseKind.Range || sharedLane;
             var lanes = laned ? ArcheryRangeLayout.FromOpenScenes() : null;
 
             if (lanes != null)
@@ -79,9 +79,9 @@ namespace LOP
 
                 if (lanes != null)
                 {
-                    //  한 발 승부는 레인 0 사대에 스폰한다 — 실제 자리(나란히, 라운드마다 돈다)는
+                    //  한 발 승부·투석기는 레인 0 사대에 스폰한다 — 실제 자리(나란히, 라운드마다 돈다)는
                     //  ArcheryWorld가 첫 틱부터 틱마다 정한다(ArcheryShootOffSeats).
-                    var lane = lanes.Lanes[config.CourseKind == ArcheryCourseKind.ShootOff ? 0 : i];
+                    var lane = lanes.Lanes[sharedLane ? 0 : i];
                     position = lane.ShooterPosition;
                     rotation = new Vector3(0f, Mathf.Atan2(lane.Forward.x, lane.Forward.z) * Mathf.Rad2Deg, 0f);
                 }

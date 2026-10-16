@@ -834,5 +834,130 @@ namespace LOP.Tests
                 Assert.AreEqual(1, f.HitEventCount());
             }
         }
+
+        //  투석기 판 하나: Shared 픽스처와 같은 값(소개 80, 160틱마다, 수명 130, 함정 35%).
+        static ArcheryConfig CatapultConfig()
+        {
+            ArcheryTargetKind K(int id, float r, int p, int w, bool trap, float d0, float d1, float v0, float v1, int stun)
+                => new ArcheryTargetKind(r, p, w, trap, ArcheryTargetShape.Sphere, new[] { new ArcheryRingBand(1f, p) },
+                                         id: id, distanceMinM: d0, distanceMaxM: d1, driftMinMps: v0, driftMaxMps: v1, stunTicks: stun);
+            var kinds = new[]
+            {
+                K(8, 1.2f, 1, 50, false, 30f, 38f, 2f, 3f, 0), K(9, 0.9f, 2, 40, false, 38f, 46f, 3.5f, 5f, 0),
+                K(10, 0.6f, 3, 30, false, 46f, 55f, 5.5f, 7f, 0), K(11, 0.5f, 5, 6, false, 48f, 55f, 8f, 10f, 0),
+                K(12, 0.85f, -3, 1, true, 32f, 50f, 3f, 5f, 75), K(13, 0.85f, -3, 1, true, 32f, 50f, 3f, 5f, 75),
+            };
+            return new ArcheryConfig(
+                wavePeriodTicks: 0, minTargets: 0, maxTargets: 0,
+                spawnRadius: 16f, spawnMinY: 3.5f, spawnMaxY: 13f, minSeparation: 0f,
+                trapRatioMin: 0f, trapRatioMax: 0f,
+                shakeFreeSeconds: 0f, shakeRampSeconds: 2.5f, shakeMaxDegrees: 0f,
+                riseHeightMin: 0.5f, riseHeightMax: 1.5f, staggerTicks: 0, restTicks: 0,
+                kinds: kinds, courseKind: ArcheryCourseKind.Catapult,
+                arrowMinSpeedMps: 50f, arrowMaxSpeedMps: 100f,
+                catapult: new ArcheryCatapultSettings(3, 80, 1250, 110, 160, 35, 150, 130, 0.35f, 16f));
+        }
+
+        //  0번 무리의 짝 A. 발사 틱 = StartTick + 80 + 35.
+        static (Fixture f, RangeScene scene, ArcheryTarget target, long hitTick) CatapultWithPairA(params string[] owners)
+        {
+            var scene = new RangeScene(1, 12f);
+            var f = Build(StartTick, CatapultConfig(), owners, () => scene.Layout);
+            var target = f.TargetsOfWave(0)[0];
+            return (f, scene, target, target.SpawnTick + 20);
+        }
+
+        //  아무 무리에서나 쏘면 안 되는 것을 하나 찾는다(씨앗 고정이라 늘 같은 무리).
+        static (int volley, ArcheryTarget trap) FirstTrap(Fixture f)
+        {
+            for (int v = 0; v < 21; v++)
+            {
+                var t = f.TargetsOfWave(v);
+                if (t.Count == 3) { return (v, t[2]); }
+            }
+            Assert.Fail("21무리에 쏘면 안 되는 것이 하나도 없다 — 씨앗을 바꿔 볼 것");
+            return default;
+        }
+
+        [Test]
+        public void 투석기_표적은_먼저_맞힌_사람이_먹고_사라진다()
+        {
+            var (f, scene, target, hit) = CatapultWithPairA("user-a", "user-b");
+            using (scene)
+            {
+                f.Archer("a", "user-a");
+                f.Archer("b", "user-b");
+                f.World.IngestRemoteShot(ShotThroughMoving("b", hit - 1, target, hit, 2.0f));   // 늦게 닿는다(멀리서)
+                f.World.IngestRemoteShot(ShotThroughMoving("a", hit - 1, target, hit, 1.0f));
+                f.System.Tick(hit, TickInterval);
+
+                Assert.AreEqual(target.Points, f.ScoreOf("a"));
+                Assert.AreEqual(0, f.ScoreOf("b"));
+                Assert.IsTrue(f.WaveState.IsConsumed(target.SlotIndex));
+                Assert.AreEqual(1, f.HitEventCount());
+            }
+        }
+
+        [Test]
+        public void 투석기_적중_사건은_무리와_표적_번호와_맞은_틱을_싣는다()
+        {
+            var (f, scene, target, hit) = CatapultWithPairA("user-a");
+            using (scene)
+            {
+                f.Archer("a", "user-a");
+                f.World.IngestRemoteShot(ShotThroughMoving("a", hit - 1, target, hit, 1.0f));
+                f.System.Tick(hit, TickInterval);
+                ArcheryTargetHitEvent sent = null;
+                foreach (var e in f.World.EventBuffer.Snapshot) { if (e is ArcheryTargetHitEvent h) { sent = h; } }
+                Assert.IsNotNull(sent);
+                Assert.AreEqual(0, sent.waveIndex);
+                Assert.AreEqual(target.SlotIndex, sent.slotIndex);
+                Assert.AreEqual(hit, sent.hitTick);
+                Assert.AreEqual(0, sent.stunUntilTick);
+            }
+        }
+
+        [Test]
+        public void 쏘면_안_되는_것을_맞히면_벌점과_사격_금지가_걸린다()
+        {
+            var scene = new RangeScene(1, 12f);
+            using (scene)
+            {
+                var f = Build(StartTick, CatapultConfig(), new[] { "user-a" }, () => scene.Layout);
+                var archer = f.Archer("a", "user-a");
+                archer.Add(new ArcheryAim());
+                var (volley, trap) = FirstTrap(f);
+                long hit = trap.SpawnTick + 20;
+                //  그 무리에 서 있게 판정 시스템을 그 무리 시각으로 먼저 한 번 돌린다(무리가 넘어갈 때 표적을 채운다).
+                f.System.Tick(trap.SpawnTick, TickInterval);
+                f.World.IngestRemoteShot(ShotThroughMoving("a", hit - 1, trap, hit, 1.0f));
+                f.System.Tick(hit, TickInterval);
+
+                Assert.AreEqual(-3, f.ScoreOf("a"));
+                Assert.AreEqual(hit + 75, archer.Get<ArcheryAim>().StunnedUntilTick);
+                ArcheryTargetHitEvent sent = null;
+                foreach (var e in f.World.EventBuffer.Snapshot) { if (e is ArcheryTargetHitEvent h) { sent = h; } }
+                Assert.AreEqual(hit + 75, sent.stunUntilTick);
+                Assert.AreEqual(volley, sent.waveIndex);
+            }
+        }
+
+        [Test]
+        public void 사격_금지는_더_짧게_줄어들지_않는다()
+        {
+            var scene = new RangeScene(1, 12f);
+            using (scene)
+            {
+                var f = Build(StartTick, CatapultConfig(), new[] { "user-a" }, () => scene.Layout);
+                var archer = f.Archer("a", "user-a");
+                archer.Add(new ArcheryAim { StunnedUntilTick = long.MaxValue - 1 });
+                var (_, trap) = FirstTrap(f);
+                long hit = trap.SpawnTick + 20;
+                f.System.Tick(trap.SpawnTick, TickInterval);
+                f.World.IngestRemoteShot(ShotThroughMoving("a", hit - 1, trap, hit, 1.0f));
+                f.System.Tick(hit, TickInterval);
+                Assert.AreEqual(long.MaxValue - 1, archer.Get<ArcheryAim>().StunnedUntilTick);
+            }
+        }
     }
 }

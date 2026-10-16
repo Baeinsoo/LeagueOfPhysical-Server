@@ -90,7 +90,7 @@ namespace LOP
             }
 
             CollectCandidates(tick);
-            ApplyCandidates();
+            ApplyCandidates(tick);
             ForgetOldArrows(tick);
         }
 
@@ -174,7 +174,7 @@ namespace LOP
             }
         }
 
-        private void ApplyCandidates()
+        private void ApplyCandidates(long tick)
         {
             if (candidates.Count == 0)
             {
@@ -231,8 +231,21 @@ namespace LOP
                     score.Lost += outcome.Lost;
                 }
 
+                //  쏘면 안 되는 것: 이 틱 다음부터 StunTicks 동안 활을 못 든다. 이미 더 긴 금지가 걸려 있으면 그대로 둔다.
+                long stunUntil = 0;
+                if (outcome.StunTicks > 0)
+                {
+                    stunUntil = tick + outcome.StunTicks;
+                    var aim = entityRegistry.Get(candidate.ShooterId)?.Get<ArcheryAim>();
+                    if (aim != null && aim.StunnedUntilTick < stunUntil)
+                    {
+                        aim.StunnedUntilTick = stunUntil;
+                    }
+                }
+
                 eventBuffer.Append(new ArcheryTargetHitEvent(
-                    candidate.ShooterId, candidate.FireTick, outcome.Delta));
+                    candidate.ShooterId, candidate.FireTick, outcome.Delta,
+                    waveIndex: target.WaveIndex, slotIndex: candidate.Slot, hitTick: tick, stunUntilTick: stunUntil));
             }
         }
 

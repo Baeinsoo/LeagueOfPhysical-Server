@@ -59,6 +59,20 @@ namespace LOP
 
             return httpClient.SendAsync<ReportMatchResultResponse>(httpRequest, cancellationToken);
         }
+
+        //  판 도중 떠난 한 사람의 위치를 비운다 — 판 전체가 끝날 때 room-server가 부르는 것과 같은 길이다.
+        //  전역 발행을 쓰지 않는다(ReportMatchResult와 같은 이유).
+        public static async UniTask ReleaseGameRoom(string userId, string roomId, CancellationToken cancellationToken = default)
+        {
+            var request = new GameRoomEndedRequest
+            {
+                entries = new[] { new GameRoomEndedEntry { userId = userId, roomId = roomId } },
+            };
+            var httpRequest = HttpRequestMessage.Put(
+                $"{EnvironmentSettings.active.lobbyBaseURL}/internal/user/location/game-room-ended", request);
+
+            await httpClient.SendAsync<HttpResponse>(httpRequest, cancellationToken);
+        }
         #endregion
 
         #region Auth

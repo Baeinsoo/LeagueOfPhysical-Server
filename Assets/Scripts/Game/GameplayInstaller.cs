@@ -62,6 +62,9 @@ namespace LOP
             builder.RegisterEntryPoint<GameInfoMessageHandler>();
             builder.RegisterEntryPoint<GameEntityMessageHandler>();
             builder.RegisterEntryPoint<GameInputMessageHandler>();
+            //  결과가 정해진 사람의 나가기 — 종목과 무관하다(판정은 ISettledResults를 구현한 룰이 한다).
+            builder.RegisterEntryPoint<LeaveMatchMessageHandler>();
+            builder.Register<IUserLocationReleaser, LobbyUserLocationReleaser>(Lifetime.Singleton);
             builder.RegisterEntryPoint<EntityBinder>();   // 서버 뷰 스포너(EntityCreated/EntityDestroyed 반응)
             //  RegisterEntryPoint여야 MessageHandlerBase의 구독이 살아난다(스코프가 Initialize/Dispose 구동).
             //  AsSelf는 LOPRunner가 구체 타입으로 [Inject]해 Tick·Phase를 직접 쓰기 때문이다.

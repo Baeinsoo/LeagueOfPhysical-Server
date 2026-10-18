@@ -39,6 +39,7 @@ namespace LOP
             builder.RegisterOrderedMessageBroker<ClientMessage<StatAllocationToS>>();
             builder.RegisterOrderedMessageBroker<ClientMessage<PanchigiStrikeToS>>();
             builder.RegisterOrderedMessageBroker<ClientMessage<MatchReadyToS>>();
+            builder.RegisterOrderedMessageBroker<ClientMessage<LeaveMatchToS>>();
             builder.Register<NetworkMessageDispatcher>(Lifetime.Singleton);
 
             builder.Register<LOP.MasterData.LOPMasterData>(Lifetime.Singleton);

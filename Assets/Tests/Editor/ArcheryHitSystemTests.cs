@@ -277,13 +277,14 @@ namespace LOP.Tests
 
         /// <summary>
         /// 그 틱에 과녁이 있을 자리를 정확히 지나가는 화살. 과녁이 움직이므로 "어디로 쏘나"가
-        /// 아니라 "언제 어디에 있을 것인가"를 먼저 풀어야 한다.
+        /// 아니라 "언제 어디에 있을 것인가"를 먼저 풀어야 한다. <paramref name="offset"/>을 주면
+        /// 가운데에서 그만큼 비켜난 자리를 지난다.
         /// </summary>
         static ArcheryShot ShotThroughMoving(string shooterId, long fireTick, in ArcheryTarget target,
-                                             long hitTick, float distance)
+                                             long hitTick, float distance, Vector3 offset = default)
         {
             //  판정이 재는 것과 같은 시각(구간 가운데)의 자리를 노린다.
-            Vector3 at = ArcheryTargetMotion.PositionAt(target, hitTick - 0.5, TickInterval);
+            Vector3 at = ArcheryTargetMotion.PositionAt(target, hitTick - 0.5, TickInterval) + offset;
             Vector3 origin = at + new Vector3(0f, 0f, -distance);
             float seconds = (hitTick - fireTick) * TickInterval;
             //  한 틱 만에 닿게 잡으면 위 선분이 정확히 그 자리에서 끝난다.
@@ -635,10 +636,10 @@ namespace LOP.Tests
             //  정중앙을 지나는 선분과, 가장자리 쪽을 지나는 선분.
             ArcheryHitTest.SegmentHitsTarget(
                 new Vector3(0f, 0f, -1f), new Vector3(0f, 0f, 1f),
-                Vector3.zero, target, out _, out float centerOffset);
+                Vector3.zero, target, target.Radius, out _, out float centerOffset);
             ArcheryHitTest.SegmentHitsTarget(
                 new Vector3(0.3f, 0f, -1f), new Vector3(0.3f, 0f, 1f),
-                Vector3.zero, target, out _, out float edgeOffset);
+                Vector3.zero, target, target.Radius, out _, out float edgeOffset);
 
             Assert.AreEqual(10, ArcheryHitRules.Resolve(target, centerOffset).Gained);
             Assert.AreEqual(3, ArcheryHitRules.Resolve(target, edgeOffset).Gained);
@@ -835,17 +836,28 @@ namespace LOP.Tests
             }
         }
 
-        //  투석기 판 하나: Shared 픽스처와 같은 값(소개 80, 160틱마다, 수명 130, 함정 35%).
-        static ArcheryConfig CatapultConfig()
+        //  투석기 판 하나: 설정은 Shared 픽스처와 같은 값(소개 80, 160틱마다, 수명 130, 금지물 35%, 대박 28%),
+        //  종류는 데이터 #ArcheryTarget 14~22와 같은 값. platesOnly면 도는 접시만 뜬다.
+        static ArcheryConfig CatapultConfig(bool platesOnly = false)
         {
-            ArcheryTargetKind K(int id, float r, int p, int w, bool trap, float d0, float d1, float v0, float v1, int stun)
+            ArcheryTargetKind K(int id, float r, int p, int w, bool trap, bool jack, float d0, float d1, float v0, float v1, int stun,
+                                ArcheryCatapultMotion m)
                 => new ArcheryTargetKind(r, p, w, trap, ArcheryTargetShape.Sphere, new[] { new ArcheryRingBand(1f, p) },
-                                         id: id, distanceMinM: d0, distanceMaxM: d1, driftMinMps: v0, driftMaxMps: v1, stunTicks: stun);
-            var kinds = new[]
+                                         id: id, distanceMinM: d0, distanceMaxM: d1, driftMinMps: v0, driftMaxMps: v1,
+                                         stunTicks: stun, isJackpot: jack, motion: m);
+            var plate = K(16, 0.85f, 2, 25, false, false, 36f, 44f, 5.5f, 7f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, spinHz: 1.1f));
+            var forbidden = new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, lateralHalfM: 10f);
+            var kinds = platesOnly ? new[] { plate } : new[]
             {
-                K(8, 1.2f, 1, 50, false, 30f, 38f, 2f, 3f, 0), K(9, 0.9f, 2, 40, false, 38f, 46f, 3.5f, 5f, 0),
-                K(10, 0.6f, 3, 30, false, 46f, 55f, 5.5f, 7f, 0), K(11, 0.5f, 5, 6, false, 48f, 55f, 8f, 10f, 0),
-                K(12, 0.85f, -3, 1, true, 32f, 50f, 3f, 5f, 75), K(13, 0.85f, -3, 1, true, 32f, 50f, 3f, 5f, 75),
+                K(14, 1.0f, 1, 40, false, false, 30f, 36f, 2f, 3f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, bobAmplitudeM: 0.6f, bobHz: 0.48f)),
+                K(15, 0.75f, 2, 25, false, false, 38f, 46f, 2.5f, 3.5f, 0, new ArcheryCatapultMotion(heightMinM: 2.5f, heightMaxM: 5f, arcMinM: 3f, arcMaxM: 4.5f)),
+                plate,
+                K(17, 0.45f, 3, 20, false, false, 46f, 55f, 0.5f, 1.5f, 0, new ArcheryCatapultMotion(heightMinM: 1f, heightMaxM: 3f, climbMinMps: 3.5f, climbMaxMps: 5f)),
+                K(18, 0.8f, 5, 1, false, true, 46f, 54f, 1.6f, 2.2f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, bobAmplitudeM: 0.3f, bobHz: 0.32f, lateralHalfM: 8f)),
+                K(19, 0.95f, 5, 1, false, true, 44f, 52f, 1.8f, 2.4f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, bobAmplitudeM: 0.3f, bobHz: 0.32f, lateralHalfM: 8f)),
+                K(20, 0.75f, -3, 1, true, false, 32f, 48f, 2.5f, 3.5f, 75, forbidden),
+                K(21, 0.8f, -3, 1, true, false, 32f, 48f, 2.5f, 3.5f, 75, forbidden),
+                K(22, 0.8f, -3, 1, true, false, 32f, 48f, 2f, 3f, 75, forbidden),
             };
             return new ArcheryConfig(
                 wavePeriodTicks: 0, minTargets: 0, maxTargets: 0,
@@ -855,7 +867,7 @@ namespace LOP.Tests
                 riseHeightMin: 0.5f, riseHeightMax: 1.5f, staggerTicks: 0, restTicks: 0,
                 kinds: kinds, courseKind: ArcheryCourseKind.Catapult,
                 arrowMinSpeedMps: 50f, arrowMaxSpeedMps: 100f,
-                catapult: new ArcheryCatapultSettings(3, 80, 1250, 110, 160, 35, 150, 130, 0.35f, 16f));
+                catapult: new ArcheryCatapultSettings(3, 80, 1250, 110, 160, 35, 150, 130, 0.35f, 16f, jackpotChance: 0.28f));
         }
 
         //  0번 무리의 짝 A. 발사 틱 = StartTick + 80 + 35.
@@ -872,8 +884,9 @@ namespace LOP.Tests
         {
             for (int v = 0; v < 21; v++)
             {
+                //  개수로 찾으면 안 된다 — 대박만 낀 무리도 개수가 같다. 금지물은 늘 제 자리에 선다.
                 var t = f.TargetsOfWave(v);
-                if (t.Count == 3) { return (v, t[2]); }
+                foreach (var x in t) { if (x.SlotIndex == ArcheryCatapultGenerator.TrapSlot) { return (v, x); } }
             }
             Assert.Fail("21무리에 쏘면 안 되는 것이 하나도 없다 — 씨앗을 바꿔 볼 것");
             return default;
@@ -957,6 +970,54 @@ namespace LOP.Tests
                 f.World.IngestRemoteShot(ShotThroughMoving("a", hit - 1, trap, hit, 1.0f));
                 f.System.Tick(hit, TickInterval);
                 Assert.AreEqual(long.MaxValue - 1, archer.Get<ArcheryAim>().StunnedUntilTick);
+            }
+        }
+
+        //  도는 접시가 그 각도에 있는 틱(판정 시각 = 틱 - 0.5)을 수명 안에서 찾는다.
+        static long PlateTickWhere(in ArcheryTarget plate, System.Func<float, bool> absCos)
+        {
+            for (long k = plate.SpawnTick + 5; k < plate.SpawnTick + 120; k++)
+            {
+                if (absCos(Mathf.Abs(Mathf.Cos(ArcheryTargetMotion.SpinAngleAt(plate, k - 0.5, TickInterval))))) { return k; }
+            }
+            Assert.Fail("수명 안에 그 각도가 없다");
+            return 0;
+        }
+
+        [Test]
+        public void 도는_접시가_옆으로_누우면_가운데에서_반_미터_비켜난_화살은_빗나간다()
+        {
+            var scene = new RangeScene(1, 12f);
+            using (scene)
+            {
+                var f = Build(StartTick, CatapultConfig(platesOnly: true), new[] { "user-a" }, () => scene.Layout);
+                f.Archer("a", "user-a");
+                var plate = f.TargetsOfWave(0)[0];
+                Assert.AreEqual(1.1f, plate.SpinHz);
+                long edge = PlateTickWhere(plate, c => c < 0.1f);   // 판정 반지름 0.17 m
+                f.System.Tick(plate.SpawnTick, TickInterval);
+                f.World.IngestRemoteShot(ShotThroughMoving("a", edge - 1, plate, edge, 1.0f, Vector3.up * 0.5f));
+                f.System.Tick(edge, TickInterval);
+                Assert.AreEqual(0, f.ScoreOf("a"));
+                Assert.IsFalse(f.WaveState.IsConsumed(plate.SlotIndex));
+            }
+        }
+
+        [Test]
+        public void 도는_접시를_정면에서_같은_자리로_맞히면_맞는다()
+        {
+            //  양성 대조 — 위 시험이 "아무 화살도 안 맞는" 이유로 초록이 아니게.
+            var scene = new RangeScene(1, 12f);
+            using (scene)
+            {
+                var f = Build(StartTick, CatapultConfig(platesOnly: true), new[] { "user-a" }, () => scene.Layout);
+                f.Archer("a", "user-a");
+                var plate = f.TargetsOfWave(0)[0];
+                long face = PlateTickWhere(plate, c => c > 0.95f);  // 판정 반지름 0.81 m 이상
+                f.System.Tick(plate.SpawnTick, TickInterval);
+                f.World.IngestRemoteShot(ShotThroughMoving("a", face - 1, plate, face, 1.0f, Vector3.up * 0.5f));
+                f.System.Tick(face, TickInterval);
+                Assert.AreEqual(2, f.ScoreOf("a"));
             }
         }
     }

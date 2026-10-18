@@ -162,8 +162,10 @@ namespace LOP
                     }
 
                     Vector3 targetAt = ArcheryTargetMotion.PositionAt(targets[i], at, tickInterval);
+                    //  도는 접시는 옆으로 누울수록 작아진다 — 위치와 같은 시각으로 묻는다(클라 꽂힘·화면 회전과 같은 함수).
+                    float radius = ArcheryTargetMotion.RadiusAt(targets[i], at, tickInterval);
 
-                    if (ArcheryHitTest.SegmentHitsTarget(from, to, targetAt, targets[i],
+                    if (ArcheryHitTest.SegmentHitsTarget(from, to, targetAt, targets[i], radius,
                                                          out float t, out float offset))
                     {
                         candidates.Add(new Candidate(t, offset, shot.ShooterId, shot.FireTick,

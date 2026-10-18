@@ -1,3 +1,4 @@
+using System.Threading;
 using Cysharp.Threading.Tasks;
 
 namespace LOP
@@ -8,6 +9,6 @@ namespace LOP
     /// </summary>
     public interface IUserLocationReleaser
     {
-        UniTask ReleaseAsync(string userId, string roomId);
+        UniTask ReleaseAsync(string userId, string roomId, CancellationToken cancellationToken);
     }
 }

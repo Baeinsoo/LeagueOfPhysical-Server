@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using GameFramework;
 using MessagePipe;
@@ -13,6 +14,10 @@ namespace LOP
     /// </summary>
     public class LeaveMatchMessageHandler : MessageHandlerBase
     {
+        //  클라는 답을 3초 기다린다. 로비가 그보다 늦으면 여기서 먼저 포기한다 — 클라가 먼저 로비로 가면 같은 방에
+        //  다시 들어가고, 늦게 도착한 비우기가 "방에 있는데 위치는 로비"로 어긋나게 만든다.
+        public static readonly TimeSpan LobbyTimeout = TimeSpan.FromSeconds(2);
+
         private readonly ISubscriber<ClientMessage<LeaveMatchToS>> subscriber;
         private readonly IRoomDataStore roomDataStore;
         private readonly IGameRuleSystem gameRuleSystem;
@@ -42,7 +47,8 @@ namespace LOP
             bool accepted;
             try
             {
-                await releaser.ReleaseAsync(userId, roomDataStore.room.id);
+                using var timeout = new CancellationTokenSource(LobbyTimeout);
+                await releaser.ReleaseAsync(userId, roomDataStore.room.id, timeout.Token);
                 accepted = true;
             }
             catch (Exception e)

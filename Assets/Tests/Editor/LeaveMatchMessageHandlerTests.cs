@@ -51,10 +51,12 @@ namespace LOP.Tests
         {
             public readonly List<(string userId, string roomId)> Calls = new List<(string, string)>();
             public bool Throw;
+            public System.Threading.CancellationToken Token;
 
-            public UniTask ReleaseAsync(string userId, string roomId)
+            public UniTask ReleaseAsync(string userId, string roomId, System.Threading.CancellationToken cancellationToken)
             {
                 Calls.Add((userId, roomId));
+                Token = cancellationToken;
                 if (Throw) throw new System.Exception("lobby down");
                 return UniTask.CompletedTask;
             }
@@ -88,6 +90,21 @@ namespace LOP.Tests
 
             CollectionAssert.AreEqual(new[] { ("u1", "room-1") }, releaser.Calls);
             Assert.IsTrue(Reply(session));
+        }
+
+        //  로비가 늦으면 클라(3초)보다 먼저 포기해야 한다 — 클라가 먼저 로비로 가면 같은 방에 다시 들어가고,
+        //  그 뒤 늦게 도착한 비우기가 "방에 있는데 위치는 로비"로 어긋나게 만든다.
+        [Test]
+        public void 로비_호출에는_제한_시간이_걸린다()
+        {
+            var rule = new FakeSettledRule();
+            rule.Settled.Add("u1");
+            var releaser = new FakeReleaser();
+
+            Handle(new LeaveMatchMessageHandler(null, Store(), rule, releaser), new FakeSession { userId = "u1" });
+
+            Assert.IsTrue(releaser.Token.CanBeCanceled, "끝없이 기다리는 호출");
+            Assert.Less(LeaveMatchMessageHandler.LobbyTimeout.TotalSeconds, 3, "클라 대기(3초)보다 짧아야 한다");
         }
 
         [Test]

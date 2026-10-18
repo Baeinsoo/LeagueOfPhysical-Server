@@ -19,7 +19,10 @@ namespace LOP
                 string displayName = string.IsNullOrWhiteSpace(dto.displayName)
                     ? $"플레이어 {rosterIndex + 1}"
                     : dto.displayName;
-                return new PlayerLook(dto.slots, displayName, dto.level);
+                var appearance = dto.characterAppearance != null
+                    ? new CharacterAppearance(dto.characterAppearance.skinColorId, dto.characterAppearance.hairColorId)
+                    : default;
+                return new PlayerLook(dto.slots, displayName, dto.level, appearance);
             }
 
             return new PlayerLook(null, $"플레이어 {rosterIndex + 1}", 1);

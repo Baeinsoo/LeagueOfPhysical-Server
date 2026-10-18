@@ -54,6 +54,11 @@ namespace LOP
                 var look = PlayerLookResolver.Resolve(looks, participant.userId, RosterIndex(roster, participant.userId, i));
                 info.DisplayName = look.DisplayName;
                 info.AccountLevel = look.AccountLevel;
+                info.CharacterAppearance = new CharacterAppearanceInfo
+                {
+                    SkinColorId = look.CharacterAppearance.SkinColorId,
+                    HairColorId = look.CharacterAppearance.HairColorId,
+                };
                 foreach (var slot in look.Slots)
                 {
                     if (slot.Value != null) info.Look.Add(slot.Key, slot.Value);

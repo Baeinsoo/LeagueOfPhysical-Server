@@ -81,6 +81,11 @@ namespace LOP
                 }
                 characterCreationData.DisplayName = look.DisplayName;
                 characterCreationData.AccountLevel = look.AccountLevel;
+                characterCreationData.CharacterAppearance = new CharacterAppearanceInfo
+                {
+                    SkinColorId = look.CharacterAppearance.SkinColorId,
+                    HairColorId = look.CharacterAppearance.HairColorId,
+                };
             }
 
             return new EntityCreationData

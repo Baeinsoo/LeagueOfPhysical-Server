@@ -115,5 +115,30 @@ namespace LOP.Tests
             Assert.AreEqual(5, look.AccountLevel);
             Assert.AreEqual("hat_009", look.SlotOrNull("hat"));
         }
+
+        [Test]
+        public void 캐릭터_외형을_그대로_싣는다()
+        {
+            var looks = Looks(("user-a", new PlayerLookDto
+            {
+                displayName = "Kim", level = 3, slots = null,
+                characterAppearance = new CharacterAppearanceDto { skinColorId = 103, hairColorId = 202 },
+            }));
+
+            var look = PlayerLookResolver.Resolve(looks, "user-a", 0);
+
+            Assert.AreEqual(new CharacterAppearance(103, 202), look.CharacterAppearance);
+        }
+
+        //  0 = 모름 — 클라가 기본값으로 그린다(서버엔 색표가 없다).
+        [Test]
+        public void 조회에_없거나_외형이_비면_0()
+        {
+            var looks = Looks(("user-a", new PlayerLookDto { displayName = "Kim", level = 3, slots = null, characterAppearance = null }));
+
+            Assert.AreEqual(default(CharacterAppearance), PlayerLookResolver.Resolve(looks, "user-a", 0).CharacterAppearance);
+            Assert.AreEqual(default(CharacterAppearance), PlayerLookResolver.Resolve(looks, "user-b", 1).CharacterAppearance);
+            Assert.AreEqual(default(CharacterAppearance), PlayerLookResolver.Resolve(null, "user-a", 0).CharacterAppearance);
+        }
     }
 }

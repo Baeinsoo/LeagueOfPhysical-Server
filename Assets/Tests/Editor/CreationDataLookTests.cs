@@ -134,5 +134,20 @@ namespace LOP.Tests
             Assert.AreEqual("", creationData.CharacterCreationData.DisplayName);
             Assert.AreEqual(0, creationData.CharacterCreationData.AccountLevel);
         }
+
+        [Test]
+        public void 생성_데이터가_캐릭터_외형을_와이어로_옮긴다()
+        {
+            var entity = new GameFramework.World.Entity("e1");
+            entity.Add(new GameFramework.World.Transform());
+            entity.Add(new GameFramework.World.Velocity());
+            entity.Add(new Appearance("visual"));
+            entity.Add(new PlayerLook(null, "Kim", 7, new CharacterAppearance(104, 203)));
+
+            var creationData = new CharacterCreationDataCreator().Create(entity);
+
+            Assert.AreEqual(104, creationData.CharacterCreationData.CharacterAppearance.SkinColorId);
+            Assert.AreEqual(203, creationData.CharacterCreationData.CharacterAppearance.HairColorId);
+        }
     }
 }

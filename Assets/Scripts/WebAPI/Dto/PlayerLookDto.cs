@@ -9,5 +9,6 @@ namespace LOP
         public string displayName;
         public int level;
         public Dictionary<string, string> slots;
+        public CharacterAppearanceDto characterAppearance;
     }
 }

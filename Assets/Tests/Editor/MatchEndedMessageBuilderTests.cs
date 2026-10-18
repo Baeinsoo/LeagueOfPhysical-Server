@@ -54,5 +54,24 @@ namespace LOP.Tests
             UnityEngine.TestTools.LogAssert.ignoreFailingMessages = true;
             Assert.AreEqual(0, MatchEndedMessageBuilder.Build(new[] { P("a", 0) }, "a", null, null).Placements.Count);
         }
+
+        [Test]
+        public void 등수마다_캐릭터_외형을_싣는다()
+        {
+            var looks = new Dictionary<string, PlayerLookDto>
+            {
+                ["a"] = new PlayerLookDto
+                {
+                    displayName = "가나", level = 1,
+                    characterAppearance = new CharacterAppearanceDto { skinColorId = 105, hairColorId = 204 },
+                },
+            };
+            var msg = MatchEndedMessageBuilder.Build(new[] { P("a", 1), P("b", 2) }, "a", looks, new[] { "a", "b" });
+
+            Assert.AreEqual(105, msg.Placements[0].CharacterAppearance.SkinColorId);
+            Assert.AreEqual(204, msg.Placements[0].CharacterAppearance.HairColorId);
+            //  조회에 없는 사람은 0(모름) — 클라가 기본값으로 그린다.
+            Assert.AreEqual(0, msg.Placements[1].CharacterAppearance?.SkinColorId ?? 0);
+        }
     }
 }

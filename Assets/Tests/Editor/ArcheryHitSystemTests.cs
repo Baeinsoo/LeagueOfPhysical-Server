@@ -836,7 +836,7 @@ namespace LOP.Tests
             }
         }
 
-        //  투석기 판 하나: 설정은 Shared 픽스처와 같은 값(소개 80, 160틱마다, 수명 130, 금지물 35%, 대박 28%),
+        //  투석기 판 하나: 설정은 Shared 픽스처와 같은 값(소개 80, 180틱마다, 수명 180, 금지물 35%, 대박 28%),
         //  종류는 데이터 #ArcheryTarget 14~22와 같은 값. platesOnly면 도는 접시만 뜬다.
         static ArcheryConfig CatapultConfig(bool platesOnly = false)
         {
@@ -866,8 +866,8 @@ namespace LOP.Tests
                 shakeFreeSeconds: 0f, shakeRampSeconds: 2.5f, shakeMaxDegrees: 0f,
                 riseHeightMin: 0.5f, riseHeightMax: 1.5f, staggerTicks: 0, restTicks: 0,
                 kinds: kinds, courseKind: ArcheryCourseKind.Catapult,
-                arrowMinSpeedMps: 50f, arrowMaxSpeedMps: 100f,
-                catapult: new ArcheryCatapultSettings(3, 80, 1250, 110, 160, 35, 150, 130, 0.35f, 16f, jackpotChance: 0.28f));
+                arrowMinSpeedMps: 90f, arrowMaxSpeedMps: 180f,
+                catapult: new ArcheryCatapultSettings(3, 80, 1250, 110, 180, 35, 215, 180, 0.35f, 16f, jackpotChance: 0.28f));
         }
 
         //  0번 무리의 짝 A. 발사 틱 = StartTick + 80 + 35.
@@ -882,13 +882,13 @@ namespace LOP.Tests
         //  아무 무리에서나 쏘면 안 되는 것을 하나 찾는다(씨앗 고정이라 늘 같은 무리).
         static (int volley, ArcheryTarget trap) FirstTrap(Fixture f)
         {
-            for (int v = 0; v < 21; v++)
+            for (int v = 0; v < f.Config.Catapult.VolleyCount; v++)
             {
                 //  개수로 찾으면 안 된다 — 대박만 낀 무리도 개수가 같다. 금지물은 늘 제 자리에 선다.
                 var t = f.TargetsOfWave(v);
                 foreach (var x in t) { if (x.SlotIndex == ArcheryCatapultGenerator.TrapSlot) { return (v, x); } }
             }
-            Assert.Fail("21무리에 쏘면 안 되는 것이 하나도 없다 — 씨앗을 바꿔 볼 것");
+            Assert.Fail("한 판 모든 무리에 쏘면 안 되는 것이 하나도 없다 — 씨앗을 바꿔 볼 것");
             return default;
         }
 

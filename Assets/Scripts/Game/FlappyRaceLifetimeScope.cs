@@ -30,6 +30,8 @@ namespace LOP
             // 부스트 패드도 같은 이유로 등록이 필요하다. 이건 특히 양쪽 다 해야 한다 — 한쪽만
             // 등록하면 그쪽만 패드를 밟아 전진 속도가 갈린다.
             builder.Register<FlappyBoostPadField>(Lifetime.Singleton);
+            // 빛 알갱이 무더기도 같은 이유로 양쪽 다 등록해야 한다 — 한쪽만 알면 게이지가 갈린다.
+            builder.Register<FlappyMoteField>(Lifetime.Singleton);
             // 맵이 추격자·수동 대시를 켜는지. 맵 씬의 FlappyMapRules 마커가 맵 로드 시 여기에 값을
             // 넣는다. FlappyDashSystem·FlappyChaserSystem이 이걸 주입받으므로 등록이 없으면
             // 씬 주입이 끊긴다 — 부스트 패드와 같은 이유로 양쪽(클·서) 다 등록해야 한다.
@@ -52,7 +54,7 @@ namespace LOP
                 c.Resolve<GameFramework.Physics.ICollisionQuery>(),
                 c.Resolve<GameFramework.World.IMotionBridge>(),
                 LayerMask.GetMask("Default", FlappyHologram.LayerName), c.Resolve<FlappyPendulumField>(), c.Resolve<FlappyShutterField>(),
-                c.Resolve<FlappyLiftField>(), c.Resolve<FlappyRockfallField>()), Lifetime.Singleton);
+                c.Resolve<FlappyLiftField>(), c.Resolve<FlappyRockfallField>(), c.Resolve<FlappyMoteField>()), Lifetime.Singleton);
             builder.Register<ICharacterCreator, FlappyBirdCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, FlappyRaceRuleSystem>(Lifetime.Singleton);
 

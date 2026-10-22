@@ -836,29 +836,44 @@ namespace LOP.Tests
             }
         }
 
-        //  투석기 판 하나: 설정은 Shared 픽스처와 같은 값(소개 80, 180틱마다, 수명 180, 금지물 35%, 대박 28%),
-        //  종류는 데이터 #ArcheryTarget 14~22와 같은 값. platesOnly면 도는 접시만 뜬다.
-        static ArcheryConfig CatapultConfig(bool platesOnly = false)
+        //  투석기 판 하나: 설정은 Shared 픽스처와 같은 값(소개 80, 180틱마다, 수명 180, 금지물 60%, 대박 28%),
+        //  종류는 데이터 #ArcheryTarget 14~22와 같은 값(3차). platesOnly면 도는 접시만, pinataAlways면 무리마다 피냐타가 낀다.
+        static ArcheryConfig CatapultConfig(bool platesOnly = false, bool pinataAlways = false)
         {
             ArcheryTargetKind K(int id, float r, int p, int w, bool trap, bool jack, float d0, float d1, float v0, float v1, int stun,
                                 ArcheryCatapultMotion m)
                 => new ArcheryTargetKind(r, p, w, trap, ArcheryTargetShape.Sphere, new[] { new ArcheryRingBand(1f, p) },
                                          id: id, distanceMinM: d0, distanceMaxM: d1, driftMinMps: v0, driftMaxMps: v1,
                                          stunTicks: stun, isJackpot: jack, motion: m);
-            var plate = K(16, 0.85f, 2, 25, false, false, 36f, 44f, 5.5f, 7f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, spinHz: 1.1f));
+            var waterBalloon = K(14, 1.0f, 1, 40, false, false, 30f, 36f, 2f, 3f, 0,
+                                 new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, bobAmplitudeM: 0.6f, bobHz: 0.48f, lateralHalfM: 12f));
+            var plate = K(16, 0.85f, 2, 25, false, false, 36f, 44f, 5.5f, 7f, 0,
+                          new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, spinHz: 1.1f, spawnSideMinM: 6f, spawnSideMaxM: 14f));
+            var pinata = K(19, 0.95f, 5, 1, false, true, 44f, 52f, 0f, 0f, 0,
+                           new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, spawnSideMinM: 3f, spawnSideMaxM: 8f, lifeTicks: 100,
+                                                     swingAmplitudeM: 3f, swingDipM: 1.6f));
             var forbidden = new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, lateralHalfM: 10f);
-            var kinds = platesOnly ? new[] { plate } : new[]
+            ArcheryTargetKind[] kinds;
+            if (platesOnly) { kinds = new[] { plate }; }
+            else if (pinataAlways) { kinds = new[] { waterBalloon, pinata }; }
+            else
             {
-                K(14, 1.0f, 1, 40, false, false, 30f, 36f, 2f, 3f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, bobAmplitudeM: 0.6f, bobHz: 0.48f)),
-                K(15, 0.75f, 2, 25, false, false, 38f, 46f, 2.5f, 3.5f, 0, new ArcheryCatapultMotion(heightMinM: 2.5f, heightMaxM: 5f, arcMinM: 3f, arcMaxM: 4.5f)),
-                plate,
-                K(17, 0.45f, 3, 20, false, false, 46f, 55f, 0.5f, 1.5f, 0, new ArcheryCatapultMotion(heightMinM: 1f, heightMaxM: 3f, climbMinMps: 3.5f, climbMaxMps: 5f)),
-                K(18, 0.8f, 5, 1, false, true, 46f, 54f, 1.6f, 2.2f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, bobAmplitudeM: 0.3f, bobHz: 0.32f, lateralHalfM: 8f)),
-                K(19, 0.95f, 5, 1, false, true, 44f, 52f, 1.8f, 2.4f, 0, new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, bobAmplitudeM: 0.3f, bobHz: 0.32f, lateralHalfM: 8f)),
-                K(20, 0.75f, -3, 1, true, false, 32f, 48f, 2.5f, 3.5f, 75, forbidden),
-                K(21, 0.8f, -3, 1, true, false, 32f, 48f, 2.5f, 3.5f, 75, forbidden),
-                K(22, 0.8f, -3, 1, true, false, 32f, 48f, 2f, 3f, 75, forbidden),
-            };
+                kinds = new[]
+                {
+                    waterBalloon,
+                    K(15, 0.75f, 2, 25, false, false, 38f, 46f, 2.5f, 3.5f, 0,
+                      new ArcheryCatapultMotion(heightMinM: 2.5f, heightMaxM: 5f, arcMinM: 3f, arcMaxM: 4.5f, lateralHalfM: 12f)),
+                    plate,
+                    K(17, 0.45f, 3, 20, false, false, 46f, 55f, 0.5f, 1.5f, 0,
+                      new ArcheryCatapultMotion(heightMinM: 1f, heightMaxM: 3f, climbMinMps: 3.5f, climbMaxMps: 5f, lateralHalfM: 12f)),
+                    K(18, 0.8f, 5, 1, false, true, 46f, 54f, 5.0f, 5.8f, 0,
+                      new ArcheryCatapultMotion(heightMinM: 4f, heightMaxM: 10f, spawnSideMinM: 4f, spawnSideMaxM: 8f, lifeTicks: 100)),
+                    pinata,
+                    K(20, 0.75f, -4, 1, true, false, 32f, 48f, 2.5f, 3.5f, 100, forbidden),
+                    K(21, 0.8f, -4, 1, true, false, 32f, 48f, 2.5f, 3.5f, 100, forbidden),
+                    K(22, 0.8f, -4, 1, true, false, 32f, 48f, 2f, 3f, 100, forbidden),
+                };
+            }
             return new ArcheryConfig(
                 wavePeriodTicks: 0, minTargets: 0, maxTargets: 0,
                 spawnRadius: 16f, spawnMinY: 3.5f, spawnMaxY: 13f, minSeparation: 0f,
@@ -867,7 +882,8 @@ namespace LOP.Tests
                 riseHeightMin: 0.5f, riseHeightMax: 1.5f, staggerTicks: 0, restTicks: 0,
                 kinds: kinds, courseKind: ArcheryCourseKind.Catapult,
                 arrowMinSpeedMps: 90f, arrowMaxSpeedMps: 180f,
-                catapult: new ArcheryCatapultSettings(3, 80, 1250, 110, 180, 35, 215, 180, 0.35f, 16f, jackpotChance: 0.28f));
+                catapult: new ArcheryCatapultSettings(3, 80, 1250, 110, 180, 35, 215, 180, 0.6f, 16f,
+                                                      jackpotChance: pinataAlways ? 1f : 0.28f));
         }
 
         //  0번 무리의 짝 A. 발사 틱 = StartTick + 80 + 35.
@@ -895,9 +911,16 @@ namespace LOP.Tests
         [Test]
         public void 투석기_표적은_먼저_맞힌_사람이_먹고_사라진다()
         {
-            var (f, scene, target, hit) = CatapultWithPairA("user-a", "user-b");
+            var (f, scene, target, _) = CatapultWithPairA("user-a", "user-b");
             using (scene)
             {
+                //  짝(거울 쪽)은 가운데로 마주 오므로 20틱 뒤엔 A와 겹칠 만큼 가까워진다 — 그러면 늦은 화살 b가
+                //  짝을 맞혀 이 시험이 "같은 표적을 둘이 노렸다"를 못 본다. 둘이 아직 떨어진 출발 직후에 쏜다.
+                long hit = target.SpawnTick + 1;
+                var twin = f.TargetsOfWave(0)[1];
+                Assert.Greater(Vector3.Distance(ArcheryTargetMotion.PositionAt(target, hit - 0.5, TickInterval),
+                                                ArcheryTargetMotion.PositionAt(twin, hit - 0.5, TickInterval)),
+                               target.Radius + twin.Radius, "짝이 겹쳐 있으면 b가 짝을 맞힌다");
                 f.Archer("a", "user-a");
                 f.Archer("b", "user-b");
                 f.World.IngestRemoteShot(ShotThroughMoving("b", hit - 1, target, hit, 2.0f));   // 늦게 닿는다(멀리서)
@@ -946,11 +969,11 @@ namespace LOP.Tests
                 f.World.IngestRemoteShot(ShotThroughMoving("a", hit - 1, trap, hit, 1.0f));
                 f.System.Tick(hit, TickInterval);
 
-                Assert.AreEqual(-3, f.ScoreOf("a"));
-                Assert.AreEqual(hit + 75, archer.Get<ArcheryAim>().StunnedUntilTick);
+                Assert.AreEqual(-4, f.ScoreOf("a"));
+                Assert.AreEqual(hit + 100, archer.Get<ArcheryAim>().StunnedUntilTick);
                 ArcheryTargetHitEvent sent = null;
                 foreach (var e in f.World.EventBuffer.Snapshot) { if (e is ArcheryTargetHitEvent h) { sent = h; } }
-                Assert.AreEqual(hit + 75, sent.stunUntilTick);
+                Assert.AreEqual(hit + 100, sent.stunUntilTick);
                 Assert.AreEqual(volley, sent.waveIndex);
             }
         }
@@ -1018,6 +1041,55 @@ namespace LOP.Tests
                 f.World.IngestRemoteShot(ShotThroughMoving("a", face - 1, plate, face, 1.0f, Vector3.up * 0.5f));
                 f.System.Tick(face, TickInterval);
                 Assert.AreEqual(2, f.ScoreOf("a"));
+            }
+        }
+
+        //  0번 무리의 피냐타(대박 자리). 무리마다 피냐타가 끼는 설정이라 늘 있다.
+        static ArcheryTarget PinataOf(Fixture f)
+        {
+            foreach (var x in f.TargetsOfWave(0)) { if (x.SlotIndex == ArcheryCatapultGenerator.JackpotSlot) { return x; } }
+            Assert.Fail("0번 무리에 피냐타가 없다 — jackpotChance 1이 안 먹었다");
+            return default;
+        }
+
+        [Test]
+        public void 피냐타는_그네의_가운데에서_맞힌다()
+        {
+            var scene = new RangeScene(1, 12f);
+            using (scene)
+            {
+                var f = Build(StartTick, CatapultConfig(pinataAlways: true), new[] { "user-a" }, () => scene.Layout);
+                f.Archer("a", "user-a");
+                var pinata = PinataOf(f);
+                Assert.AreEqual(3f, pinata.Swing.magnitude, 1e-4f);
+                long mid = pinata.SpawnTick + 50;   // 2초 수명의 가운데 — 가장 빠르고 가장 낮다
+                f.System.Tick(pinata.SpawnTick, TickInterval);
+                f.World.IngestRemoteShot(ShotThroughMoving("a", mid - 1, pinata, mid, 1.0f));
+                f.System.Tick(mid, TickInterval);
+                Assert.AreEqual(5, f.ScoreOf("a"));
+                Assert.IsTrue(f.WaveState.IsConsumed(pinata.SlotIndex));
+            }
+        }
+
+        [Test]
+        public void 피냐타의_출발점을_쏘면_그네가_비켜_가서_빗나간다()
+        {
+            //  판정이 그네를 모르면(출발점에 서 있다고 보면) 이 화살이 맞는다 — 판정이 움직인 자리로 재는지 지킨다.
+            //  클·서가 같은 자리를 보는지는 이 시험이 아니라 제공자 쌍둥이 대조와 실제 판의 요약 비교가 지킨다.
+            var scene = new RangeScene(1, 12f);
+            using (scene)
+            {
+                var f = Build(StartTick, CatapultConfig(pinataAlways: true), new[] { "user-a" }, () => scene.Layout);
+                f.Archer("a", "user-a");
+                var pinata = PinataOf(f);
+                long mid = pinata.SpawnTick + 50;
+                Vector3 toOrigin = pinata.Origin - ArcheryTargetMotion.PositionAt(pinata, mid - 0.5, TickInterval);
+                Assert.Greater(toOrigin.magnitude, 2f, "그네가 3 m쯤 비켜 있어야 이 시험이 뜻이 있다");
+                f.System.Tick(pinata.SpawnTick, TickInterval);
+                f.World.IngestRemoteShot(ShotThroughMoving("a", mid - 1, pinata, mid, 1.0f, toOrigin));
+                f.System.Tick(mid, TickInterval);
+                Assert.AreEqual(0, f.ScoreOf("a"));
+                Assert.IsFalse(f.WaveState.IsConsumed(pinata.SlotIndex));
             }
         }
     }

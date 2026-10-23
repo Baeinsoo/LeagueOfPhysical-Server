@@ -17,14 +17,16 @@ namespace LOP
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
         private readonly MountedArcheryConfig config;
+        private readonly MountedArcheryMatchState state;
         private readonly List<string> userIds = new List<string>();
 
         public MountedArcheryRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
-                                        MountedArcheryConfig config)
+                                        MountedArcheryConfig config, MountedArcheryMatchState state)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.config = config;
+            this.state = state;
         }
 
         /// <summary>원점을 바라보는 yaw(도). 0도가 +Z, 시계 방향이 +.</summary>
@@ -47,17 +49,23 @@ namespace LOP
                 userIds.Add(playerList[i]);
                 var position = slots.Count > 0 ? slots[i % slots.Count] : RingSlot(i, playerList.Length);
 
+                var look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i);
+                string entityId = entitySpawner.GenerateEntityId();
                 entitySpawner.Spawn(new CharacterCreationData
                 {
                     userId = playerList[i],
-                    entityId = entitySpawner.GenerateEntityId(),
+                    entityId = entityId,
                     visualId = BodyVisualId,
                     characterCode = "",
                     position = position,
                     rotation = new Vector3(0f, YawFacingCenter(position), 0f),
                     velocity = Vector3.zero,
-                    look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i),
+                    maxHP = config.MaxHp,
+                    currentHP = config.MaxHp,
+                    look = look,
                 });
+                //  킬 피드는 몸이 디스폰된 뒤에도 이름을 보여야 해서 판 상태에 이름을 따로 적어 둔다.
+                state.Add(entityId, playerList[i], look.DisplayName);
             }
         }
 

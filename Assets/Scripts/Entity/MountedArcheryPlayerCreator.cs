@@ -5,7 +5,7 @@ namespace LOP
 {
     /// <summary>
     /// MountedArchery의 기수 몸(서버). 말 위에서 달리며 쏘므로 Mount가 달리고,
-    /// 점수·사대·화살통은 아직 없다(1차 조각은 맞춤 판정이 없다).
+    /// 화살에 맞으면 깎일 체력이 있다. 점수·사대·화살통은 없다.
     /// </summary>
     public class MountedArcheryPlayerCreator : ICharacterCreator
     {
@@ -30,6 +30,7 @@ namespace LOP
             PlayerLookAttach.Attach(worldEntity, creationData.look);
             worldEntity.Add(new ArcheryAim());
             worldEntity.Add(new Mount());
+            worldEntity.Add(new GameFramework.World.Health(creationData.maxHP) { Current = creationData.currentHP });
 
             // 이 몸이 누구 것인지. 서버 공용 시스템들이 이걸로 엔티티→유저→세션을 찾는다.
             if (string.IsNullOrEmpty(creationData.userId) == false)

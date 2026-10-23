@@ -106,6 +106,7 @@ namespace LOP
                 Drawing = command.Drawing,
                 Release = command.Release,
                 DrawRatio = command.DrawRatio,
+                ViewTick = command.ViewTick,
             };
         }
     }

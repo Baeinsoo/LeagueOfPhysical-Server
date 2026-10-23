@@ -17,7 +17,7 @@ namespace LOP.Tests
         public void 판_길이는_150초()
         {
             var cfg = new MountedArcheryConfig(150f, 10f, 30f, 2.5f,
-                new MountSettings(12f, 20f, 25f, 180f, 60f, 90f, 0.5f, 0.6f));
+                new MountSettings(12f, 20f, 25f, 180f, 60f, 90f, 0.5f, 0.6f), 100, 34, 0.5f);
             Assert.AreEqual(7500L, cfg.MatchDurationTicks(0.02f));
         }
     }

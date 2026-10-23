@@ -4,10 +4,10 @@ using UnityEngine;
 namespace LOP
 {
     /// <summary>
-    /// MountedArchery 룰(서버). 1차 조각은 맞춤 판정이 없어 판은 시간 상한(150초)으로만 끝나고,
-    /// 등수는 무작위다. 참가자는 가운데를 보고 선다.
+    /// MountedArchery 룰(서버). 산 사람이 한 명 이하가 되고 여운이 지나면 끝나며(시간 상한 150초),
+    /// 등수는 탈락 순서의 역순이다. 참가자는 가운데를 보고 선다.
     /// </summary>
-    public class MountedArcheryRuleSystem : IGameRuleSystem
+    public class MountedArcheryRuleSystem : IGameRuleSystem, ISettledResults
     {
         // 맵에 SpawnPoint가 없을 때만 쓰는 폴백 — 반지름 30 m 원 위에 등간격.
         private const float FallbackRingRadius = 30f;
@@ -77,24 +77,29 @@ namespace LOP
 
         public void Deinitialize() => userIds.Clear();
 
-        public bool IsMatchOver => false;
+        public bool IsMatchOver => DodgeRuleSystem.MatchOver(
+            state.Players.Count, state.AliveCount, state.LastEliminationTick, state.LastTick);
 
         public long MatchDurationTicks => config.MatchDurationTicks(0.02f);
 
+        /// <summary>탈락했으면 결과가 정해졌다 — 그 뒤 관전하다 나가도 탈락 순서 그대로.</summary>
+        public bool IsResultSettled(string userId)
+        {
+            foreach (var player in state.Players.Values)
+            {
+                if (player.UserId == userId) return player.Alive == false;
+            }
+            return false;
+        }
+
         public MatchOutcome ResolveOutcome()
         {
-            var shuffled = new List<string>(userIds);
-            for (int i = shuffled.Count - 1; i > 0; i--)
+            var alive = new List<string>();
+            foreach (var player in state.Players.Values)
             {
-                int j = Random.Range(0, i + 1);
-                (shuffled[i], shuffled[j]) = (shuffled[j], shuffled[i]);
+                if (player.Alive) alive.Add(player.UserId);
             }
-            var outcome = new MatchOutcome();
-            for (int i = 0; i < shuffled.Count; i++)
-            {
-                outcome.placements.Add(new MatchPlacement { userId = shuffled[i], placement = i + 1 });
-            }
-            return outcome;
+            return DodgePlacements.Resolve(alive, state.Eliminations);
         }
     }
 }

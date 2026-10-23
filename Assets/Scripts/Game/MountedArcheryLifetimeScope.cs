@@ -47,6 +47,7 @@ namespace LOP
                 c.Resolve<EntitySpawner>().Despawn,
                 TerrainAlong,
                 TickInterval), Lifetime.Singleton);
+            builder.Register<MountedArcheryStateBroadcastSystem>(Lifetime.Singleton);
 
             //  순서가 뜻이다: 이번 틱 자리를 먼저 적어야 되감기 0(지금 자리)도 기록에서 찾는다 → 판정.
             //  시스템이 러너를 직접 잡으면 러너→룰→시스템→러너 순환이 생겨 빌드 콜백에서 붙인다(DodgeLifetimeScope와 같다).
@@ -54,6 +55,7 @@ namespace LOP
             {
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MotionHistorySystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MountedArcheryHitSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MountedArcheryStateBroadcastSystem>());
             });
         }
 

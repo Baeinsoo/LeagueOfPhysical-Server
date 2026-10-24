@@ -71,7 +71,8 @@ namespace LOP
                     //  되감기 상한을 실측으로 정하려고 남긴다(슬라이스 4에서 수치를 정하면 지운다). 상한에 잘리기 전 값(raw)도 같이.
                     //  쏜 틱을 놓친 발은 되감기를 모르는 것이라 남기지 않는다 — 0으로 남기면 지연 0인 표본처럼 섞인다.
                     if (shot.FireTick == tick) Debug.Log($"[LagComp] fire shooter={shot.ShooterId} fireTick={shot.FireTick} viewTick={lag.viewTick} " +
-                              $"raw={(lag.viewTick > 0 ? shot.FireTick - lag.viewTick : 0)} rewind={lag.rewind} max={maxRewind}");
+                              $"raw={(lag.viewTick > 0 ? shot.FireTick - lag.viewTick : 0)} rewind={lag.rewind} max={maxRewind}" +
+                              ViewedPositions(shot.ShooterId, tick - lag.rewind));
                 }
                 int rewind = lag.rewind;
                 if (spent.Contains(key))
@@ -121,6 +122,21 @@ namespace LOP
                 return (0, viewTick);
             }
             return (MountedArcheryLagCompensation.RewindTicks(shot.FireTick, viewTick, maxRewind), viewTick);
+        }
+
+        // 측정용: 되감은 틱에서 남의 몸이 있던 자리. 쏜 사람 화면에 그려진 자리와 대조한다.
+        private string ViewedPositions(string shooterId, long rewoundTick)
+        {
+            var text = new System.Text.StringBuilder();
+            foreach (var id in candidates)
+            {
+                if (id != shooterId && world.TryGetSavedMotion(rewoundTick, id, out var saved))
+                {
+                    var p = saved.Position.ToUnity();
+                    text.Append($" at{rewoundTick}:{id}=({p.x:F2},{p.z:F2})");
+                }
+            }
+            return text.ToString();
         }
 
         // 지금 살아 있는 말 탄 몸. 순서를 고정해야 같은 거리의 두 몸 중 누가 맞나가 딕셔너리 순서를 안 탄다.

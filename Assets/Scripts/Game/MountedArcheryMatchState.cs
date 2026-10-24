@@ -25,6 +25,9 @@ namespace LOP
         /// <summary>탈락 순서대로. 순위는 이 역순이고, 같은 틱은 공동이다.</summary>
         public readonly List<(string userId, long tick)> Eliminations = new List<(string, long)>();
 
+        /// <summary>서버가 공개한 원 단계(순서대로). 한 번 공개하면 바뀌지 않는다.</summary>
+        public readonly List<ZoneStage> ZoneStages = new List<ZoneStage>();
+
         public long LastEliminationTick { get; private set; } = -1;
 
         /// <summary>판정 시스템이 마지막으로 돈 틱 — 룰이 "마지막 탈락 뒤 얼마나 지났나"를 잰다.</summary>
@@ -50,6 +53,12 @@ namespace LOP
         public void Add(string entityId, string userId, string displayName)
         {
             players[entityId] = new Player { UserId = userId, DisplayName = displayName };
+            MarkChanged();
+        }
+
+        public void AddZoneStage(ZoneStage stage)
+        {
+            ZoneStages.Add(stage);
             MarkChanged();
         }
 

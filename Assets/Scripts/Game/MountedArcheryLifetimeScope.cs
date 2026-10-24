@@ -47,6 +47,15 @@ namespace LOP
                 c.Resolve<EntitySpawner>().Despawn,
                 TerrainAlong,
                 TickInterval), Lifetime.Singleton);
+            builder.Register(c => new MountedArcheryZoneSystem(
+                c.Resolve<MountedArcheryMatchState>(),
+                c.Resolve<MountedArcheryConfig>(),
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<GameFramework.World.HealthSystem>(),
+                c.Resolve<GameFramework.World.IWorld>(),
+                new System.Random(unchecked((int)c.Resolve<IMatchSeed>().Value)),
+                c.Resolve<EntitySpawner>().Despawn,
+                TickInterval), Lifetime.Singleton);
             builder.Register<MountedArcheryStateBroadcastSystem>(Lifetime.Singleton);
 
             //  순서가 뜻이다: 이번 틱 자리를 먼저 적어야 되감기 0(지금 자리)도 기록에서 찾는다 → 판정.
@@ -55,6 +64,7 @@ namespace LOP
             {
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MotionHistorySystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MountedArcheryHitSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MountedArcheryZoneSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MountedArcheryStateBroadcastSystem>());
             });
         }

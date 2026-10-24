@@ -68,6 +68,10 @@ namespace LOP
                     //  쏜 틱을 놓친 화살(이 시스템이 늦게 붙은 경우 등)은 쏜 사람 화면을 모르니 되감지 않는다.
                     lag = shot.FireTick == tick ? RewindFor(shot, maxRewind) : (0, 0L);
                     rewinds[key] = lag;
+                    //  되감기 상한을 실측으로 정하려고 남긴다(슬라이스 4). 상한에 잘리기 전 값(raw)도 같이 — 잘리는지가 궁금한 것이다.
+                    //  한 발에 한 줄이라 릴리스 빌드에서도 남긴다.
+                    Debug.Log($"[LagComp] fire shooter={shot.ShooterId} fireTick={shot.FireTick} viewTick={lag.viewTick} " +
+                              $"raw={(lag.viewTick > 0 ? shot.FireTick - lag.viewTick : 0)} rewind={lag.rewind} max={maxRewind}");
                 }
                 int rewind = lag.rewind;
                 if (spent.Contains(key))
@@ -92,11 +96,8 @@ namespace LOP
                 {
                     hits.Add((target, shot.ShooterId));
                     spent.Add(key);
-                    if (Debug.isDebugBuild)
-                    {
-                        Debug.Log($"[LagComp] shooter={shot.ShooterId} target={target} fireTick={shot.FireTick} " +
-                                  $"viewTick={lag.viewTick} rewind={rewind}");
-                    }
+                    Debug.Log($"[LagComp] hit shooter={shot.ShooterId} target={target} fireTick={shot.FireTick} " +
+                              $"viewTick={lag.viewTick} rewind={rewind}");
                 }
                 else if (obstacle.HasValue)
                 {

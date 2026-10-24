@@ -62,6 +62,23 @@ namespace LOP
                     DisplayName = kv.Value.DisplayName ?? "",
                 });
             }
+            foreach (var s in state.ZoneStages)
+            {
+                message.ZoneStages.Add(new MountedZoneStageWire
+                {
+                    Index = s.index,
+                    RevealTick = s.revealTick,
+                    ShrinkStartTick = s.shrinkStartTick,
+                    ShrinkEndTick = s.shrinkEndTick,
+                    FromX = s.fromCenter.x,
+                    FromZ = s.fromCenter.y,
+                    FromRadius = s.fromRadius,
+                    ToX = s.toCenter.x,
+                    ToZ = s.toCenter.y,
+                    ToRadius = s.toRadius,
+                    DamagePerSecond = s.damagePerSecond,
+                });
+            }
             return message;
         }
     }

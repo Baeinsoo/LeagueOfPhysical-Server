@@ -368,7 +368,7 @@ namespace LOP.Tests
         public void 자기_화살은_자기를_안_맞힌다()
         {
             var fx = new Fx();
-            //  화살은 기수 구(높이 2.4, 반지름 0.62) 안(눈높이 2.5)에서 출발한다 — 자기를 빼지 않으면 바로 맞는다.
+            //  화살은 눈높이 2.5에서 앞으로 나가 자기 말 머리 구(높이 2.32, 반지름 0.21)를 스친다 — 자기를 빼지 않으면 바로 맞는다.
             var a = fx.Rider("A", Vector3.zero);
             fx.Rider("B", new Vector3(50f, 0f, 0f));
 

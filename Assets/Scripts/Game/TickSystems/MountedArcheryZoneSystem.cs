@@ -83,7 +83,7 @@ namespace LOP
 
         private void DamageOutside(long tick, float deltaTime)
         {
-            float dps = MountedArcheryZone.DamagePerSecondAt(state.ZoneStages, tick);
+            float dps = MountedArcheryZone.DamagePerSecondAt(state.ZoneStages, tick, config.ZoneOvertimeDpsGrowth, tickInterval);
             if (dps <= 0f)
             {
                 return;

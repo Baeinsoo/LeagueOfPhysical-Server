@@ -10,6 +10,13 @@ namespace LOP
     {
         public static PlayerLook Resolve(IReadOnlyDictionary<string, PlayerLookDto> looks, string userId, int rosterIndex)
         {
+            //  봇은 백엔드 룩 조회에 없다. 기본 외형에 "봇 N" 이름표를 단다.
+            if (MountedArcheryBots.IsBot(userId))
+            {
+                int n = int.TryParse(userId.Substring(MountedArcheryBots.IdPrefix.Length), out var parsed) ? parsed : rosterIndex + 1;
+                return new PlayerLook(null, MountedArcheryBots.DisplayNameFor(n), 1);
+            }
+
             //  dto 자체가 null일 수 있다(백엔드가 유저 키는 보냈는데 값이 null인 경우) — 그런 자리는
             //  "조회 안 됨"과 똑같이 기본값으로 가야 한다. 아니면 dto.displayName에서 예외가 난다.
             if (looks != null && userId != null && looks.TryGetValue(userId, out var dto) && dto != null)

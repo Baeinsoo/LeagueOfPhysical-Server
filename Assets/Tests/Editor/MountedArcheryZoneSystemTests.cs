@@ -18,7 +18,7 @@ namespace LOP.Tests
                 new MountedArcheryZoneStageConfig(10f, 23f, 60f, 4f),
                 new MountedArcheryZoneStageConfig(10f, 23f, 30f, 7f),
             },
-            4f, 90f, 0.6f, 0.5f, 15f);
+            4f, 90f, 0.6f, 0.5f, 15f, 2.5f, 0.2f, 0.4f, 60f);
 
         sealed class Fx
         {
@@ -151,7 +151,7 @@ namespace LOP.Tests
                     new MountedArcheryZoneStageConfig(10f, 23f, 50f, 4f),
                     new MountedArcheryZoneStageConfig(10f, 23f, 0f, 7f),
                 },
-                4f, 90f, 0.6f, 0.5f, 15f);
+                4f, 90f, 0.6f, 0.5f, 15f, 2.5f, 0.2f, 0.4f, 60f);
             var registry = new EntityRegistry();
             var state = new MountedArcheryMatchState();
             var zone = new MountedArcheryZoneSystem(state, cfg, registry, new HealthSystem(),

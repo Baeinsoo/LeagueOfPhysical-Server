@@ -34,6 +34,7 @@ namespace LOP
 
             builder.Register<ICharacterCreator, MountedArcheryPlayerCreator>(Lifetime.Singleton);
             builder.Register<MountedArcheryMatchState>(Lifetime.Singleton);
+            builder.RegisterInstance<System.Func<int>>(MountedArcheryTestBots.ReadFillTo);
             builder.Register<IGameRuleSystem, MountedArcheryRuleSystem>(Lifetime.Singleton);
 
             builder.Register(c => new MotionHistorySystem(c.Resolve<GameFramework.World.IWorld>()), Lifetime.Singleton);
@@ -57,11 +58,22 @@ namespace LOP
                 c.Resolve<EntitySpawner>().Despawn,
                 TickInterval), Lifetime.Singleton);
             builder.Register<MountedArcheryStateBroadcastSystem>(Lifetime.Singleton);
+            builder.Register(c => new MountedArcheryBotSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<MountedArcheryWorld>(),
+                c.Resolve<MountedArcheryMatchState>(),
+                c.Resolve<MountedArcheryConfig>(),
+                c.Resolve<InputBufferSystem>(),
+                c.Resolve<IMatchSeed>(),
+                (from, to) => TerrainAlong(from, to).HasValue == false,
+                TickInterval), Lifetime.Singleton);
 
             //  순서가 뜻이다: 이번 틱 자리를 먼저 적어야 되감기 0(지금 자리)도 기록에서 찾는다 → 판정.
             //  시스템이 러너를 직접 잡으면 러너→룰→시스템→러너 순환이 생겨 빌드 콜백에서 붙인다(DodgeLifetimeScope와 같다).
             builder.RegisterBuildCallback(container =>
             {
+                //  봇 입력은 사람 입력이 처리되기 전(Begin)에 이번 틱 번호로 넣어야 같은 틱에 쓰인다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.Begin>(container.Resolve<MountedArcheryBotSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MotionHistorySystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MountedArcheryHitSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<MountedArcheryZoneSystem>());

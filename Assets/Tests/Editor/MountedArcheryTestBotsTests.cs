@@ -39,5 +39,12 @@ namespace LOP.Tests
             Assert.AreEqual(0, MountedArcheryTestBots.Resolve("8", 0));
             Assert.AreEqual(0, MountedArcheryTestBots.Resolve("8", -2));
         }
+    
+        [Test]
+        public void 에디터_저장_키는_프로젝트마다_다르다()
+        {
+            Assert.AreNotEqual(MountedArcheryTestBots.ScopedKey("C:/a/Assets"), MountedArcheryTestBots.ScopedKey("C:/b/Assets"));
+            Assert.AreEqual(MountedArcheryTestBots.ScopedKey("C:/a/Assets"), MountedArcheryTestBots.ScopedKey("C:/a/Assets"));
+        }
     }
 }

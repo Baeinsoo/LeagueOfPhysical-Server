@@ -38,6 +38,31 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 단독_실행에서도_봇_판은_연습_결과를_만든다()
+        {
+            int calls = 0;
+            var outcome = Outcome(("u1", 1), ("bot-1", 2));
+
+            var confirmed = MatchResultConfirmer.ConfirmAsync(outcome, o => { calls++; return UniTask.FromResult(Ok(o)); }, standalone: true).GetAwaiter().GetResult();
+
+            Assert.AreEqual(0, calls);
+            Assert.IsNotNull(confirmed);
+            Assert.AreEqual(2, confirmed.Length);
+        }
+
+        [Test]
+        public void 단독_실행에서_봇이_없으면_지금처럼_빈_결과()
+        {
+            int calls = 0;
+            var outcome = Outcome(("u1", 1), ("u2", 2));
+
+            var confirmed = MatchResultConfirmer.ConfirmAsync(outcome, o => { calls++; return UniTask.FromResult(Ok(o)); }, standalone: true).GetAwaiter().GetResult();
+
+            Assert.AreEqual(0, calls);
+            Assert.IsNull(confirmed);
+        }
+
+        [Test]
         public void 봇이_없으면_지금처럼_보고한다()
         {
             int calls = 0;

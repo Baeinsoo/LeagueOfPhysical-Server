@@ -9,7 +9,14 @@ namespace LOP
     public static class MountedArcheryTestBots
     {
         public const string EnvName = "MOUNTED_ARCHERY_TEST_BOTS";
-        public const string EditorPrefsKey = "LOP.Debug.MountedArcheryTestBots";
+        private const string EditorPrefsKeyBase = "LOP.Debug.MountedArcheryTestBots";
+
+        /// <summary>EditorPrefs는 컴퓨터 전체가 공유한다. 프로젝트 경로를 키에 넣어 다른 체크아웃으로 새지 않게 한다.</summary>
+        public static string ScopedKey(string projectPath) => $"{EditorPrefsKeyBase}:{projectPath}";
+
+#if UNITY_EDITOR
+        public static string EditorPrefsKey => ScopedKey(UnityEngine.Application.dataPath);
+#endif
 
         /// <summary>에디터 메뉴 값이 있으면 그것이 먼저(0 이하는 꺼짐). 없으면 env를 정수로, 못 읽으면 꺼짐.</summary>
         public static int Resolve(string envValue, int? editorValue)

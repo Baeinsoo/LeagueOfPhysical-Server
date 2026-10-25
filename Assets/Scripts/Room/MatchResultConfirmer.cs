@@ -11,12 +11,15 @@ namespace LOP
     public static class MatchResultConfirmer
     {
         public static async UniTask<ConfirmedParticipantDto[]> ConfirmAsync(
-            MatchOutcome outcome, Func<MatchOutcome, UniTask<ReportMatchResultResponse>> report)
+            MatchOutcome outcome, Func<MatchOutcome, UniTask<ReportMatchResultResponse>> report, bool standalone = false)
         {
             if (MatchEndedMessageBuilder.IsPractice(outcome))
             {
                 return MatchEndedMessageBuilder.PracticeParticipants(outcome);
             }
+
+            //  단독 실행은 백엔드가 없다 — 사람만 있는 판은 보고할 곳이 없으니 빈 결과로 둔다.
+            if (standalone) return null;
 
             var response = await report(outcome);
 

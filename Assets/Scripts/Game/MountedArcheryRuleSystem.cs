@@ -50,6 +50,11 @@ namespace LOP
             var playerList = roomDataStore.match.playerList;
             int botCount = MountedArcheryBots.CountToAdd(fillTo(), playerList.Length);
             int total = playerList.Length + botCount;
+            int fill = fillTo();
+            if (fill > 0)
+            {
+                Debug.Log($"[TestBots] fillTo={fill} humans={playerList.Length} bots={botCount}");
+            }
             for (int i = 0; i < total; i++)
             {
                 //  봇은 사람 다음 번호의 자리를 쓴다.

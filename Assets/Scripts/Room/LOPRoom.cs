@@ -226,28 +226,26 @@ namespace LOP
             //  정리는 2초마다 도니, 닫은 뒤에 보고하면 파드가 사라져 결과가 영영 안 나간다.
             //  실패해도 아래 닫기·통보·배수·종료는 그대로 간다 — 클라를 끝난 방에 가둬 두는 쪽이
             //  더 나쁘다. 그 판은 점수 무변화로 남는다.
-            if (!EnvironmentSettings.active.Standalone)
+            //  봇 판의 연습 결과는 단독 실행(에디터 local)에서도 만든다 — 보고만 단독이면 건너뛴다.
+            try
             {
-                try
+                //  등수는 러너가 LOPRunner.EndMatch()에서 이미 채워 뒀다.
+                var outcome = roomDataStore.outcome;
+                if (outcome == null)
                 {
-                    //  등수는 러너가 LOPRunner.EndMatch()에서 이미 채워 뒀다.
-                    var outcome = roomDataStore.outcome;
-                    if (outcome == null)
-                    {
-                        //  러너를 거치지 않고 방이 닫히는 경로(초기화 실패 등)가 있다. 보고할 등수가
-                        //  없으면 조용히 건너뛴다 — 없는 결과를 지어내지 않는다.
-                        Debug.LogWarning("No match outcome to report. Skipping.");
-                    }
-                    else
-                    {
-                        //  봇이 낀 판은 보고 없이 게임서버가 직접 확정한다(MatchResultConfirmer).
-                        confirmed = await MatchResultConfirmer.ConfirmAsync(outcome, ReportMatchResultAsync);
-                    }
+                    //  러너를 거치지 않고 방이 닫히는 경로(초기화 실패 등)가 있다. 보고할 등수가
+                    //  없으면 조용히 건너뛴다 — 없는 결과를 지어내지 않는다.
+                    if (!EnvironmentSettings.active.Standalone) Debug.LogWarning("No match outcome to report. Skipping.");
                 }
-                catch (Exception e)
+                else
                 {
-                    Debug.LogError($"Failed to report match result. Continuing to close the room. Error: {e.Message}");
+                    //  봇이 낀 판은 보고 없이 게임서버가 직접 확정한다(MatchResultConfirmer).
+                    confirmed = await MatchResultConfirmer.ConfirmAsync(outcome, ReportMatchResultAsync, EnvironmentSettings.active.Standalone);
                 }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Failed to report match result. Continuing to close the room. Error: {e.Message}");
             }
 
             if (!EnvironmentSettings.active.Standalone)

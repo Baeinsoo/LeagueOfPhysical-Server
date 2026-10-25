@@ -66,11 +66,14 @@ namespace LOP.Tests
         }
 
         [Test]
-        public void 반응_지연_최소가_최대보다_크면_만들_수_없다()
+        public void 반응_지연_최소가_최대보다_크면_맞바꿔_만든다()
         {
-            Assert.Throws<System.ArgumentException>(() => new MountedArcheryConfig(
+            UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("맞바꿨다"));
+            var c = new MountedArcheryConfig(
                 150f, 10f, 30f, 2.5f, default, 100, 34, 0.5f, 100f, 30f, null, 4f, 90f, 0.6f, 0.5f, 15f,
-                botAimErrorDeg: 2.5f, botReactionMinSeconds: 0.5f, botReactionMaxSeconds: 0.2f, botEngageRange: 60f));
+                botAimErrorDeg: 2.5f, botReactionMinSeconds: 0.5f, botReactionMaxSeconds: 0.2f, botEngageRange: 60f);
+            Assert.AreEqual(0.2f, c.BotReactionMinSeconds);
+            Assert.AreEqual(0.5f, c.BotReactionMaxSeconds);
         }
     }
 }

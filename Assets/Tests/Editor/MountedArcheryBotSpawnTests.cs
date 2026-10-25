@@ -193,18 +193,52 @@ namespace LOP.Tests
         [Test]
         public void 사람이_나가도_봇은_남는다()
         {
-            var f = Build(3, "u1");
-            string humanEntity = null;
+            var f = Build(8, "u1");
+
+            //  진짜 나감 길: 방이 연결 끊김을 presence에 적는다. 탈락이 아니다.
+            var presence = new PlayerPresence();
+            presence.Begin(new[] { "u1" });
+            presence.MarkJoined("u1");
+            presence.MarkMatchStarted();
+            presence.MarkLeft("u1");
+            Assert.IsTrue(presence.IsAway("u1"), "사람이 나갔다고 적혔다");
+
+            //  나갔다고 판이 끝나지 않고, 몸들은 그대로 월드에 남아 계속 굴러간다.
+            Assert.AreEqual(8, f.State.AliveCount);
+            Assert.IsFalse(f.Rule.IsMatchOver);
+            Assert.IsFalse(f.Rule.IsResultSettled("u1"), "나간 사람도 탈락 전엔 결과가 안 정해진다");
+            int simulated = 0;
+            foreach (var e in f.Registry.All)
+            {
+                if (e.Has<GameFramework.World.Simulated>()) simulated++;
+            }
+            Assert.AreEqual(8, simulated);
+
+            //  원(밖 피해)이 한 명씩 쓰러뜨리는 보통의 끝 — 사람 포함 일곱이 쓰러지고 봇 하나가 남는다.
+            long tick = 100;
             foreach (var kv in f.State.Players)
             {
-                if (kv.Value.UserId == "u1") humanEntity = kv.Key;
+                if (kv.Value.UserId == "bot-7") continue;
+                f.State.Eliminate(kv.Key, "", tick);
+                tick += 10;
             }
-            f.State.Eliminate(humanEntity, "", 10);
+            long lastElimination = tick - 10;
+            f.State.LastTick = lastElimination + 149;
+            Assert.IsFalse(f.Rule.IsMatchOver, "여운이 끝나기 전");
+            f.State.LastTick = lastElimination + 150;
+            Assert.IsTrue(f.Rule.IsMatchOver);
 
-            Assert.AreEqual(2, f.State.AliveCount);
-            Assert.IsFalse(f.Rule.IsMatchOver);
-            Assert.IsFalse(f.Rule.IsResultSettled("bot-1"));
-            Assert.IsTrue(f.Rule.IsResultSettled("u1"));
+            var outcome = MatchOutcomeFinalizer.Finalize(
+                f.Rule.ResolveOutcome(), presence.LeftLatestFirst, presence.NeverJoined,
+                f.Rule.IsResultSettled, f.State.LastTick, 0, 0.02);
+            int botRank = 0, humanRank = 0;
+            foreach (var p in outcome.placements)
+            {
+                if (p.userId == "bot-7") botRank = p.placement;
+                if (p.userId == "u1") humanRank = p.placement;
+            }
+            Assert.AreEqual(1, botRank);
+            Assert.Greater(humanRank, 1);
         }
     }
 }

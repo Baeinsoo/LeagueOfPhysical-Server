@@ -11,7 +11,7 @@ namespace LOP.Tests
 
         static readonly MountedArcheryConfig Config = new MountedArcheryConfig(
             150f, 40f, 80f, 2.5f,
-            new MountSettings(13f, 9f, 16f, 172f, 92f, 100f, 0.35f, 0.5f),
+            new MountSettings(13f, 9f, 16f, 172f, 92f, 100f, 0.35f, 0.5f, 3f),
             100, 34, 0.5f, 100f, 30f,
             new[]
             {
@@ -144,7 +144,7 @@ namespace LOP.Tests
             // 마지막 원이 반지름 0까지 줄어드는 표
             var cfg = new MountedArcheryConfig(
                 180f, 40f, 80f, 2.5f,
-                new MountSettings(13f, 9f, 16f, 172f, 92f, 100f, 0.35f, 0.5f),
+                new MountSettings(13f, 9f, 16f, 172f, 92f, 100f, 0.35f, 0.5f, 3f),
                 100, 34, 0.5f, 100f, 30f,
                 new[]
                 {

@@ -38,7 +38,7 @@ namespace LOP.Tests
         static readonly MountSettings Mount = new MountSettings(
             maxSpeed: 13f, acceleration: 9f, deceleration: 16f,
             turnRateStoppedDeg: 172f, turnRateAtMaxDeg: 92f,
-            sharpTurnDeg: 100f, sharpTurnSpeedFactor: 0.35f, drawSpeedFactor: 0.5f);
+            sharpTurnDeg: 100f, sharpTurnSpeedFactor: 0.35f, drawSpeedFactor: 0.5f, reverseSpeed: 3f);
 
         static readonly MountedArcheryConfig Config
             = new MountedArcheryConfig(150f, 40f, 80f, 2.5f, Mount, 100, 34, 0.5f, 100f, 30f, null, 4f, 90f, 0.6f, 0.5f, 15f);

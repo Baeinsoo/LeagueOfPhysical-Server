@@ -53,5 +53,24 @@ namespace LOP.Tests
             Assert.AreEqual(0.6f, cfg.AimAssistFriction, 1e-5f);
             Assert.AreEqual(0.5f, cfg.AimAssistTrack, 1e-5f);
         }
+
+        [Test]
+        public void 봇_수치는_표에서_읽힌다()
+        {
+            var cfg = new MountedArcheryConfigProvider(RealMasterData()).Get();
+
+            Assert.AreEqual(2.5f, cfg.BotAimErrorDeg, 1e-5f);
+            Assert.AreEqual(0.2f, cfg.BotReactionMinSeconds, 1e-5f);
+            Assert.AreEqual(0.4f, cfg.BotReactionMaxSeconds, 1e-5f);
+            Assert.AreEqual(60f, cfg.BotEngageRange, 1e-5f);
+        }
+
+        [Test]
+        public void 반응_지연_최소가_최대보다_크면_만들_수_없다()
+        {
+            Assert.Throws<System.ArgumentException>(() => new MountedArcheryConfig(
+                150f, 10f, 30f, 2.5f, default, 100, 34, 0.5f, 100f, 30f, null, 4f, 90f, 0.6f, 0.5f, 15f,
+                botAimErrorDeg: 2.5f, botReactionMinSeconds: 0.5f, botReactionMaxSeconds: 0.2f, botEngageRange: 60f));
+        }
     }
 }

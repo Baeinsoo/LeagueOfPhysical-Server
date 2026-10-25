@@ -39,8 +39,8 @@ namespace LOP
                 }
 
                 string userId = worldEntity.Get<GameFramework.World.Ownership>()?.OwnerId;
-                ISession session = sessionManager.GetSessionByUserId(userId);
-                if (session == null)
+                //  세션 없는 몸(시험 봇)이 있다 — 조회 함수는 없는 키에 예외를 던지므로 Try로 묻는다.
+                if (userId == null || sessionManager.TryGetSessionByUserId<ISession>(userId, out ISession session) == false)
                 {
                     continue;
                 }

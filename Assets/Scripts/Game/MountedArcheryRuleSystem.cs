@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -18,11 +19,14 @@ namespace LOP
         private readonly EntitySpawner entitySpawner;
         private readonly MountedArcheryConfig config;
         private readonly MountedArcheryMatchState state;
+        private readonly Func<int> fillTo;
         private readonly List<string> userIds = new List<string>();
 
         public MountedArcheryRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
-                                        MountedArcheryConfig config, MountedArcheryMatchState state)
+                                        MountedArcheryConfig config, MountedArcheryMatchState state,
+                                        Func<int> fillTo)
         {
+            this.fillTo = fillTo;
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.config = config;
@@ -37,23 +41,31 @@ namespace LOP
         {
             userIds.Clear();
             var slots = SpawnPlacement.Arrange(
-                Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None));
+                UnityEngine.Object.FindObjectsByType<SpawnPoint>(FindObjectsInactive.Include, FindObjectsSortMode.None));
             if (slots.Count == 0)
             {
                 Debug.LogWarning("[MountedArchery] 맵에 SpawnPoint가 없다 — 반지름 30 m 원 위에 세운다");
             }
 
             var playerList = roomDataStore.match.playerList;
-            for (int i = 0; i < playerList.Length; i++)
+            int botCount = MountedArcheryBots.CountToAdd(fillTo(), playerList.Length);
+            int total = playerList.Length + botCount;
+            for (int i = 0; i < total; i++)
             {
-                userIds.Add(playerList[i]);
-                var position = slots.Count > 0 ? slots[i % slots.Count] : RingSlot(i, playerList.Length);
+                //  봇은 사람 다음 번호의 자리를 쓴다.
+                bool isBot = i >= playerList.Length;
+                int botNumber = i - playerList.Length + 1;
+                string userId = isBot ? MountedArcheryBots.UserIdFor(botNumber) : playerList[i];
+                userIds.Add(userId);
+                var position = slots.Count > 0 ? slots[i % slots.Count] : RingSlot(i, total);
 
-                var look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i);
+                var look = isBot
+                    ? new PlayerLook(null, MountedArcheryBots.DisplayNameFor(botNumber), 1)
+                    : PlayerLookResolver.Resolve(roomDataStore.looks, userId, i);
                 string entityId = entitySpawner.GenerateEntityId();
                 entitySpawner.Spawn(new CharacterCreationData
                 {
-                    userId = playerList[i],
+                    userId = userId,
                     entityId = entityId,
                     visualId = BodyVisualId,
                     characterCode = "",
@@ -65,7 +77,7 @@ namespace LOP
                     look = look,
                 });
                 //  킬 피드는 몸이 디스폰된 뒤에도 이름을 보여야 해서 판 상태에 이름을 따로 적어 둔다.
-                state.Add(entityId, playerList[i], look.DisplayName);
+                state.Add(entityId, userId, look.DisplayName);
             }
         }
 

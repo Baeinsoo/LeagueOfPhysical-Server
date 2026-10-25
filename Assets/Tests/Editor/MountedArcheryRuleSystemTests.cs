@@ -30,7 +30,7 @@ namespace LOP.Tests
         }
 
         private static MountedArcheryRuleSystem RuleOf(MountedArcheryMatchState st)
-            => new MountedArcheryRuleSystem(null, null, null, st);
+            => new MountedArcheryRuleSystem(null, null, null, st, () => 0);
 
         [Test]
         public void 한_명_남고_유예가_지나면_끝난다()

@@ -34,6 +34,7 @@ namespace LOP
 
             builder.Register<ICharacterCreator, MountedArcheryPlayerCreator>(Lifetime.Singleton);
             builder.Register<MountedArcheryMatchState>(Lifetime.Singleton);
+            builder.RegisterInstance<System.Func<int>>(MountedArcheryTestBots.ReadFillTo);
             builder.Register<IGameRuleSystem, MountedArcheryRuleSystem>(Lifetime.Singleton);
 
             builder.Register(c => new MotionHistorySystem(c.Resolve<GameFramework.World.IWorld>()), Lifetime.Singleton);

@@ -63,10 +63,13 @@ namespace LOP.Tests
                 }
                 drawing = command.Drawing;
                 ratio = Mathf.MoveTowards(ratio, drawing ? 1f : 0f,
-                    (drawing ? ArcheryAimSystem.DrawRisePerSecond : ArcheryAimSystem.DrawFallPerSecond) * Dt);
+                    (drawing ? 1f / MountedFullDrawSeconds : ArcheryAimSystem.DrawFallPerSecond) * Dt);
             }
             return (null, ratio);
         }
+
+        //  표의 말 활쏘기 만작 시간(full_draw_seconds)과 같게 둔다 — 봇은 실제 당김 비율을 읽는다.
+        const float MountedFullDrawSeconds = 0.35f;
 
         /// <summary>
         /// 서버와 같은 순서로 화살을 날려 본다: 쏜 틱에 쏜 사람·과녁이 한 틱 움직이고, 화살이 s초 날았을 때

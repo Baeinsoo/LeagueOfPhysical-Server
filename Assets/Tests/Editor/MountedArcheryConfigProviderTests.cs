@@ -66,6 +66,14 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 표에서_만작_시간을_읽는다()
+        {
+            var cfg = new MountedArcheryConfigProvider(RealMasterData()).Get();
+
+            Assert.AreEqual(0.35f, cfg.FullDrawSeconds, 1e-5f);
+        }
+
+        [Test]
         public void 반응_지연_최소가_최대보다_크면_맞바꿔_만든다()
         {
             UnityEngine.TestTools.LogAssert.Expect(UnityEngine.LogType.Warning, new System.Text.RegularExpressions.Regex("맞바꿨다"));

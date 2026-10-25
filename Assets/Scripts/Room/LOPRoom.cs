@@ -240,18 +240,8 @@ namespace LOP
                     }
                     else
                     {
-                        var response = await ReportMatchResultAsync(outcome);
-
-                        //  거절(명단 불일치·매치 없음 등)은 HTTP 자체는 200으로 오고 실패를
-                        //  body의 code로 알린다 — HTTP 상태만 보면 거절을 조용히 놓친다.
-                        if (response.code != 200)
-                        {
-                            Debug.LogError($"Match result report rejected by backend. code={response.code}");
-                        }
-                        else
-                        {
-                            confirmed = response.participants;
-                        }
+                        //  봇이 낀 판은 보고 없이 게임서버가 직접 확정한다(MatchResultConfirmer).
+                        confirmed = await MatchResultConfirmer.ConfirmAsync(outcome, ReportMatchResultAsync);
                     }
                 }
                 catch (Exception e)
@@ -288,7 +278,8 @@ namespace LOP
                 //  구해 준다.
                 try
                 {
-                    session.Send(MatchEndedMessageBuilder.Build(confirmed, session.userId, roomDataStore.looks, roomDataStore.match?.playerList));
+                    session.Send(MatchEndedMessageBuilder.Build(confirmed, session.userId, roomDataStore.looks, roomDataStore.match?.playerList,
+                        MatchEndedMessageBuilder.IsPractice(roomDataStore.outcome)));
                 }
                 catch (Exception e)
                 {

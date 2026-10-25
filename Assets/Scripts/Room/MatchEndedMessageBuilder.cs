@@ -11,7 +11,8 @@ namespace LOP
     public static class MatchEndedMessageBuilder
     {
         public static MatchEndedToC Build(ConfirmedParticipantDto[] confirmed, string userId,
-            IReadOnlyDictionary<string, PlayerLookDto> looks, IReadOnlyList<string> roster)
+            IReadOnlyDictionary<string, PlayerLookDto> looks, IReadOnlyList<string> roster,
+            bool practice = false)
         {
             var message = new MatchEndedToC();
 
@@ -66,7 +67,8 @@ namespace LOP
 
                 message.Placements.Add(info);
 
-                if (participant.userId == userId)
+                //  연습 판은 점수가 움직이지 않으므로 점수 변화 칸을 비운다.
+                if (!practice && participant.userId == userId)
                 {
                     message.HasRatingChange = true;
                     message.MyMmrBefore = participant.mmrBefore;
@@ -75,6 +77,35 @@ namespace LOP
             }
 
             return message;
+        }
+
+        /// <summary>봇이 낀 연습 판 — 백엔드가 확정하지 않으니 게임서버가 판 결과 그대로 참가자 줄을 만든다. 점수는 그대로.</summary>
+        public static ConfirmedParticipantDto[] PracticeParticipants(MatchOutcome outcome)
+        {
+            var result = new ConfirmedParticipantDto[outcome.placements.Count];
+            for (int i = 0; i < result.Length; i++)
+            {
+                var placement = outcome.placements[i];
+                result[i] = new ConfirmedParticipantDto
+                {
+                    userId = placement.userId,
+                    placement = placement.placement,
+                    mmrBefore = 0,
+                    mmrAfter = 0,
+                    stats = placement.stats,
+                };
+            }
+            return result;
+        }
+
+        public static bool IsPractice(MatchOutcome outcome)
+        {
+            if (outcome == null) return false;
+            foreach (var placement in outcome.placements)
+            {
+                if (MountedArcheryBots.IsBot(placement.userId)) return true;
+            }
+            return false;
         }
 
         //  방을 열 때 룩을 만든 순번(명단 순서)과 같아야 기본 이름 "플레이어 N"이 경기 중 이름표와 같다.

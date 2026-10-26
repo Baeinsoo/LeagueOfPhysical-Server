@@ -42,6 +42,7 @@ namespace LOP
                 c.Resolve<GameFramework.World.IWorld>(),
                 c.Resolve<KnockbackConfig>(),
                 c.Resolve<EntitySpawner>().Despawn), Lifetime.Singleton);
+            builder.RegisterInstance<System.Func<int>>(KnockbackTestBots.ReadFillTo);
             builder.Register<IGameRuleSystem, KnockbackRuleSystem>(Lifetime.Singleton);
 
             builder.Register(c => new KnockbackHitSystem(
@@ -56,10 +57,19 @@ namespace LOP
                 c.Resolve<KnockbackWorld>(),
                 new System.Random(unchecked((int)c.Resolve<IMatchSeed>().Value))), Lifetime.Singleton);
             builder.Register<KnockbackStateBroadcastSystem>(Lifetime.Singleton);
+            builder.Register(c => new KnockbackBotSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<KnockbackWorld>(),
+                c.Resolve<KnockbackMatchState>(),
+                c.Resolve<KnockbackConfig>(),
+                c.Resolve<InputBufferSystem>(),
+                c.Resolve<IMatchSeed>()), Lifetime.Singleton);
 
             // 시스템이 러너를 직접 잡으면 순환이 생겨 빌드 콜백에서 붙인다(DodgeLifetimeScope와 같다).
             builder.RegisterBuildCallback(container =>
             {
+                //  봇 입력은 사람 입력이 처리되기 전(Begin)에 이번 틱 번호로 넣어야 같은 틱에 쓰인다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.Begin>(container.Resolve<KnockbackBotSystem>());
                 //  순서가 뜻이다: 맞음 → 떨어짐/사라짐 → 원 공개 → 방송.
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackHitSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackFallSystem>());

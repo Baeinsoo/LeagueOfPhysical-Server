@@ -37,7 +37,7 @@ namespace LOP.Tests
         [Test]
         public void 결과는_연습_판이다()
         {
-            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f);
+            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, 18f, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 1, 6f, 0.5f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 5f, new System.Collections.Generic.List<MountedArcheryZoneStageConfig>());
             var rule = new KnockbackRuleSystem(null, null, new KnockbackMatchState(), cfg);
             Assert.IsTrue(rule.ResolveOutcome().practice);
         }
@@ -45,7 +45,7 @@ namespace LOP.Tests
         [Test]
         public void 판_길이는_120초()
         {
-            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f);
+            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, 18f, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 1, 6f, 0.5f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 5f, new System.Collections.Generic.List<MountedArcheryZoneStageConfig>());
             Assert.AreEqual(6000L, cfg.MatchDurationTicks(0.02f));
         }
     }

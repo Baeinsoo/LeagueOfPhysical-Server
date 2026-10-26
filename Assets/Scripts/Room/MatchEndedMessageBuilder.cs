@@ -101,6 +101,7 @@ namespace LOP
         public static bool IsPractice(MatchOutcome outcome)
         {
             if (outcome == null) return false;
+            if (outcome.practice) return true;
             foreach (var placement in outcome.placements)
             {
                 if (MountedArcheryBots.IsBot(placement.userId)) return true;

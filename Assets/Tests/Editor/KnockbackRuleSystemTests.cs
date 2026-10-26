@@ -35,6 +35,14 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 결과는_연습_판이다()
+        {
+            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f);
+            var rule = new KnockbackRuleSystem(null, null, new KnockbackMatchState(), cfg);
+            Assert.IsTrue(rule.ResolveOutcome().practice);
+        }
+
+        [Test]
         public void 판_길이는_120초()
         {
             var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f);

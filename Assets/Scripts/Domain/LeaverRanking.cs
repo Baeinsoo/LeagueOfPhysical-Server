@@ -38,7 +38,7 @@ namespace LOP
             }
             stayed.Sort((x, y) => x.placement.CompareTo(y.placement));
 
-            var result = new MatchOutcome();
+            var result = new MatchOutcome { practice = outcome.practice };
             int place = 0;
             int previousOriginal = int.MinValue;
             for (int i = 0; i < stayed.Count; i++)

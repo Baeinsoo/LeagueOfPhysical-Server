@@ -7,6 +7,9 @@ namespace LOP
     public class MatchOutcome
     {
         public List<MatchPlacement> placements = new List<MatchPlacement>();
+
+        //  봇이 없어도 룰이 "이 판은 연습"이라고 정할 수 있다(넉백 슬라이스 1: 아직 남을 떨어뜨릴 수 없어서).
+        public bool practice;
     }
 
     [Serializable]

@@ -32,6 +32,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/MountedArchery.unity
     guid: d6b88320f95b935459b84c8465c95978
+  - enabled: 1
+    path: Assets/Scenes/Knockback.unity
+    guid: ec7f2604f96728e41abcb7201defaaaf
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 35add8549303d7e40afb044c7a36484b, type: 2}
   m_UseUCBPForAssetBundles: 0

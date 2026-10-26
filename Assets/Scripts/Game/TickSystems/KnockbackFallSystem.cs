@@ -9,14 +9,16 @@ namespace LOP
     {
         private readonly KnockbackMatchState state;
         private readonly GameFramework.World.EntityRegistry registry;
+        private readonly GameFramework.World.IWorld world;
         private readonly KnockbackConfig config;
         private readonly System.Action<string> despawn;
 
         public KnockbackFallSystem(KnockbackMatchState state, GameFramework.World.EntityRegistry registry,
-                                   KnockbackConfig config, System.Action<string> despawn)
+                                   GameFramework.World.IWorld world, KnockbackConfig config, System.Action<string> despawn)
         {
             this.state = state;
             this.registry = registry;
+            this.world = world;
             this.config = config;
             this.despawn = despawn;
         }
@@ -24,6 +26,10 @@ namespace LOP
         public void Tick(long tick, float deltaTime)
         {
             state.LastTick = tick;
+            if (tick < world.GameplayStartTick)
+            {
+                return;
+            }
             foreach (var id in state.Players)
             {
                 if (state.EliminatedTick.ContainsKey(id) || !registry.TryGet(id, out var entity))

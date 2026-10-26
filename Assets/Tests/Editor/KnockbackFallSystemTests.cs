@@ -11,6 +11,13 @@ namespace LOP.Tests
         KnockbackMatchState state;
         List<string> despawned;
         KnockbackFallSystem system;
+        StubWorld world;
+
+        class StubWorld : GameFramework.World.WorldBase
+        {
+            public StubWorld(GameFramework.World.EntityRegistry registry)
+                : base(registry, new GameFramework.World.WorldEventBuffer()) { }
+        }
 
         [SetUp]
         public void SetUp()
@@ -18,7 +25,8 @@ namespace LOP.Tests
             registry = new GameFramework.World.EntityRegistry();
             state = new KnockbackMatchState();
             despawned = new List<string>();
-            system = new KnockbackFallSystem(state, registry, C, despawned.Add);
+            world = new StubWorld(registry) { GameplayStartTick = 0 };
+            system = new KnockbackFallSystem(state, registry, world, C, despawned.Add);
             var e = new GameFramework.World.Entity("1");
             e.Add(new GameFramework.World.Transform());
             registry.Add(e);
@@ -55,6 +63,20 @@ namespace LOP.Tests
             system.Tick(43, 0.02f);
             Assert.AreEqual(1, despawned.Count);
             Assert.AreEqual(1, state.Eliminations.Count);
+        }
+
+        [Test]
+        public void 출발_전에는_떨어져도_탈락하지_않는다()
+        {
+            world.GameplayStartTick = 100;
+            SetY(-6f);
+            system.Tick(50, 0.02f);
+            Assert.IsFalse(state.EliminatedTick.ContainsKey("1"));
+            Assert.AreEqual(0, despawned.Count);
+            Assert.AreEqual(50L, state.LastTick);
+
+            system.Tick(100, 0.02f);
+            Assert.AreEqual(1, despawned.Count);
         }
     }
 }

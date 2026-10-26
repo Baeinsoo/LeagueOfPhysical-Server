@@ -31,6 +31,7 @@ namespace LOP
             builder.Register(c => new KnockbackFallSystem(
                 c.Resolve<KnockbackMatchState>(),
                 c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<GameFramework.World.IWorld>(),
                 c.Resolve<KnockbackConfig>(),
                 c.Resolve<EntitySpawner>().Despawn), Lifetime.Singleton);
             builder.Register<IGameRuleSystem, KnockbackRuleSystem>(Lifetime.Singleton);

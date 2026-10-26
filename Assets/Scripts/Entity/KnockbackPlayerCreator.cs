@@ -4,15 +4,18 @@ using UnityEngine;
 namespace LOP
 {
     /// <summary>
-    /// 넉백 생존전의 몸(서버). 걷고 떨어질 뿐이라 능력·탈것은 없다.
+    /// 넉백 생존전의 몸(서버). 걷고 쏘고 떨어진다. 능력·탈것은 없다.
     /// </summary>
     public class KnockbackPlayerCreator : ICharacterCreator
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
 
-        public KnockbackPlayerCreator(GameFramework.World.EntityRegistry entityRegistry)
+        private readonly KnockbackConfig config;
+
+        public KnockbackPlayerCreator(GameFramework.World.EntityRegistry entityRegistry, KnockbackConfig config)
         {
             this.entityRegistry = entityRegistry;
+            this.config = config;
         }
 
         public void Create(CharacterCreationData creationData)
@@ -28,6 +31,8 @@ namespace LOP
             worldEntity.Add(new Appearance(creationData.visualId));
             PlayerLookAttach.Attach(worldEntity, creationData.look);
             worldEntity.Add(new GameFramework.World.Health(creationData.maxHP) { Current = creationData.currentHP });
+            worldEntity.Add(new KnockbackGun(config.AmmoMax));
+            worldEntity.Add(new KnockbackBody());
             worldEntity.Add(new GameFramework.World.GroundState { IsGrounded = true });
 
             // 이 몸이 누구 것인지. 서버 공용 시스템들이 이걸로 엔티티→유저→세션을 찾는다.

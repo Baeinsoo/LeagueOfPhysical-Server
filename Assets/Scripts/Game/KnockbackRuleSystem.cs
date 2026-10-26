@@ -98,10 +98,7 @@ namespace LOP
             {
                 if (entityIdToUserId.TryGetValue(entityId, out var user)) eliminations.Add((user, tick));
             }
-            var outcome = DodgePlacements.Resolve(alive, eliminations);
-            //  슬라이스 2(탄·넉백)에서 뺀다. 그 전엔 가만히 서 있기만 해도 1등이라 보상을 줄 수 없다.
-            outcome.practice = true;
-            return outcome;
+            return DodgePlacements.Resolve(alive, eliminations);
         }
     }
 }

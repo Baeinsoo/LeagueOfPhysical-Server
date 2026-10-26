@@ -13,6 +13,30 @@ namespace LOP
         /// <summary>떨어짐 판정이 마지막으로 돈 틱 — 룰이 "마지막 탈락 뒤 얼마나 지났나"를 잰다.</summary>
         public long LastTick;
 
+        /// <summary>서버가 공개한 원 단계(순서대로). 한 번 공개하면 바뀌지 않는다.</summary>
+        public readonly List<ZoneStage> ZoneStages = new List<ZoneStage>();
+
+        /// <summary>바뀔 때마다 오른다 — 방송 시스템이 판본을 보고 다시 보낸다.</summary>
+        public int Version { get; private set; }
+
+        public void MarkChanged() => Version++;
+
+        public void AddZoneStage(ZoneStage stage)
+        {
+            ZoneStages.Add(stage);
+            MarkChanged();
+        }
+
+        /// <summary>탈락시키는 유일한 길. 이미 탈락했으면 false.</summary>
+        public bool Eliminate(string entityId, long tick)
+        {
+            if (EliminatedTick.ContainsKey(entityId)) return false;
+            EliminatedTick[entityId] = tick;
+            Eliminations.Add((entityId, tick));
+            MarkChanged();
+            return true;
+        }
+
         public int AliveCount()
         {
             int n = 0;

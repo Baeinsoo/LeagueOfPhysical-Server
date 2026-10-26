@@ -66,6 +66,18 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 몸이_없어진_사람은_탈락으로_센다()
+        {
+            state.Players.Add("2");   // 레지스트리에 없는 사람
+            system.Tick(42, 0.02f);
+            Assert.AreEqual(42L, state.EliminatedTick["2"]);
+            Assert.IsFalse(state.EliminatedTick.ContainsKey("1"));
+
+            system.Tick(43, 0.02f);
+            Assert.AreEqual(1, state.Eliminations.Count);
+        }
+
+        [Test]
         public void 출발_전에는_떨어져도_탈락하지_않는다()
         {
             world.GameplayStartTick = 100;

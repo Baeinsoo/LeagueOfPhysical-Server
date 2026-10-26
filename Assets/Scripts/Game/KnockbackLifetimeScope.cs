@@ -44,10 +44,27 @@ namespace LOP
                 c.Resolve<EntitySpawner>().Despawn), Lifetime.Singleton);
             builder.Register<IGameRuleSystem, KnockbackRuleSystem>(Lifetime.Singleton);
 
+            builder.Register(c => new KnockbackHitSystem(
+                c.Resolve<KnockbackWorld>(),
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<KnockbackMatchState>(),
+                c.Resolve<KnockbackConfig>(),
+                c.Resolve<GameFramework.World.IEventSink>()), Lifetime.Singleton);
+            builder.Register(c => new KnockbackZoneSystem(
+                c.Resolve<KnockbackMatchState>(),
+                c.Resolve<KnockbackConfig>(),
+                c.Resolve<KnockbackWorld>(),
+                new System.Random(unchecked((int)c.Resolve<IMatchSeed>().Value))), Lifetime.Singleton);
+            builder.Register<KnockbackStateBroadcastSystem>(Lifetime.Singleton);
+
             // 시스템이 러너를 직접 잡으면 순환이 생겨 빌드 콜백에서 붙인다(DodgeLifetimeScope와 같다).
             builder.RegisterBuildCallback(container =>
             {
+                //  순서가 뜻이다: 맞음 → 떨어짐/사라짐 → 원 공개 → 방송.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackHitSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackFallSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackZoneSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackStateBroadcastSystem>());
             });
         }
     }

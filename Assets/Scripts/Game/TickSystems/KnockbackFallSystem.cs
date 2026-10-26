@@ -32,8 +32,15 @@ namespace LOP
             }
             foreach (var id in state.Players)
             {
-                if (state.EliminatedTick.ContainsKey(id) || !registry.TryGet(id, out var entity))
+                if (state.EliminatedTick.ContainsKey(id))
                 {
+                    continue;
+                }
+                //  몸이 레지스트리에서 사라졌다(접속이 끊겨 치워짐 등) — 떨어진 것과 같게 그 틱에 탈락으로 센다.
+                if (!registry.TryGet(id, out var entity))
+                {
+                    state.Eliminate(id, tick);
+                    Debug.Log($"[Knockback] body missing {id} tick {tick}");
                     continue;
                 }
                 if (entity.Get<GameFramework.World.Transform>().Position.Y >= -config.FallDepth)
@@ -41,8 +48,7 @@ namespace LOP
                     continue;
                 }
 
-                state.EliminatedTick[id] = tick;
-                state.Eliminations.Add((id, tick));
+                state.Eliminate(id, tick);
                 Debug.Log($"[Knockback] fell {id} tick {tick}");
                 despawn(id);
             }

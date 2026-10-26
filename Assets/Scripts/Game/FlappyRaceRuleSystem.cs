@@ -109,13 +109,40 @@ namespace LOP
             entityIdToUserId.Clear();
             finishSystem.Reset();
             chaserSystem.Reset();
+            raceOverSinceTick = -1;
         }
 
+        //  마지막 완주자 여운(10-26 결정) — 완주 조건이 참이 되는 그 틱에 바로 끝내면, 막 결승선을
+        //  넘은 사람은 자기 FINISH 도장·등수 도장·기록 줄·NEW BEST!(완주 뒤 최대 2.55초 뒤에 뜬다)를
+        //  하나도 못 보고 결과 화면으로 넘어간다. 그래서 조건이 참이 된 뒤 3초를 더 기다린다.
+        //  MountedArcheryRuleSystem의 탈락 여운과 같은 자리·같은 이름(FinishGraceTicks)이다.
+        public const long FinishGraceTicks = 150;   // 3.0s × 50Hz(LOPRunner의 틱 간격과 같다)
+
+        //  조건이 "처음" 참이 된 틱만 기억한다(래치) — entityRegistry 조회 순서 등으로 한 틱
+        //  깜빡여도(참→거짓→참) 그때마다 다시 3초를 세면 여운이 끝없이 밀릴 수 있다.
+        private long raceOverSinceTick = -1;
+
         /// <summary>
-        /// 남아 있는 새가 전원 결승선에 닿거나, 아무도 달리고 있지 않으면 끝난다.
-        /// 시간 상한은 러너가 따로 본다.
+        /// 남아 있는 새가 전원 결승선에 닿거나, 아무도 달리고 있지 않으면 — 그 틱으로부터 3초
+        /// 뒤에 끝난다(여운). 시간 상한은 러너가 따로 본다.
+        ///
+        /// <para>지금 틱은 <see cref="FinishTrackingSystem.LastTick"/>으로 잰다 — 룰 자체에는
+        /// 틱이 없어서고(클래스 주석 참고), 여기 쓰는 값은 프레임 시간이 아니라 반드시 시뮬 틱이어야
+        /// 한다(LOPRunner.CheckMatchOver 주석: 프레임 경계는 틱을 최대 8개까지 몰아 돈다).</para>
         /// </summary>
-        public bool IsMatchOver => finishSystem.AllWatchedFinished || EveryoneAccountedFor;
+        public bool IsMatchOver
+        {
+            get
+            {
+                bool allFinished = finishSystem.AllWatchedFinished || EveryoneAccountedFor;
+                if (allFinished && raceOverSinceTick < 0)
+                {
+                    raceOverSinceTick = finishSystem.LastTick;
+                }
+                return raceOverSinceTick >= 0
+                    && finishSystem.LastTick - raceOverSinceTick >= FinishGraceTicks;
+            }
+        }
 
         /// <summary>완주했거나 벽에 잡혔으면 결과가 정해졌다 — 그 뒤 관전 화면에서 나가도 제자리.</summary>
         public bool IsResultSettled(string userId)

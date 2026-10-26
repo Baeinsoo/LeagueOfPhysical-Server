@@ -32,16 +32,22 @@ namespace LOP
         /// <summary>판 도중 나가 있는 사람(엔티티)인가 — 그 사람의 완주를 기다리지 않는다. 규칙이 정해 준다. 없으면 아무도 안 나감.</summary>
         public System.Func<string, bool> IsAwayEntity { get; set; }
 
+        /// <summary>이 시스템이 마지막으로 돈 틱 — 룰이 "완주 조건이 참이 된 뒤 얼마나 지났나"를
+        /// 재는 기준 시계로 쓴다(여기가 매 틱 러너 End 페이즈에서 돈다, DodgeHazardSystem.LastTick과 같은 자리).</summary>
+        public long LastTick { get; private set; }
+
         public void Watch(string entityId) => watched.Add(entityId);
 
         public void Reset()
         {
             watched.Clear();
             tracker.Reset();
+            LastTick = 0;
         }
 
         public void Tick(long tick, float deltaTime)
         {
+            LastTick = tick;
             for (int i = 0; i < watched.Count; i++)
             {
                 var entity = entityRegistry.Get(watched[i]);

@@ -28,6 +28,26 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 룰이_연습이라_하면_연습이다()
+        {
+            var outcome = new MatchOutcome { practice = true };
+            outcome.placements.Add(new MatchPlacement { userId = "a", placement = 1 });
+            Assert.IsTrue(MatchEndedMessageBuilder.IsPractice(outcome));
+
+            outcome.practice = false;
+            Assert.IsFalse(MatchEndedMessageBuilder.IsPractice(outcome));
+        }
+
+        [Test]
+        public void 마무리를_거쳐도_연습_표시가_남는다()
+        {
+            var raw = new MatchOutcome { practice = true };
+            raw.placements.Add(new MatchPlacement { userId = "a", placement = 1 });
+            var done = MatchOutcomeFinalizer.Finalize(raw, new string[0], new string[0], null, 100, 0, 0.02);
+            Assert.IsTrue(done.practice);
+        }
+
+        [Test]
         public void 룩_조회가_실패해도_이름은_채운다()
         {
             var msg = MatchEndedMessageBuilder.Build(new[] { P("a", 1) }, "a", null, null);

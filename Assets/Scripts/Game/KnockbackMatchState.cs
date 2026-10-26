@@ -7,6 +7,8 @@ namespace LOP
     {
         /// <summary>참가한 몸의 엔티티 id. 룰이 몸을 세울 때 채운다.</summary>
         public readonly List<string> Players = new List<string>();
+        /// <summary>Players 중 시험용 봇의 몸 id. 봇 시스템만 읽는다.</summary>
+        public readonly HashSet<string> Bots = new HashSet<string>();
         public readonly Dictionary<string, long> EliminatedTick = new Dictionary<string, long>();
         public readonly List<(string entityId, long tick)> Eliminations = new List<(string, long)>();
 

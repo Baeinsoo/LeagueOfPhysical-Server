@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -28,11 +29,13 @@ namespace LOP
         private readonly EntitySpawner entitySpawner;
         private readonly KnockbackMatchState state;
         private readonly KnockbackConfig config;
+        private readonly Func<int> fillTo;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
         public KnockbackRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
-                                   KnockbackMatchState state, KnockbackConfig config)
+                                   KnockbackMatchState state, KnockbackConfig config, Func<int> fillTo = null)
         {
+            this.fillTo = fillTo ?? (() => 0);
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.state = state;
@@ -42,16 +45,28 @@ namespace LOP
         public void Initialize()
         {
             var playerList = roomDataStore.match.playerList;
-            for (int i = 0; i < playerList.Length; i++)
+            int fill = fillTo();
+            int botCount = MountedArcheryBots.CountToAdd(fill, playerList.Length);
+            int total = playerList.Length + botCount;
+            if (fill > 0)
             {
+                UnityEngine.Debug.Log($"[TestBots] fillTo={fill} humans={playerList.Length} bots={botCount}");
+            }
+            for (int i = 0; i < total; i++)
+            {
+                //  봇은 사람 다음 번호의 자리를 쓴다.
+                bool isBot = i >= playerList.Length;
+                int botNumber = i - playerList.Length + 1;
+                string userId = isBot ? MountedArcheryBots.UserIdFor(botNumber) : playerList[i];
                 string entityId = entitySpawner.GenerateEntityId();
-                entityIdToUserId[entityId] = playerList[i];
+                entityIdToUserId[entityId] = userId;
                 state.Players.Add(entityId);
+                if (isBot) state.Bots.Add(entityId);
 
-                var position = KnockbackSpawn.Position(i, playerList.Length, config.SpawnRadius);
+                var position = KnockbackSpawn.Position(i, total, config.SpawnRadius);
                 entitySpawner.Spawn(new CharacterCreationData
                 {
-                    userId = playerList[i],
+                    userId = userId,
                     entityId = entityId,
                     visualId = DodgeRuleSystem.BodyVisualId,
                     characterCode = BodyCharacterCode,
@@ -64,7 +79,9 @@ namespace LOP
                     currentMP = 1000,
                     level = 1,
                     currentExp = 0,
-                    look = PlayerLookResolver.Resolve(roomDataStore.looks, playerList[i], i),
+                    look = isBot
+                        ? new PlayerLook(null, MountedArcheryBots.DisplayNameFor(botNumber), 1)
+                        : PlayerLookResolver.Resolve(roomDataStore.looks, userId, i),
                 });
             }
         }

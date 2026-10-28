@@ -74,6 +74,12 @@ namespace LOP
         long nextStrafeFlipTick = long.MinValue;
         float strafeSign;
 
+        string targetId;
+        long nextRetargetTick = long.MinValue;
+
+        /// <summary>지금 붙잡고 있는 적(없으면 null). 시험이 목표 유지를 확인하는 데 쓴다.</summary>
+        public string TargetId => targetId;
+
         public KnockbackBotBrain(System.Random rng)
         {
             this.rng = rng;
@@ -96,20 +102,13 @@ namespace LOP
                 return command;
             }
 
-            var nearest = Nearest(view, out float distance);
-            Vector2 move = Vector2.zero;
+            var target = HoldTarget(view, out float distance);
 
-            if (TryDodge(view, out var dodge))
+            //  하나만 고르지 않고 섞는다 — 갈림길마다 틱 단위로 갈아타면 몸이 떨린다.
+            Vector2 move = Dodge(view) + Inward(view);
+            if (target.HasValue)
             {
-                move = dodge;
-            }
-            else if (TryStayInside(view, out var inward))
-            {
-                move = inward;
-            }
-            else if (nearest.HasValue)
-            {
-                move = KeepDistance(view, nearest.Value, distance);
+                move += KeepDistance(view, target.Value, distance);
             }
 
             if (move.sqrMagnitude > 1f)
@@ -119,39 +118,51 @@ namespace LOP
             command.Horizontal = move.x;
             command.Vertical = move.y;
 
-            if (nearest.HasValue && distance <= view.Config.ShotRange)
+            if (target.HasValue && distance <= view.Config.ShotRange)
             {
-                TryFire(view, nearest.Value, distance, command);
+                TryFire(view, target.Value, distance, command);
             }
             return command;
         }
 
-        KnockbackBotBody? Nearest(KnockbackBotView view, out float distance)
+        // 목표는 0.6~1.2초마다, 또는 목표가 사라졌을 때만 가장 가까운 적으로 바꾼다.
+        KnockbackBotBody? HoldTarget(KnockbackBotView view, out float distance)
         {
-            KnockbackBotBody? best = null;
             distance = float.MaxValue;
             if (view.Enemies == null) return null;
+
+            KnockbackBotBody? held = null;
+            KnockbackBotBody? nearest = null;
+            float nearestDistance = float.MaxValue;
             foreach (var enemy in view.Enemies)
             {
                 if (enemy.Id == view.SelfId) continue;
+                if (enemy.Id == targetId) held = enemy;
                 float d = Vector2.Distance(enemy.Position, view.Position);
-                if (d < distance)
+                if (d < nearestDistance)
                 {
-                    distance = d;
-                    best = enemy;
+                    nearestDistance = d;
+                    nearest = enemy;
                 }
             }
-            return best;
+
+            if (held.HasValue == false || view.Tick >= nextRetargetTick)
+            {
+                held = nearest;
+                targetId = nearest?.Id;
+                nextRetargetTick = view.Tick + Mathf.RoundToInt(Range(0.6f, 1.2f) / view.TickInterval);
+            }
+            if (held.HasValue) distance = Vector2.Distance(held.Value.Position, view.Position);
+            return held;
         }
 
-        // 가장 급한 탄 하나의 진행 방향에 수직으로, 탄이 지나갈 쪽의 반대로 비킨다.
-        bool TryDodge(KnockbackBotView view, out Vector2 move)
+        // 날아오는 탄마다 진행 방향에 수직으로, 탄이 지나갈 쪽의 반대로 비킨다. 아슬아슬할수록 세게.
+        Vector2 Dodge(KnockbackBotView view)
         {
-            move = Vector2.zero;
-            if (view.Shots == null) return false;
+            var sum = Vector2.zero;
+            if (view.Shots == null) return sum;
             float speed = view.Config.ShotSpeed;
             float dt = view.TickInterval;
-            float bestAlong = float.MaxValue;
             foreach (var shot in view.Shots)
             {
                 if (shot.ShooterId == view.SelfId) continue;
@@ -164,26 +175,23 @@ namespace LOP
                 if (along < 0f || along > speed * DodgeWindowSeconds) continue;
                 float side = shot.Direction.x * toMe.y - shot.Direction.y * toMe.x;
                 if (Mathf.Abs(side) > DodgeDistance) continue;
-                if (along >= bestAlong) continue;
 
-                bestAlong = along;
                 // 탄이 정확히 몸 가운데를 향하면 어느 쪽이든 같다 — 옆걸음 방향을 따른다.
                 float away = Mathf.Abs(side) < 0.05f ? strafeSign : Mathf.Sign(side);
-                move = new Vector2(-shot.Direction.y, shot.Direction.x) * away * dodgeSkill;
+                float weight = (DodgeDistance - Mathf.Abs(side)) / DodgeDistance * 2.6f * dodgeSkill;
+                sum += new Vector2(-shot.Direction.y, shot.Direction.x) * away * weight;
             }
-            return bestAlong < float.MaxValue;
+            return sum;
         }
 
-        // 다음 원이 공개됐으면 그 안쪽, 아니면 지금 원 안쪽. 가장자리 가까이면 중심으로 돌아온다.
-        bool TryStayInside(KnockbackBotView view, out Vector2 move)
+        // 다음 원이 공개됐으면 그 안쪽, 아니면 지금 원 안쪽. 가장자리 여유선에 다가갈수록 서서히 세게 중심으로 당긴다.
+        Vector2 Inward(KnockbackBotView view)
         {
-            move = Vector2.zero;
             var circle = view.NextZone;
             if (circle.radius <= 0f) circle = view.Zone;
             var offset = circle.center - view.Position;
-            if (offset.magnitude <= circle.radius - EdgeMargin) return false;
-            move = offset.normalized;
-            return true;
+            float weight = Mathf.Clamp01((offset.magnitude - (circle.radius - EdgeMargin)) / 1.2f);
+            return weight <= 0f ? Vector2.zero : offset.normalized * weight * 2f;
         }
 
         Vector2 KeepDistance(KnockbackBotView view, KnockbackBotBody enemy, float distance)

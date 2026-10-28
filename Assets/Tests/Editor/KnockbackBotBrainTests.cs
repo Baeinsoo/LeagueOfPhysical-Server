@@ -139,6 +139,44 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 가장자리_근처에서_틱마다_방향이_뒤집히지_않는다()
+        {
+            // 가장자리 경계선(반지름 10 - 여유 3.5)에 서서 바깥 쪽 먼 적을 본다. 움직임을 따라 위치도 옮긴다.
+            var enemies = new List<KnockbackBotBody> { new KnockbackBotBody("enemy", new Vector2(18f, 0f), Vector2.zero) };
+            var brain = Brain();
+            var position = new Vector2(6.5f, 0f);
+            float previous = 0f;
+            for (int i = 0; i < 20; i++)
+            {
+                var command = brain.Think(View(position, 1000 + i, enemies, zone: (Vector2.zero, 10f)));
+                float radial = command.Horizontal;
+                Assert.IsFalse(previous * radial < -1e-4f, $"틱 {i}: {previous} -> {radial}");
+                previous = radial;
+                position += new Vector2(command.Horizontal, command.Vertical) * 6f * Dt;
+            }
+        }
+
+        [Test]
+        public void 비슷한_거리의_두_적_사이에서_목표를_유지한다()
+        {
+            var brain = Brain();
+            string first = null;
+            for (int i = 0; i < 30; i++)
+            {
+                float da = i % 2 == 0 ? 10.01f : 9.99f;
+                float db = i % 2 == 0 ? 9.99f : 10.01f;
+                var enemies = new List<KnockbackBotBody>
+                {
+                    new KnockbackBotBody("a", new Vector2(da, 0f), Vector2.zero),
+                    new KnockbackBotBody("b", new Vector2(-db, 0f), Vector2.zero),
+                };
+                brain.Think(View(Vector2.zero, 1000 + i, enemies));
+                first ??= brain.TargetId;
+                Assert.AreEqual(first, brain.TargetId, $"틱 {i}");
+            }
+        }
+
+        [Test]
         public void 시작_전에는_가만히_있는다()
         {
             var view = View(new Vector2(9.5f, 0f), zone: (Vector2.zero, 10f));

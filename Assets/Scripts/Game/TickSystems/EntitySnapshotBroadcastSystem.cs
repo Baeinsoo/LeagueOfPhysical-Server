@@ -84,6 +84,11 @@ namespace LOP
                 snap.DashEndTick = FlappyTickDuration.EndTick(dash?.DashRemaining ?? 0f, tick, deltaTime);
                 snap.DashCharge = dash?.Charge ?? 0f;
 
+                //  연속 날갯짓 수(spec 2026-10-27). 고비 보상이 이 수에서 나오므로 클라가 내 새 예측을 이 값으로 맞춘다.
+                //  개수라 끝 틱으로 바꾸지 않는다(ADR-0015는 줄어드는 시간 값의 관례다). 새가 아니면 0이 나가고 안 실린다.
+                //  모두에게 같은 청크를 보내므로 남의 수도 실리지만(1~2바이트) 클라는 내 새 것만 읽는다.
+                snap.FlapCombo = worldEntity.Get<FlappyFlapCombo>()?.Count ?? 0;
+
                 //  결승선이 없는 게임에는 이 컴포넌트가 없다 — 그러면 0(아직)이 나간다.
                 //  아래 Skydive 전용 필드와 같은 방식이다.
                 snap.FinishPlacement = worldEntity.Get<FinishPlacement>()?.Value ?? 0;

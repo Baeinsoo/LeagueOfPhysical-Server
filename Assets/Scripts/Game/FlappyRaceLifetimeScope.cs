@@ -63,14 +63,22 @@ namespace LOP
 
             builder.Register<FinishTrackingSystem>(Lifetime.Singleton);
             builder.Register<FlappyChaserSystem>(Lifetime.Singleton);
+            //  연속 날갯짓 고비 세기(서버만) — 판 끝 결과 자루로 로비에 가서 코인이 된다. 룰이 생성자로 받으니 빠지면 컨테이너가 바로 깨진다.
+            builder.Register<FlappyComboTallySystem>(Lifetime.Singleton);
 
             //  도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
             //  러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다.
             //  추격자는 그 뒤여야 한다 — 앞에 두면 같은 틱에 결승선을 넘은 새를 잡는다.
+            //  콤보 세기는 추격자보다 앞이어야 한다 — World.Tick은 이미 끝났으니 이번 틱 값을 먼저 봐도 안전하고,
+            //  추격자가 뒤에서 몸을 Despawn해도 콤보가 이미 그 틱의 고비를 셌다(리뷰: 같은 틱에 고비를 넘기며
+            //  잡히면 추격자 뒤일 때 그 고비를 영영 놓친다).
             builder.RegisterBuildCallback(container =>
             {
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<FinishTrackingSystem>());
+                //  월드가 이번 틱 연속 수를 정한 뒤(End 페이즈) 본다. 등록이 빠지면 고비가 늘 0이다 — 판은 멀쩡해 눈에 안 띈다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
+                    container.Resolve<FlappyComboTallySystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<FlappyChaserSystem>());
             });

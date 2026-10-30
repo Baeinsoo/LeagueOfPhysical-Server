@@ -13,5 +13,11 @@ namespace LOP
         public static readonly int[] Thresholds = { 10, 25, 50, 100 };
 
         public static string For(int threshold) => "flapCombo" + threshold;
+
+        /// <summary>그 판 가장 긴 연속 날갯짓. 로비 퀘스트 "한 판에 연속 N번"이 읽는다(spec 2026-10-30 §4) — 표와 함께 바꾼다.</summary>
+        public const string Best = "flapComboBest";
+
+        /// <summary>새로 기절에 들어간 횟수(추격자에게 잡힌 것은 아니다). 로비 퀘스트 "기절 없이 완주"가 읽는다.</summary>
+        public const string Stuns = "flapStuns";
     }
 }

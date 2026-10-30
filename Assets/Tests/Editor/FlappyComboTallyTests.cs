@@ -24,6 +24,7 @@ namespace LOP.Tests
         {
             var e = new Entity(id);
             e.Add(new FlappyFlapCombo());
+            e.Add(new FlappyStun());
             registry.Add(e);
             return e;
         }
@@ -107,11 +108,13 @@ namespace LOP.Tests
             tally.AttachTo(outcome);
 
             var stats = outcome.placements[0].stats;
-            Assert.AreEqual(4, stats.Count, "넷 다 싣는다 — 0도(옛 서버와 갈리게)");
+            Assert.AreEqual(6, stats.Count, "고비 넷 + 가장 긴 연속 + 기절 — 0도 싣는다(옛 서버와 갈리게)");
             Assert.AreEqual(1, stats["flapCombo10"]);
             Assert.AreEqual(1, stats["flapCombo25"]);
             Assert.AreEqual(0, stats["flapCombo50"]);
             Assert.AreEqual(0, stats["flapCombo100"]);
+            Assert.AreEqual(26, stats["flapComboBest"]);
+            Assert.AreEqual(0, stats["flapStuns"]);
             Assert.IsNull(outcome.placements[1].stats, "안 지켜본 사람의 줄은 건드리지 않는다");
         }
 
@@ -192,6 +195,81 @@ namespace LOP.Tests
             outcome.placements.Add(new MatchPlacement { userId = "u-a", placement = 1 });
             tally.AttachTo(outcome);
             Assert.IsNull(outcome.placements[0].stats);
+        }
+
+        //  퀘스트 조건(spec 2026-10-30 §4) — 로비 퀘스트 표의 clauses가 같은 문자열로 찾는다.
+        [Test]
+        public void 퀘스트_키_문자열은_로비_퀘스트_표와_같다()
+        {
+            Assert.AreEqual("flapComboBest", FlappyComboStatKeys.Best);
+            Assert.AreEqual("flapStuns", FlappyComboStatKeys.Stuns);
+            Assert.AreEqual("finished", RaceStatKeys.Finished);
+        }
+
+        [Test]
+        public void 가장_긴_연속은_끊긴_뒤에도_최댓값이다()
+        {
+            var registry = new EntityRegistry();
+            var bird = Bird(registry, "e-a");
+            var tally = new FlappyComboTallySystem(registry);
+            tally.Watch("e-a", "u-a");
+            long tick = 0;
+            ClimbTo(tally, bird, 1, 30, ref tick);
+            bird.Get<FlappyFlapCombo>().Count = 0;
+            tally.Tick(++tick, 0.02f);
+            ClimbTo(tally, bird, 1, 12, ref tick);
+
+            var outcome = new MatchOutcome();
+            outcome.placements.Add(new MatchPlacement { userId = "u-a", placement = 1 });
+            tally.AttachTo(outcome);
+            Assert.AreEqual(30, outcome.placements[0].stats["flapComboBest"]);
+        }
+
+        [Test]
+        public void 기절은_들어간_틱만_센다_연속이_0이어도()
+        {
+            var registry = new EntityRegistry();
+            var bird = Bird(registry, "e-a");
+            var tally = new FlappyComboTallySystem(registry);
+            tally.Watch("e-a", "u-a");
+            var stun = bird.Get<FlappyStun>();
+            long tick = 0;
+
+            //  날갯짓 없이(연속 0) 바로 기절 — 연속이 줄지 않아도 센다.
+            stun.StunRemaining = 1.2f;
+            for (int i = 0; i < 3; i++) tally.Tick(++tick, 0.02f);   //  기절 중 여러 틱은 한 번
+            stun.StunRemaining = 0f;
+            stun.InvulnRemaining = 0.5f;
+            tally.Tick(++tick, 0.02f);                                 //  무적은 기절이 아니다
+            stun.InvulnRemaining = 0f;
+            stun.StunRemaining = 1.2f;
+            tally.Tick(++tick, 0.02f);
+
+            var outcome = new MatchOutcome();
+            outcome.placements.Add(new MatchPlacement { userId = "u-a", placement = 1 });
+            tally.AttachTo(outcome);
+            Assert.AreEqual(2, outcome.placements[0].stats["flapStuns"]);
+        }
+
+        [Test]
+        public void 몸이_사라져도_가장_긴_연속과_기절은_남는다()
+        {
+            var registry = new EntityRegistry();
+            var bird = Bird(registry, "e-a");
+            var tally = new FlappyComboTallySystem(registry);
+            tally.Watch("e-a", "u-a");
+            long tick = 0;
+            ClimbTo(tally, bird, 1, 7, ref tick);
+            bird.Get<FlappyStun>().StunRemaining = 1.2f;
+            tally.Tick(++tick, 0.02f);
+            registry.Remove("e-a");
+            tally.Tick(++tick, 0.02f);
+
+            var outcome = new MatchOutcome();
+            outcome.placements.Add(new MatchPlacement { userId = "u-a", placement = 3 });
+            tally.AttachTo(outcome);
+            Assert.AreEqual(7, outcome.placements[0].stats["flapComboBest"]);
+            Assert.AreEqual(1, outcome.placements[0].stats["flapStuns"]);
         }
     }
 }

@@ -172,6 +172,8 @@ namespace LOP.Tests
                 };
                 brain.Think(View(Vector2.zero, 1000 + i, enemies));
                 first ??= brain.TargetId;
+                //  목표가 없으면(null == null) 유지를 안 해도 통과하므로 먼저 붙잡았는지 본다.
+                Assert.IsNotNull(first, "적을 붙잡아야 한다");
                 Assert.AreEqual(first, brain.TargetId, $"틱 {i}");
             }
         }

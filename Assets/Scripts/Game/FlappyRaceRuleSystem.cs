@@ -22,6 +22,7 @@ namespace LOP
 
         private readonly FinishTrackingSystem finishSystem;
         private readonly FlappyChaserSystem chaserSystem;
+        private readonly FlappyComboTallySystem comboTally;
 
         //  등수를 답할 때 통과 기록(entityId)을 userId로 옮기고, 못 들어온 사람의 몸을 되찾는 데 쓴다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
@@ -34,13 +35,15 @@ namespace LOP
         public FlappyRaceRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                     GameFramework.World.EntityRegistry entityRegistry,
                                     FinishTrackingSystem finishSystem,
-                                    FlappyChaserSystem chaserSystem)
+                                    FlappyChaserSystem chaserSystem,
+                                    FlappyComboTallySystem comboTally)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.entityRegistry = entityRegistry;
             this.finishSystem = finishSystem;
             this.chaserSystem = chaserSystem;
+            this.comboTally = comboTally;
         }
 
         public void Initialize()
@@ -76,6 +79,7 @@ namespace LOP
                 entityIdToUserId[entityId] = playerList[i];
                 finishSystem.Watch(entityId);
                 chaserSystem.Watch(entityId);
+                comboTally.Watch(entityId, playerList[i]);
 
                 entitySpawner.Spawn(new CharacterCreationData
                 {
@@ -109,6 +113,7 @@ namespace LOP
             entityIdToUserId.Clear();
             finishSystem.Reset();
             chaserSystem.Reset();
+            comboTally.Reset();
             raceOverSinceTick = -1;
         }
 
@@ -240,8 +245,11 @@ namespace LOP
                 }
             }
 
-            return FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId,
+            var outcome = FinishPlacements.Resolve(finishSystem.Ordered, entityIdToUserId,
                 unfinished, eliminated, left);
+            //  연속 날갯짓 고비 횟수 — 로비가 고비 코인으로 바꾼다(spec 2026-10-28). 나간 사람은 LeaverRanking이 left를 더해 로비가 0으로 친다.
+            comboTally.AttachTo(outcome);
+            return outcome;
         }
     }
 }

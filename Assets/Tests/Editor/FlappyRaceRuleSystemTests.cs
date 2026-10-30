@@ -88,7 +88,7 @@ namespace LOP.Tests
                 new FinishLineBounds(FinishAxis.X), Config(), new FlappyMapRulesField());
             var rule = new FlappyRaceRuleSystem(
                 new FakeRoomDataStore { match = new Match { playerList = new string[0] } },
-                Spawner(registry), registry, finish, chaser);
+                Spawner(registry), registry, finish, chaser, new FlappyComboTallySystem(registry));
             return new Fixture { Registry = registry, Finish = finish, Rule = rule };
         }
 

@@ -29,13 +29,13 @@ namespace LOP
         private readonly EntitySpawner entitySpawner;
         private readonly KnockbackMatchState state;
         private readonly KnockbackConfig config;
-        private readonly Func<int> fillTo;
+        private readonly KnockbackTestBotFill fillTo;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
         public KnockbackRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
-                                   KnockbackMatchState state, KnockbackConfig config, Func<int> fillTo = null)
+                                   KnockbackMatchState state, KnockbackConfig config, KnockbackTestBotFill fillTo = null)
         {
-            this.fillTo = fillTo ?? (() => 0);
+            this.fillTo = fillTo ?? new KnockbackTestBotFill(() => 0);
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
             this.state = state;
@@ -45,7 +45,7 @@ namespace LOP
         public void Initialize()
         {
             var playerList = roomDataStore.match.playerList;
-            int fill = fillTo();
+            int fill = fillTo.Read();
             int botCount = MountedArcheryBots.CountToAdd(fill, playerList.Length);
             int total = playerList.Length + botCount;
             if (fill > 0)

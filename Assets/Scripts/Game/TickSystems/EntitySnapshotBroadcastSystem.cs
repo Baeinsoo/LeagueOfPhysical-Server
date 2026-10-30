@@ -100,6 +100,14 @@ namespace LOP
                 var knockbackBody = worldEntity.Get<KnockbackBody>();
                 snap.KnockbackEndTick = knockbackBody != null && knockbackBody.KnockbackEndTick > 0 ? knockbackBody.KnockbackEndTick : 0;
                 snap.DamagePercent = knockbackBody?.DamagePercent ?? 0;
+                //  총 상태는 클라 예측과 비교해 갈리면 되감는다. 총이 없는 몸은 0(다른 모드 스냅을 키우지 않게).
+                var knockbackGun = worldEntity.Get<KnockbackGun>();
+                if (knockbackGun != null)
+                {
+                    snap.KnockbackAmmo = knockbackGun.Ammo;
+                    snap.KnockbackNextReloadTick = knockbackGun.NextReloadTick;
+                    snap.KnockbackCooldownEndTick = knockbackGun.CooldownEndTick;
+                }
 
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)

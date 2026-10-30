@@ -31,4 +31,20 @@ namespace LOP
             return MountedArcheryTestBots.Resolve(Environment.GetEnvironmentVariable(EnvName), editorValue);
         }
     }
+
+    /// <summary>
+    /// 넉백 규칙이 받는 봇 채우기 목표 인원. 맨 <c>Func&lt;int&gt;</c>로 스코프에 넣으면
+    /// 나중에 <c>Func&lt;int&gt;</c>를 받는 다른 생성자가 생겼을 때 조용히 이 값을 받아 가서, 이름 있는 타입으로 감싼다.
+    /// </summary>
+    public sealed class KnockbackTestBotFill
+    {
+        private readonly Func<int> read;
+
+        public KnockbackTestBotFill(Func<int> read)
+        {
+            this.read = read;
+        }
+
+        public int Read() => read();
+    }
 }

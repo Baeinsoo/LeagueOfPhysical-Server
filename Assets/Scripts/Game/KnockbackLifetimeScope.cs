@@ -42,7 +42,7 @@ namespace LOP
                 c.Resolve<GameFramework.World.IWorld>(),
                 c.Resolve<KnockbackConfig>(),
                 c.Resolve<EntitySpawner>().Despawn), Lifetime.Singleton);
-            builder.RegisterInstance<System.Func<int>>(KnockbackTestBots.ReadFillTo);
+            builder.RegisterInstance(new KnockbackTestBotFill(KnockbackTestBots.ReadFillTo));
             builder.Register<IGameRuleSystem, KnockbackRuleSystem>(Lifetime.Singleton);
 
             builder.Register(c => new KnockbackHitSystem(

@@ -249,6 +249,13 @@ namespace LOP
                 unfinished, eliminated, left);
             //  연속 날갯짓 고비 횟수 — 로비가 고비 코인으로 바꾼다(spec 2026-10-28). 나간 사람은 LeaverRanking이 left를 더해 로비가 0으로 친다.
             comboTally.AttachTo(outcome);
+            //  완주 1/0 — 로비 퀘스트 "완주하기"·"기절 없이 완주"가 읽는다(spec 2026-10-30 §4).
+            var finishedUsers = new HashSet<string>();
+            foreach (var pair in entityIdToUserId)
+            {
+                if (finishSystem.HasFinished(pair.Key)) finishedUsers.Add(pair.Value);
+            }
+            RaceStatKeys.AttachFinished(outcome, entityIdToUserId.Values, finishedUsers);
             return outcome;
         }
     }

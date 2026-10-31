@@ -18,18 +18,22 @@ namespace LOP
         private readonly KnockbackConfig config;
         private readonly GameFramework.World.IEventSink eventSink;
         private readonly float tickInterval;
+        private readonly KnockbackPillars pillars;
+        private readonly List<UnityEngine.Vector2> standingPillars = new List<UnityEngine.Vector2>();
         private readonly List<(string id, Vector2 position)> targets = new List<(string, Vector2)>();
         private readonly List<GameFramework.World.WorldEvent> events = new List<GameFramework.World.WorldEvent>();
 
         public KnockbackHitSystem(KnockbackWorld world, GameFramework.World.EntityRegistry registry,
                                   KnockbackMatchState state, KnockbackConfig config,
-                                  GameFramework.World.IEventSink eventSink, float tickInterval = 0.02f)
+                                  GameFramework.World.IEventSink eventSink, KnockbackPillars pillars,
+                                  float tickInterval = 0.02f)
         {
             this.world = world;
             this.registry = registry;
             this.state = state;
             this.config = config;
             this.eventSink = eventSink;
+            this.pillars = pillars;
             this.tickInterval = tickInterval;
         }
 
@@ -55,7 +59,8 @@ namespace LOP
                 targets.Add((id, new Vector2(t.Position.X, t.Position.Z)));
             }
 
-            var hits = KnockbackHits.Find(world.Shots.Shots, targets, tick, config, tickInterval);
+            pillars.CollectStanding(tick, standingPillars);
+            var hits = KnockbackHits.Find(world.Shots.Shots, targets, standingPillars, pillars.Radius, tick, config, tickInterval);
             if (hits.Count == 0)
             {
                 return;

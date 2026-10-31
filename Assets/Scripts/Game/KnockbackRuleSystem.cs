@@ -103,6 +103,9 @@ namespace LOP
 
         public long MatchDurationTicks => config.MatchDurationTicks(TickInterval);
 
+        /// <summary>사람이 둘 이상이어야 겨룬 판이다 — 혼자 잡힌 판은 바로 이겨도 보상을 주지 않는다.</summary>
+        public static bool IsPractice(int humanCount) => humanCount < 2;
+
         public MatchOutcome ResolveOutcome()
         {
             var alive = new List<string>();
@@ -115,7 +118,9 @@ namespace LOP
             {
                 if (entityIdToUserId.TryGetValue(entityId, out var user)) eliminations.Add((user, tick));
             }
-            return DodgePlacements.Resolve(alive, eliminations);
+            var outcome = DodgePlacements.Resolve(alive, eliminations);
+            outcome.practice = IsPractice(entityIdToUserId.Count - state.Bots.Count);
+            return outcome;
         }
     }
 }

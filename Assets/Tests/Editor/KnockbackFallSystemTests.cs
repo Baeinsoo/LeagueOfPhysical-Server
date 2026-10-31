@@ -5,7 +5,7 @@ namespace LOP.Tests
 {
     public class KnockbackFallSystemTests
     {
-        static readonly KnockbackConfig C = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f);
+        static readonly KnockbackConfig C = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, 18f, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 1, 6f, 0.5f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 5f, new System.Collections.Generic.List<MountedArcheryZoneStageConfig>());
 
         GameFramework.World.EntityRegistry registry;
         KnockbackMatchState state;
@@ -62,6 +62,18 @@ namespace LOP.Tests
             system.Tick(42, 0.02f);
             system.Tick(43, 0.02f);
             Assert.AreEqual(1, despawned.Count);
+            Assert.AreEqual(1, state.Eliminations.Count);
+        }
+
+        [Test]
+        public void 몸이_없어진_사람은_탈락으로_센다()
+        {
+            state.Players.Add("2");   // 레지스트리에 없는 사람
+            system.Tick(42, 0.02f);
+            Assert.AreEqual(42L, state.EliminatedTick["2"]);
+            Assert.IsFalse(state.EliminatedTick.ContainsKey("1"));
+
+            system.Tick(43, 0.02f);
             Assert.AreEqual(1, state.Eliminations.Count);
         }
 

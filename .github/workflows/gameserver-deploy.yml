@@ -67,7 +67,9 @@ jobs:
               TARGET=main
               git -C "$r" fetch --depth 1 origin "$TARGET"
             fi
-            git -C "$r" checkout -q -B ci-build FETCH_HEAD
+            #  -f: 이 폴더는 빌드용 사본이라 Unity가 만든 추적 안 된 .meta가 남는다. 그 파일이 나중에 레포에
+            #  추적되면 일반 체크아웃은 "덮어쓰게 된다"며 멈춘다(실제로 겪었다).
+            git -C "$r" checkout -q -f -B ci-build FETCH_HEAD
             echo "$r @ $(git -C "$r" rev-parse --short HEAD)"
           done
 

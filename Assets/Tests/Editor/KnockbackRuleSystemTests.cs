@@ -34,10 +34,21 @@ namespace LOP.Tests
             Assert.IsFalse(DodgeRuleSystem.MatchOver(2, 2, -1, 9999));
         }
 
+        //  사람이 혼자인 판은 겨룬 상대가 없어 보상을 주지 않는다(사용자 결정 10-31). 봇이 낀 판은
+        //  MatchEndedMessageBuilder.IsPractice가 따로 연습으로 본다.
         [Test]
-        public void 결과는_연습_판이다()
+        public void 사람이_둘_이상이어야_보상_판이다()
         {
-            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f);
+            Assert.IsTrue(KnockbackRuleSystem.IsPractice(0));
+            Assert.IsTrue(KnockbackRuleSystem.IsPractice(1));
+            Assert.IsFalse(KnockbackRuleSystem.IsPractice(2));
+            Assert.IsFalse(KnockbackRuleSystem.IsPractice(8));
+        }
+
+        [Test]
+        public void 사람이_없는_판의_결과는_연습이다()
+        {
+            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, 18f, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 1, 6f, 0.5f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 5f, new System.Collections.Generic.List<MountedArcheryZoneStageConfig>());
             var rule = new KnockbackRuleSystem(null, null, new KnockbackMatchState(), cfg);
             Assert.IsTrue(rule.ResolveOutcome().practice);
         }
@@ -45,7 +56,7 @@ namespace LOP.Tests
         [Test]
         public void 판_길이는_120초()
         {
-            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f);
+            var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, 18f, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 1, 6f, 0.5f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 5f, new System.Collections.Generic.List<MountedArcheryZoneStageConfig>());
             Assert.AreEqual(6000L, cfg.MatchDurationTicks(0.02f));
         }
     }

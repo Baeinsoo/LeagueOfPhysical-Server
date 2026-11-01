@@ -21,6 +21,7 @@ namespace LOP
         private readonly KnockbackPillars pillars;
         private readonly List<UnityEngine.Vector2> standingPillars = new List<UnityEngine.Vector2>();
         private readonly List<(string id, Vector2 position)> targets = new List<(string, Vector2)>();
+        private readonly List<(string id, Vector2 position)> shotTargets = new List<(string, Vector2)>();
         private readonly List<GameFramework.World.WorldEvent> events = new List<GameFramework.World.WorldEvent>();
 
         public KnockbackHitSystem(KnockbackWorld world, GameFramework.World.EntityRegistry registry,
@@ -35,6 +36,31 @@ namespace LOP
             this.eventSink = eventSink;
             this.pillars = pillars;
             this.tickInterval = tickInterval;
+        }
+
+        //  탄마다 쏜 사람과 같은 팀인 몸을 표적에서 빼 호출한다 — 탄이 아군을 지나 뒤의 상대를 맞히게.
+        //  Find는 탄 하나씩 불러도 결과 순서가 탄 목록 순서 그대로다.
+        private List<(KnockbackShot shot, string victimId)> FindHits(long tick)
+        {
+            var shots = world.Shots.Shots;
+            var hits = new List<(KnockbackShot, string)>();
+            var single = new KnockbackShot[1];
+            for (int i = 0; i < shots.Count; i++)
+            {
+                state.Team.TryGetValue(shots[i].ShooterId, out int shooterTeam);
+                shotTargets.Clear();
+                foreach (var target in targets)
+                {
+                    state.Team.TryGetValue(target.id, out int targetTeam);
+                    if (!KnockbackTeams.SameTeam(shooterTeam, targetTeam))
+                    {
+                        shotTargets.Add(target);
+                    }
+                }
+                single[0] = shots[i];
+                hits.AddRange(KnockbackHits.Find(single, shotTargets, standingPillars, pillars.Radius, tick, config, tickInterval));
+            }
+            return hits;
         }
 
         public void Tick(long tick, float deltaTime)
@@ -60,7 +86,7 @@ namespace LOP
             }
 
             pillars.CollectStanding(tick, standingPillars);
-            var hits = KnockbackHits.Find(world.Shots.Shots, targets, standingPillars, pillars.Radius, tick, config, tickInterval);
+            var hits = FindHits(tick);
             if (hits.Count == 0)
             {
                 return;

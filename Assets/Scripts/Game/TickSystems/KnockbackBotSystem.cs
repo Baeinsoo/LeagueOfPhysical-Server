@@ -27,6 +27,8 @@ namespace LOP
         private readonly List<string> botIds = new List<string>();
         private readonly List<KnockbackBotBody> bodies = new List<KnockbackBotBody>();
         private readonly List<KnockbackBotShot> shots = new List<KnockbackBotShot>();
+        private readonly List<KnockbackBotBody> enemiesOfBot = new List<KnockbackBotBody>();
+        private readonly List<KnockbackBotShot> threatsOfBot = new List<KnockbackBotShot>();
 
         public KnockbackBotSystem(GameFramework.World.EntityRegistry registry, KnockbackWorld world,
                                   KnockbackMatchState state, KnockbackConfig config,
@@ -69,6 +71,7 @@ namespace LOP
                 var transform = entity.Get<GameFramework.World.Transform>();
                 var velocity = entity.Get<GameFramework.World.Velocity>()?.Linear.ToUnity() ?? Vector3.zero;
                 var position = transform.Position.ToUnity();
+                FilterByTeam(id, state.Team, bodies, shots, enemiesOfBot, threatsOfBot);
                 var view = new KnockbackBotView
                 {
                     SelfId = id,
@@ -77,8 +80,8 @@ namespace LOP
                     Started = tick >= world.GameplayStartTick,
                     Position = new Vector2(position.x, position.z),
                     Velocity = new Vector2(velocity.x, velocity.z),
-                    Enemies = bodies,
-                    Shots = shots,
+                    Enemies = enemiesOfBot,
+                    Shots = threatsOfBot,
                     Zone = zone,
                     NextZone = next,
                     Config = config,
@@ -90,6 +93,26 @@ namespace LOP
                 command.SequenceNumber = ++sequence;
                 sequences[id] = sequence;
                 inputBufferSystem.Enqueue(entity.Get<InputBuffer>(), tick, command);
+            }
+        }
+
+        /// <summary>같은 팀 몸은 적이 아니고 같은 팀이 쏜 탄은 피할 필요가 없다. 팀 0(개인전)은 아무도 거르지 않는다.</summary>
+        public static void FilterByTeam(string selfId, IReadOnlyDictionary<string, int> team,
+                                        IReadOnlyList<KnockbackBotBody> bodies, IReadOnlyList<KnockbackBotShot> shots,
+                                        List<KnockbackBotBody> enemies, List<KnockbackBotShot> threats)
+        {
+            enemies.Clear();
+            threats.Clear();
+            team.TryGetValue(selfId, out int mine);
+            for (int i = 0; i < bodies.Count; i++)
+            {
+                team.TryGetValue(bodies[i].Id, out int theirs);
+                if (!KnockbackTeams.SameTeam(mine, theirs)) enemies.Add(bodies[i]);
+            }
+            for (int i = 0; i < shots.Count; i++)
+            {
+                team.TryGetValue(shots[i].ShooterId, out int theirs);
+                if (!KnockbackTeams.SameTeam(mine, theirs)) threats.Add(shots[i]);
             }
         }
 

@@ -21,6 +21,8 @@ namespace LOP
         private readonly IPublisher<EntityDestroyed> entityDestroyedPublisher;
 
         private readonly Dictionary<string, string> userEntityMap = new Dictionary<string, string>();
+        // 디스폰해도 지우지 않는다 — 탈락 뒤 다시 들어온 사람이 자기 옛 몸(팀 표시용)을 알려 받게.
+        private readonly Dictionary<string, string> lastEntityMap = new Dictionary<string, string>();
         private readonly HashSet<string> entitiesToDestroy = new HashSet<string>();
         private int entityIdCounter = 1;
 
@@ -58,6 +60,12 @@ namespace LOP
             return userId != null && userEntityMap.TryGetValue(userId, out string entityId) ? entityId : null;
         }
 
+        /// <summary>이 판에서 그 사람이 마지막으로 가졌던 몸 id(디스폰 뒤에도 남음). 없으면 null.</summary>
+        public string GetLastEntityIdByUserId(string userId)
+        {
+            return userId != null && lastEntityMap.TryGetValue(userId, out string entityId) ? entityId : null;
+        }
+
         public void Spawn(CharacterCreationData creationData)
         {
             characterCreator.Create(creationData);
@@ -66,6 +74,7 @@ namespace LOP
             if (string.IsNullOrEmpty(creationData.userId) == false)
             {
                 userEntityMap[creationData.userId] = creationData.entityId;
+                lastEntityMap[creationData.userId] = creationData.entityId;
             }
         }
 

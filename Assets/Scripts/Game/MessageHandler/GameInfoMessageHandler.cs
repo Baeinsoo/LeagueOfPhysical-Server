@@ -75,6 +75,8 @@ namespace LOP
                     //  "내 몸 없음"이 그대로 표현된다. 세상 정보(다른 새들)는 그대로 보낸다,
                     //  관전하려면 그게 필요하다.
                     EntityId = entityId ?? string.Empty,
+                    //  몸이 디스폰된 뒤 재접속해도 팀 표시를 찾게 옛 몸 id를 따로 준다(조종용 EntityId와 별개).
+                    FormerEntityId = entitySpawner.GetLastEntityIdByUserId(session.userId) ?? string.Empty,
                     SessionId = session.sessionId,
                     // 판치기 등 입력을 안 보내는 모드는 InputBuffer가 없다 — 없는 게 정상이니 조회 실패를 감내한다.
                     ExpectedNextSequence = (entityId == null

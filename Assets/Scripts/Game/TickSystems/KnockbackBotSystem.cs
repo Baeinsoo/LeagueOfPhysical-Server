@@ -72,6 +72,7 @@ namespace LOP
                 var velocity = entity.Get<GameFramework.World.Velocity>()?.Linear.ToUnity() ?? Vector3.zero;
                 var position = transform.Position.ToUnity();
                 FilterByTeam(id, state.Team, bodies, shots, enemiesOfBot, threatsOfBot);
+                var gun = entity.Get<KnockbackGun>();
                 var view = new KnockbackBotView
                 {
                     SelfId = id,
@@ -85,6 +86,8 @@ namespace LOP
                     Zone = zone,
                     NextZone = next,
                     Config = config,
+                    Ammo = gun?.Ammo ?? 0,
+                    CooldownEndTick = gun?.CooldownEndTick ?? 0,
                 };
 
                 var command = BrainFor(id).Think(view);

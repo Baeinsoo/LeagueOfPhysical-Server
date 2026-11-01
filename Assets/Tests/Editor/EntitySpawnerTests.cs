@@ -23,6 +23,22 @@ namespace LOP.Tests
             public void Publish(T message) { }
         }
 
+        private sealed class EmptySessions : GameFramework.ISessionManager
+        {
+            public void AddSession(GameFramework.ISession session) { }
+            public void RemoveSession(GameFramework.ISession session) { }
+            public GameFramework.ISession GetSessionById(string sessionId) => null;
+            public GameFramework.ISession GetSessionByUserId(string userId) => null;
+            public T GetSessionById<T>(string sessionId) where T : GameFramework.ISession => default;
+            public T GetSessionByUserId<T>(string userId) where T : GameFramework.ISession => default;
+            public bool TryGetSessionById(string sessionId, out GameFramework.ISession session) { session = null; return false; }
+            public bool TryGetSessionByUserId<T>(string userId, out T session) where T : GameFramework.ISession { session = default; return false; }
+            public void RemoveSessionById(string sessionId) { }
+            public void RemoveSessionByUserId(string userId) { }
+            public System.Collections.Generic.IReadOnlyCollection<GameFramework.ISession> GetAllSessions()
+                => new GameFramework.ISession[0];
+        }
+
         //  스폰과 조회만 보는 테스트라 나머지 의존은 쓰이지 않는다.
         private static EntitySpawner Spawner()
             => new EntitySpawner(
@@ -65,6 +81,27 @@ namespace LOP.Tests
         {
             //  딕셔너리는 null 키로 찾는 것 자체를 거부한다 — 조회 함수가 먼저 막아야 한다.
             Assert.IsNull(Spawner().GetEntityIdByUserId(null));
+        }
+
+        [Test]
+        public void 디스폰해도_마지막_몸_id를_기억한다()
+        {
+            var registry = new GameFramework.World.EntityRegistry();
+            var spawner = new EntitySpawner(new EmptySessions(), registry, new FakeCharacterCreator(),
+                null, null, new FakePublisher<EntityCreated>(), new FakePublisher<EntityDestroyed>());
+            var body = new GameFramework.World.Entity("e1");
+            body.Add(new GameFramework.World.Ownership("u"));
+            registry.Add(body);
+            spawner.Spawn(new CharacterCreationData { userId = "u", entityId = "e1" });
+            Assert.AreEqual("e1", spawner.GetLastEntityIdByUserId("u"));
+
+            spawner.Despawn("e1");
+            spawner.FlushDespawns();
+
+            Assert.IsNull(spawner.GetEntityIdByUserId("u"));
+            Assert.AreEqual("e1", spawner.GetLastEntityIdByUserId("u"));
+            Assert.IsNull(spawner.GetLastEntityIdByUserId("모르는사람"));
+            Assert.IsNull(spawner.GetLastEntityIdByUserId(null));
         }
     }
 }

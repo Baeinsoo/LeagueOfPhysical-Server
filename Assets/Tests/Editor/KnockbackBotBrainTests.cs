@@ -14,7 +14,7 @@ namespace LOP.Tests
 
         static KnockbackBotView View(Vector2 position, long tick = 1000,
                                      IReadOnlyList<KnockbackBotBody> enemies = null, IReadOnlyList<KnockbackBotShot> shots = null,
-                                     (Vector2, float)? zone = null)
+                                     (Vector2, float)? zone = null, int ammo = 2, long cooldownEndTick = 0)
         {
             var circle = zone ?? (Vector2.zero, 100f);
             return new KnockbackBotView
@@ -30,6 +30,8 @@ namespace LOP.Tests
                 Zone = circle,
                 NextZone = circle,
                 Config = Config,
+                Ammo = ammo,
+                CooldownEndTick = cooldownEndTick,
             };
         }
 
@@ -242,6 +244,57 @@ namespace LOP.Tests
             team["me"] = 0;
             KnockbackBotSystem.FilterByTeam("me", team, bodies, shots, enemies, threats);
             Assert.AreEqual(3, enemies.Count, "개인전은 거르지 않는다");
+        }
+
+        static List<KnockbackBotBody> OneEnemyInRange() =>
+            new List<KnockbackBotBody> { new KnockbackBotBody("enemy", new Vector2(0f, 10f), Vector2.zero) };
+
+        [Test]
+        public void 탄이_없으면_쏘지_않는다()
+        {
+            var brain = Brain();
+            var enemies = OneEnemyInRange();
+            for (int i = 0; i < 200; i++)
+            {
+                Assert.IsFalse(brain.Think(View(Vector2.zero, 1000 + i, enemies, ammo: 0)).Fire);
+            }
+        }
+
+        [Test]
+        public void 연사_간격_중엔_쏘지_않는다()
+        {
+            var brain = Brain();
+            var enemies = OneEnemyInRange();
+            for (int i = 0; i < 200; i++)
+            {
+                Assert.IsFalse(brain.Think(View(Vector2.zero, 1000 + i, enemies, cooldownEndTick: 5000)).Fire);
+            }
+        }
+
+        [Test]
+        public void 탄이_차면_다음_틱에_바로_쏜다()
+        {
+            var brain = Brain();
+            var enemies = OneEnemyInRange();
+            // 탄이 바닥난 채로 발사 간격(최대 1.3초=65틱)보다 오래 버틴다
+            for (int i = 0; i < 300; i++)
+            {
+                Assert.IsFalse(brain.Think(View(Vector2.zero, 1000 + i, enemies, ammo: 0)).Fire);
+            }
+            Assert.IsTrue(brain.Think(View(Vector2.zero, 1300, enemies, ammo: 1)).Fire, "탄이 찬 첫 틱에 쏜다");
+        }
+
+        [Test]
+        public void 탄과_간격이_되면_쏜다_양성_대조()
+        {
+            var brain = Brain();
+            var enemies = OneEnemyInRange();
+            bool fired = false;
+            for (int i = 0; i < 100 && !fired; i++)
+            {
+                fired = brain.Think(View(Vector2.zero, 1000 + i, enemies, ammo: 2, cooldownEndTick: 900)).Fire;
+            }
+            Assert.IsTrue(fired);
         }
     }
 }

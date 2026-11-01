@@ -50,6 +50,8 @@ namespace LOP
         public (Vector2 center, float radius) Zone;
         public (Vector2 center, float radius) NextZone;
         public KnockbackConfig Config;
+        public int Ammo;
+        public long CooldownEndTick;
     }
 
     /// <summary>
@@ -215,6 +217,9 @@ namespace LOP
                 nextFireTick = view.Tick + interval;
             }
             if (view.Tick < nextFireTick) return;
+
+            //  탄이 없거나 연사 간격 중이면 눌러도 헛방이다. 예약 틱을 밀지 않아야 탄이 차는 순간 바로 쏜다.
+            if (view.Ammo < 1 || view.Tick < view.CooldownEndTick) return;
 
             //  탄이 도착하는 동안 적이 걸어갈 만큼 앞을 겨눈다(얼마나 믿고 앞지를지는 봇마다 다르다).
             var aimPoint = enemy.Position + enemy.Velocity * (distance / view.Config.ShotSpeed) * lead;

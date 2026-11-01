@@ -216,5 +216,32 @@ namespace LOP.Tests
                 Assert.LessOrEqual(new Vector2(c.Horizontal, c.Vertical).magnitude, 1.0001f);
             }
         }
+
+        [Test]
+        public void 같은_팀은_적_목록에_없다()
+        {
+            var team = new Dictionary<string, int> { ["me"] = 1, ["mate"] = 1, ["foe"] = 2, ["solo"] = 0 };
+            var bodies = new List<KnockbackBotBody>
+            {
+                new KnockbackBotBody("mate", Vector2.zero, Vector2.zero),
+                new KnockbackBotBody("foe", Vector2.zero, Vector2.zero),
+                new KnockbackBotBody("solo", Vector2.zero, Vector2.zero),
+            };
+            var shots = new List<KnockbackBotShot>
+            {
+                new KnockbackBotShot("mate", 1, Vector2.zero, Vector2.right),
+                new KnockbackBotShot("foe", 1, Vector2.zero, Vector2.right),
+            };
+            var enemies = new List<KnockbackBotBody>();
+            var threats = new List<KnockbackBotShot>();
+            KnockbackBotSystem.FilterByTeam("me", team, bodies, shots, enemies, threats);
+
+            CollectionAssert.AreEqual(new[] { "foe", "solo" }, enemies.ConvertAll(b => b.Id));
+            CollectionAssert.AreEqual(new[] { "foe" }, threats.ConvertAll(s => s.ShooterId));
+
+            team["me"] = 0;
+            KnockbackBotSystem.FilterByTeam("me", team, bodies, shots, enemies, threats);
+            Assert.AreEqual(3, enemies.Count, "개인전은 거르지 않는다");
+        }
     }
 }

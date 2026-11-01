@@ -106,5 +106,28 @@ namespace LOP.Tests
             open.Tick(17, Dt);
             Assert.AreEqual(12, registry.Get("c").Get<KnockbackBody>().DamagePercent);
         }
+
+        [Test]
+        public void 같은_팀_몸은_지나가고_뒤의_상대를_맞힌다()
+        {
+            AddBody("c", 2.4f, 0f, 0f);
+            state.Team["a"] = 1;
+            state.Team["c"] = 1;
+            state.Team["b"] = 2;
+            system.Tick(14, Dt);
+
+            Assert.AreEqual(0, registry.Get("c").Get<KnockbackBody>().DamagePercent, "같은 팀은 안 맞는다");
+            Assert.AreEqual(12, registry.Get("b").Get<KnockbackBody>().DamagePercent, "뒤의 상대가 맞는다");
+        }
+
+        [Test]
+        public void 개인전은_앞의_몸을_맞힌다()
+        {
+            AddBody("c", 2.4f, 0f, 0f);
+            system.Tick(14, Dt);
+
+            Assert.AreEqual(12, registry.Get("c").Get<KnockbackBody>().DamagePercent);
+            Assert.AreEqual(0, registry.Get("b").Get<KnockbackBody>().DamagePercent);
+        }
     }
 }

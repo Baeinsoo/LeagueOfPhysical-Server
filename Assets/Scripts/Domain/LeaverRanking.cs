@@ -38,18 +38,19 @@ namespace LOP
             }
             stayed.Sort((x, y) => x.placement.CompareTo(y.placement));
 
-            var result = new MatchOutcome { practice = outcome.practice };
+            var result = new MatchOutcome { practice = outcome.practice, denseRanking = outcome.denseRanking };
             int place = 0;
             int previousOriginal = int.MinValue;
             for (int i = 0; i < stayed.Count; i++)
             {
                 //  원래 동점이면 같은 등수, 아니면 앞에 선 사람 수 + 1(1·1·3에서 하나 빠지면 1·2).
-                if (stayed[i].placement != previousOriginal) place = i + 1;
+                //  촘촘한 등수(팀전)는 묶음마다 1씩만 내려간다(1·1·2·2).
+                if (stayed[i].placement != previousOriginal) place = outcome.denseRanking ? place + 1 : i + 1;
                 previousOriginal = stayed[i].placement;
                 result.placements.Add(Copy(stayed[i], place));
             }
 
-            int next = stayed.Count;
+            int next = outcome.denseRanking ? place : stayed.Count;
             foreach (var userId in leftLatestFirst)
             {
                 if (byUser.TryGetValue(userId, out var p)) result.placements.Add(CopyLeft(p, ++next));

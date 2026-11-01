@@ -10,6 +10,9 @@ namespace LOP
 
         //  봇이 없어도 룰이 "이 판은 연습"이라고 정할 수 있다(넉백 슬라이스 1: 아직 남을 떨어뜨릴 수 없어서).
         public bool practice;
+
+        //  팀전처럼 등수가 "묶음"인 판(이긴 팀 1위·진 팀 2위). 나간 사람을 빼고 다시 매길 때 묶음 사이를 사람 수만큼 띄우지 않는다.
+        public bool denseRanking;
     }
 
     [Serializable]

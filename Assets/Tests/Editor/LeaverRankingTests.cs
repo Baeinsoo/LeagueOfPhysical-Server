@@ -129,5 +129,22 @@ namespace LOP.Tests
                 Assert.AreEqual(37, placement.playedSeconds);
             }
         }
+
+        //  팀전: 이긴 팀 전원 1위, 진 팀 전원 2위 — 묶음 사이를 사람 수만큼 띄우지 않는다.
+        [Test]
+        public void 촘촘한_등수는_묶음끼리_1_2로_남는다()
+        {
+            var raw = Outcome(("a", 1), ("b", 1), ("c", 2), ("d", 2));
+            raw.denseRanking = true;
+            Assert.AreEqual("a1 b1 c2 d2", Shape(LeaverRanking.Apply(raw, None, None)));
+        }
+
+        [Test]
+        public void 촘촘한_등수에서_나간_사람은_맨_아래()
+        {
+            var raw = Outcome(("a", 1), ("b", 1), ("c", 2), ("d", 2));
+            raw.denseRanking = true;
+            Assert.AreEqual("a1 b1 d2 c3", Shape(LeaverRanking.Apply(raw, new[] { "c" }, None)));
+        }
     }
 }

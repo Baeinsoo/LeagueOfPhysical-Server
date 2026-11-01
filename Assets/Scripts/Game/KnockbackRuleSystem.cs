@@ -89,6 +89,8 @@ namespace LOP
                         : PlayerLookResolver.Resolve(roomDataStore.looks, userId, i),
                 });
             }
+            //  팀을 채운 상태를 틱 0부터 보낸다 — 판본이 0이면 첫 원 공개(8초)까지 클라가 팀을 모른다.
+            state.MarkChanged();
         }
 
         public void Deinitialize() { }
@@ -110,15 +112,9 @@ namespace LOP
                 long lastElimination = state.Eliminations.Count > 0 ? state.Eliminations[state.Eliminations.Count - 1].tick : -1;
                 if (mode.IsTeam)
                 {
-                    var alive = new List<string>();
-                    foreach (var id in state.Players)
-                    {
-                        if (state.EliminatedTick.ContainsKey(id) == false) alive.Add(id);
-                    }
-                    //  팀전은 "한 명 남음"이 아니라 "한 팀 남음". 아무도 안 떨어졌으면 아직 안 시작한 판이다.
-                    return state.Eliminations.Count > 0
-                        && KnockbackTeams.TeamMatchOver(state.Team, alive)
-                        && state.LastTick - lastElimination >= DodgeRuleSystem.EndGraceTicks;
+                    //  팀전은 "한 명 남음"이 아니라 "한 팀 남음" — 탈락 때 상태가 승부를 확정해 둔다.
+                    return state.TeamDecided
+                        && state.LastTick - state.TeamDecidedTick >= DodgeRuleSystem.EndGraceTicks;
                 }
                 return DodgeRuleSystem.MatchOver(entityIdToUserId.Count, state.AliveCount(), lastElimination, state.LastTick);
             }
@@ -166,7 +162,19 @@ namespace LOP
                 {
                     teamOfUser[pair.Value] = state.Team.TryGetValue(pair.Key, out var team) ? team : 0;
                 }
-                outcome = TeamOutcome(teamOfUser, alive);
+                //  승부가 정해진 틱의 생존자로 매긴다 — 그 뒤에 이긴 팀이 떨어져도 결과는 그대로.
+                //  정해지지 않았으면(시간 끝, 두 팀 생존) 지금 살아 있는 사람으로.
+                var winners = alive;
+                if (state.TeamDecided)
+                {
+                    winners = new List<string>();
+                    foreach (var id in state.TeamWinners)
+                    {
+                        if (entityIdToUserId.TryGetValue(id, out var user)) winners.Add(user);
+                    }
+                }
+                outcome = TeamOutcome(teamOfUser, winners);
+                outcome.denseRanking = true;
             }
             else
             {

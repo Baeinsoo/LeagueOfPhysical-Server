@@ -33,14 +33,45 @@ namespace LOP
             MarkChanged();
         }
 
+        /// <summary>팀전에서 승부가 정해진 틱(-1 = 아직). 살아 있는 팀이 하나 이하가 된 첫 틱이다.</summary>
+        public long TeamDecidedTick { get; private set; } = -1;
+
+        /// <summary>
+        /// 승부가 정해진 틱이 끝났을 때 살아 있던 몸들 = 이긴 팀. 비어 있으면 같은 틱 동시 전멸(무승부).
+        /// 끝나기를 기다리는 사이 이긴 팀이 떨어져도 승부는 바뀌지 않는다.
+        /// </summary>
+        public readonly HashSet<string> TeamWinners = new HashSet<string>();
+
+        public bool TeamDecided => TeamDecidedTick >= 0;
+
         /// <summary>탈락시키는 유일한 길. 이미 탈락했으면 false.</summary>
         public bool Eliminate(string entityId, long tick)
         {
             if (EliminatedTick.ContainsKey(entityId)) return false;
             EliminatedTick[entityId] = tick;
             Eliminations.Add((entityId, tick));
+            DecideTeamResult(entityId, tick);
             MarkChanged();
             return true;
+        }
+
+        private void DecideTeamResult(string entityId, long tick)
+        {
+            if (TeamCount < 2) return;
+            if (TeamDecided)
+            {
+                //  같은 틱에 떨어진 사람은 "그 틱에 살아 있던" 쪽이 아니다 — 같은 틱 동시 전멸은 무승부.
+                if (tick == TeamDecidedTick) TeamWinners.Remove(entityId);
+                return;
+            }
+            var alive = new List<string>();
+            foreach (var id in Players)
+            {
+                if (EliminatedTick.ContainsKey(id) == false) alive.Add(id);
+            }
+            if (KnockbackTeams.TeamMatchOver(Team, alive) == false) return;
+            TeamDecidedTick = tick;
+            foreach (var id in alive) TeamWinners.Add(id);
         }
 
         public int AliveCount()

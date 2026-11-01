@@ -59,5 +59,51 @@ namespace LOP.Tests
             var cfg = new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, 18f, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 1, 6f, 0.5f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 5f, new System.Collections.Generic.List<MountedArcheryZoneStageConfig>());
             Assert.AreEqual(6000L, cfg.MatchDurationTicks(0.02f));
         }
+
+        static System.Collections.Generic.Dictionary<string, int> FourPlayers() => new System.Collections.Generic.Dictionary<string, int>
+        {
+            ["a"] = 1, ["b"] = 2, ["c"] = 1, ["d"] = 2,
+        };
+
+        static int PlacementOf(MatchOutcome o, string user)
+        {
+            foreach (var p in o.placements) if (p.userId == user) return p.placement;
+            return -1;
+        }
+
+        [Test]
+        public void 팀전은_남은_팀_전원이_1위_나머지는_2위()
+        {
+            var o = KnockbackRuleSystem.TeamOutcome(FourPlayers(), new[] { "a", "c" });
+            Assert.AreEqual(1, PlacementOf(o, "a"));
+            Assert.AreEqual(1, PlacementOf(o, "c"));
+            Assert.AreEqual(2, PlacementOf(o, "b"));
+            Assert.AreEqual(2, PlacementOf(o, "d"));
+        }
+
+        [Test]
+        public void 팀전에서_동시에_다_떨어지면_전원_1위()
+        {
+            var o = KnockbackRuleSystem.TeamOutcome(FourPlayers(), new string[0]);
+            foreach (var id in new[] { "a", "b", "c", "d" }) Assert.AreEqual(1, PlacementOf(o, id));
+        }
+
+        [Test]
+        public void 사람1_봇7이면_4대4로_나뉜다()
+        {
+            int one = 0, two = 0;
+            for (int seat = 0; seat < 8; seat++)
+            {
+                if (KnockbackTeams.TeamForSeat(seat, 2) == 1) one++; else two++;
+            }
+            Assert.AreEqual(4, one);
+            Assert.AreEqual(4, two);
+        }
+
+        [Test]
+        public void 내가_떨어져도_우리_팀이_살아_있으면_안_끝난다()
+        {
+            Assert.IsFalse(KnockbackTeams.TeamMatchOver(FourPlayers(), new[] { "c", "b", "d" }));
+        }
     }
 }

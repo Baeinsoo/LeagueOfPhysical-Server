@@ -54,7 +54,7 @@ namespace LOP
 
         public static KnockbackStateToC ToWire(KnockbackMatchState state, GameFramework.World.EntityRegistry registry)
         {
-            var message = new KnockbackStateToC { Version = state.Version };
+            var message = new KnockbackStateToC { Version = state.Version, TeamCount = state.TeamCount };
             foreach (var id in state.Players)
             {
                 int damage = 0;
@@ -67,6 +67,7 @@ namespace LOP
                     EntityId = id,
                     EliminatedTick = state.EliminatedTick.TryGetValue(id, out var t) ? t : -1,
                     DamagePercent = damage,
+                    Team = state.Team.TryGetValue(id, out var team) ? team : 0,
                 });
             }
             foreach (var s in state.ZoneStages)

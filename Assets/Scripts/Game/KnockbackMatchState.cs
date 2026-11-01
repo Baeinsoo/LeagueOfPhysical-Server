@@ -9,6 +9,10 @@ namespace LOP
         public readonly List<string> Players = new List<string>();
         /// <summary>Players 중 시험용 봇의 몸 id. 봇 시스템만 읽는다.</summary>
         public readonly HashSet<string> Bots = new HashSet<string>();
+        /// <summary>몸 id → 팀 번호(0 = 개인전). 룰이 자리를 나눌 때 채운다.</summary>
+        public readonly Dictionary<string, int> Team = new Dictionary<string, int>();
+        /// <summary>0 = 개인전, 2 = 팀전.</summary>
+        public int TeamCount;
         public readonly Dictionary<string, long> EliminatedTick = new Dictionary<string, long>();
         public readonly List<(string entityId, long tick)> Eliminations = new List<(string, long)>();
 

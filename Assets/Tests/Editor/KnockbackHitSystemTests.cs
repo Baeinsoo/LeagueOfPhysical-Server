@@ -67,6 +67,15 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 맞으면_쏜_사람이_막타_크레딧에_기록된다()
+        {
+            system.Tick(14, Dt);
+            state.Eliminate("b", 14 + 150);
+            Assert.AreEqual("a", state.KoBy["b"]);
+            Assert.IsFalse(state.KoChain.Contains("b"));
+        }
+
+        [Test]
         public void 떨어지는_몸은_안_맞는다()
         {
             registry.Get("b").Get<GameFramework.World.Transform>().Position = new System.Numerics.Vector3(3f, -1f, 0f);

@@ -14,6 +14,12 @@ namespace LOP
         /// <summary>0 = 개인전, 2 = 팀전.</summary>
         public int TeamCount;
         public readonly Dictionary<string, long> EliminatedTick = new Dictionary<string, long>();
+        /// <summary>몸 id → 장외시킨 사람 id. 자멸이면 항목이 없다.</summary>
+        public readonly Dictionary<string, string> KoBy = new Dictionary<string, string>();
+        /// <summary>연쇄(날아가는 몸에 부딪힘)로 장외된 몸 id.</summary>
+        public readonly HashSet<string> KoChain = new HashSet<string>();
+        /// <summary>막타 크레딧 장부. 탄 맞음·연쇄가 쓰고 Eliminate가 읽는다.</summary>
+        public readonly KnockbackKoCredit Credit = new KnockbackKoCredit();
         public readonly List<(string entityId, long tick)> Eliminations = new List<(string, long)>();
 
         /// <summary>떨어짐 판정이 마지막으로 돈 틱 — 룰이 "마지막 탈락 뒤 얼마나 지났나"를 잰다.</summary>
@@ -49,6 +55,12 @@ namespace LOP
         {
             if (EliminatedTick.ContainsKey(entityId)) return false;
             EliminatedTick[entityId] = tick;
+            Credit.Resolve(entityId, tick, out var koBy, out var koChain);
+            if (koBy.Length > 0)
+            {
+                KoBy[entityId] = koBy;
+                if (koChain) KoChain.Add(entityId);
+            }
             Eliminations.Add((entityId, tick));
             DecideTeamResult(entityId, tick);
             MarkChanged();

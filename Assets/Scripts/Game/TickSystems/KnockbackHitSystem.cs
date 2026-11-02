@@ -104,6 +104,7 @@ namespace LOP
                 }
                 KnockbackRules.ApplyHit(body, velocity, shot.Direction, tick, config, tickInterval);
                 world.RemoveShot(shot.ShooterId, shot.FireTick);
+                state.Credit.RecordShotHit(victimId, shot.ShooterId, tick);
                 events.Add(new KnockbackHitEvent(shot.ShooterId, shot.FireTick, victimId));
             }
 

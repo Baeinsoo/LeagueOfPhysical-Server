@@ -231,6 +231,56 @@ namespace LOP.Tests
             Assert.AreNotEqual(positions[0], positions[1], "매번 같은 자리가 아니다");
         }
 
+        //  거리·각도를 정해 준 값만 내놓는 난수 - 상자 후보를 기둥 자리로 몰아넣는다.
+        sealed class FixedRandom : System.Random
+        {
+            readonly double[] values;
+            int next;
+            public FixedRandom(params double[] values) { this.values = values; }
+            public override double NextDouble() => values[next++ % values.Length];
+        }
+
+        [Test]
+        public void 기둥_곁_자리는_고르지_않는다()
+        {
+            //  기둥 중심(링 4m, 22.5도). 후보가 늘 정확히 그 자리가 되도록 거리·각도를 맞춘다.
+            var layout = new KnockbackPillarLayout(1, 4f, 0.9f, 3f);
+            var pillars = new KnockbackPillars(layout, world.Floor);
+            float reach = world.Floor.ZoneStartRadius - 1.5f;
+            double fDistance = (4f / reach) * (4f / reach);
+            double fAngle = 67.5 / 360.0;
+            var s = new KnockbackMatchState();
+            new KnockbackCrateSystem(s, C, world, registry, new FixedRandom(fDistance, fAngle), pillars).Tick(FirstAnnounce, Dt);
+            //  후보가 전부 기둥 곁이라 버려지고 마지막 수단(원 중심)으로 간다 - 기둥 곁에는 놓이지 않는다.
+            Assert.IsTrue(s.Crate.HasValue);
+            Assert.Greater((s.Crate.Value.Position - pillars.Center(0)).magnitude, pillars.Radius + C.CratePickupRadius + 0.3f,
+                "기둥 곁 자리에는 상자를 놓지 않는다(주울 수 없는 자리)");
+
+            //  양성 대조 - 같은 난수라도 기둥이 없으면 그 자리에 놓인다.
+            var s2 = new KnockbackMatchState();
+            new KnockbackCrateSystem(s2, C, world, registry, new FixedRandom(fDistance, fAngle)).Tick(FirstAnnounce, Dt);
+            Assert.IsTrue(s2.Crate.HasValue);
+            Assert.AreEqual(4f, s2.Crate.Value.Position.magnitude, 1e-3f);
+        }
+
+        [Test]
+        public void 기둥_곁이라도_기둥_반경_줍기_반경_여유_밖이면_고른다()
+        {
+            var pillars = new KnockbackPillars(new KnockbackPillarLayout(1, 4f, 0.9f, 3f), world.Floor);
+            var center = pillars.Center(0);
+            float reach = world.Floor.ZoneStartRadius - 1.5f;
+            //  기둥 중심에서 바깥쪽으로 2.2m(0.9+0.9+0.3=2.1 밖) 떨어진 자리.
+            var point = center + center.normalized * 2.2f;
+            double fDistance = (point.magnitude / reach) * (point.magnitude / reach);
+            double fAngle = System.Math.Atan2(point.y, point.x) / (2 * System.Math.PI);
+            if (fAngle < 0) fAngle += 1.0;
+            var s = new KnockbackMatchState();
+            new KnockbackCrateSystem(s, C, world, registry, new FixedRandom(fDistance, fAngle), pillars).Tick(FirstAnnounce, Dt);
+            Assert.IsTrue(s.Crate.HasValue);
+            Assert.AreEqual(point.x, s.Crate.Value.Position.x, 1e-2f);
+            Assert.AreEqual(point.y, s.Crate.Value.Position.y, 1e-2f);
+        }
+
         [Test]
         public void 다음_원이_공개돼_있으면_그_안쪽에_떨어진다()
         {

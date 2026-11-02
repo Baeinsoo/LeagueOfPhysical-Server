@@ -70,7 +70,8 @@ namespace LOP
                 c.Resolve<KnockbackConfig>(),
                 c.Resolve<KnockbackWorld>(),
                 c.Resolve<GameFramework.World.EntityRegistry>(),
-                new System.Random(unchecked((int)c.Resolve<IMatchSeed>().Value ^ 0x43524154))), Lifetime.Singleton);
+                new System.Random(unchecked((int)c.Resolve<IMatchSeed>().Value ^ 0x43524154)),
+                c.Resolve<KnockbackPillars>()), Lifetime.Singleton);
             builder.Register(c => new KnockbackChainCreditSystem(
                 c.Resolve<KnockbackWorld>(),
                 c.Resolve<KnockbackMatchState>()), Lifetime.Singleton);

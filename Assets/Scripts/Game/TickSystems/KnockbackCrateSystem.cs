@@ -14,18 +14,24 @@ namespace LOP
         //  이보다 낮으면 바닥 밖으로 빠져 떨어지는 중이다.
         private const float StandingMinY = -0.05f;
         private const int PickTries = 20;
+        //  기둥 가장자리에서 몸이 줍기 반경 안으로 들어올 수 있도록 두는 여유(m).
+        private const float PillarMargin = 0.3f;
 
         private readonly KnockbackMatchState state;
         private readonly KnockbackConfig config;
         private readonly KnockbackWorld world;
         private readonly GameFramework.World.EntityRegistry registry;
         private readonly System.Random random;
+        private readonly KnockbackPillars pillars;
+        private readonly System.Collections.Generic.List<Vector2> standingPillars = new System.Collections.Generic.List<Vector2>();
 
         private long nextAnnounceTick = long.MinValue;
 
         public KnockbackCrateSystem(KnockbackMatchState state, KnockbackConfig config, KnockbackWorld world,
-                                    GameFramework.World.EntityRegistry registry, System.Random random)
+                                    GameFramework.World.EntityRegistry registry, System.Random random,
+                                    KnockbackPillars pillars = null)
         {
+            this.pillars = pillars;
             this.state = state;
             this.config = config;
             this.world = world;
@@ -95,6 +101,15 @@ namespace LOP
                 radius = latest.toRadius;
             }
 
+            //  서 있는 기둥 곁은 몸이 닿지 못해 주울 수 없다 - 위험 지대 방식에선 상자가 남아 이후 상자를 막는다.
+            standingPillars.Clear();
+            float clearance = 0f;
+            if (pillars != null)
+            {
+                pillars.CollectStanding(landTick, standingPillars);
+                clearance = pillars.Radius + config.CratePickupRadius + PillarMargin;
+            }
+
             float reach = radius - EdgeInset;
             if (reach > 0f)
             {
@@ -104,7 +119,7 @@ namespace LOP
                     float distance = reach * Mathf.Sqrt((float)random.NextDouble());
                     float angle = (float)random.NextDouble() * Mathf.PI * 2f;
                     var point = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
-                    if (world.Floor.IsSolid(point.x, point.y, landTick))
+                    if (world.Floor.IsSolid(point.x, point.y, landTick) && NearPillar(point, clearance) == false)
                     {
                         position = point;
                         return true;
@@ -113,7 +128,17 @@ namespace LOP
             }
             //  마지막 수단은 원 중심 - 그곳도 설 수 있는 칸일 때만.
             position = center;
-            return world.Floor.IsSolid(center.x, center.y, landTick);
+            return world.Floor.IsSolid(center.x, center.y, landTick) && NearPillar(center, clearance) == false;
+        }
+
+        private bool NearPillar(Vector2 point, float clearance)
+        {
+            float sqr = clearance * clearance;
+            for (int i = 0; i < standingPillars.Count; i++)
+            {
+                if ((standingPillars[i] - point).sqrMagnitude <= sqr) return true;
+            }
+            return false;
         }
 
         private void TryPickUp(long tick)

@@ -13,10 +13,9 @@ namespace LOP.Tests
     {
         private sealed class Seed : IMatchSeed { public ulong Value => 42UL; }
 
+        //  출시 표(#CardRushConfig 1행) 그대로 — 손으로 적은 수치로 돌리면 표를 고쳐도 이 경보가 안 울린다(최종 리뷰 M5).
         private static CardRushConfig Config()
-            => new CardRushConfig(matchDurationSeconds: 120f, moveSeconds: 0.3f, stunSeconds: 0.6f, minLanes: 4,
-                                  botReactMinSeconds: 0.2f, botReactMaxSeconds: 0.5f, botTimingJitterSeconds: 0.05f,
-                                  botMissChance: 0.1f);
+            => new CardRushConfigProvider(CardRushScopeWiringTests.RealMasterData()).Get();
 
         [Test]
         public void 봇_8명은_2분_안에_모두_완주()

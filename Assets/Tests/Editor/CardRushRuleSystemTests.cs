@@ -141,6 +141,54 @@ namespace LOP.Tests
             Assert.IsTrue(f.Rule.IsMatchOver, "1000 + 150");
         }
 
+        //  최종 리뷰 I4: 로딩 중 앱이 죽어 한 번도 못 들어온 사람의 몸은 칸 0에 서 있다. 그 몸을 기다리면
+        //  나머지가 다 들어와도 2분 상한까지 관전 화면에 묶인다 — 출발 뒤엔 세지 않는다.
+        [Test]
+        public void 안_들어온_사람은_기다리지_않는다()
+        {
+            var players = new[] { "a", "b", "c", "absent" };
+            var f = Build(players);
+            var presence = new PlayerPresence();
+            presence.Begin(players);
+            presence.MarkJoined("a");
+            presence.MarkJoined("b");
+            presence.MarkJoined("c");
+            presence.MarkMatchStarted();
+            f.Rule.Presence = presence;
+            f.Rule.Initialize();
+
+            foreach (var user in new[] { "a", "b", "c" })
+            {
+                f.BodyOf(user).Get<FinishState>().FinishedTick = 1000;
+            }
+            //  러너는 매 틱 묻는다 — 조건이 처음 참이 된 틱부터 여운을 센다.
+            f.Finish.Tick(1000, 0.02f);
+            Assert.IsFalse(f.Rule.IsMatchOver, "여운 전");
+            f.Finish.Tick(1150, 0.02f);
+
+            Assert.IsTrue(f.Rule.IsMatchOver, "들어온 셋이 다 완주했다 — 여운 150틱 뒤 끝난다");
+        }
+
+        //  출발 전엔 아직 로딩 중일 수 있다 — 그때 빼면 먼저 온 사람만으로 "전원 완주"가 된다.
+        [Test]
+        public void 출발_전엔_안_들어온_사람도_기다린다()
+        {
+            var players = new[] { "a", "late" };
+            var f = Build(players);
+            var presence = new PlayerPresence();
+            presence.Begin(players);
+            presence.MarkJoined("a");
+            f.Rule.Presence = presence;
+            f.Rule.Initialize();
+
+            f.BodyOf("a").Get<FinishState>().FinishedTick = 1000;
+            f.Finish.Tick(1000, 0.02f);
+            Assert.IsFalse(f.Rule.IsMatchOver);
+            f.Finish.Tick(1150, 0.02f);
+
+            Assert.IsFalse(f.Rule.IsMatchOver);
+        }
+
         [Test]
         public void 상한은_6000틱()
         {

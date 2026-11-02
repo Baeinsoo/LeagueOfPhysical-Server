@@ -36,7 +36,8 @@ namespace LOP.Tests
         private sealed class Seed : IMatchSeed { public ulong Value => 3UL; }
 
         //  LoadAsync는 UnityWebRequest라 EditMode에서 못 기다린다 — 패키지의 .bytes를 직접 읽어 같은 표를 만든다.
-        private static LOP.MasterData.LOPMasterData RealMasterData()
+        //  봇 판 시험(CardRushBotMatchTests)도 출시 표 값을 여기서 읽는다.
+        internal static LOP.MasterData.LOPMasterData RealMasterData()
         {
             var tables = new LOP.MasterData.Tables(file =>
                 new ByteBuf(File.ReadAllBytes(Path.GetFullPath(Folder + file + ".bytes"))));

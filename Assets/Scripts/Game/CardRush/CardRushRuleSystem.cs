@@ -31,7 +31,9 @@ namespace LOP
         /// <summary>판 도중 나가 있는 사람 — 판이 그 사람을 기다리지 않게. 시험 등에서 없으면 아무도 안 나간 것으로 본다.</summary>
         [VContainer.Inject] public PlayerPresence Presence { get; set; }
 
-        private bool IsAway(string userId) => userId != null && Presence != null && Presence.IsAway(userId);
+        //  끊긴 사람뿐 아니라 한 번도 안 들어온 사람도 뺀다(최종 리뷰 I4) — 그 몸은 칸 0에 서 있어 영영 결승에 못 간다.
+        //  추격자가 없는 종목이라 Flappy처럼 "잡혀서 정리됨"으로 풀리지도 않는다.
+        private bool IsAway(string userId) => userId != null && Presence != null && Presence.IsAbsent(userId);
 
         public CardRushRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                   GameFramework.World.EntityRegistry entityRegistry,

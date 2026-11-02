@@ -197,6 +197,29 @@ namespace LOP.Tests
             Assert.IsNull(outcome.placements[0].stats);
         }
 
+        [Test]
+        public void 백_뒤_50마다_되풀이되는_대시_보상은_코인_고비로_안_센다()
+        {
+            //  11-02 — 대시 게이지는 150·200·250…에도 반 칸을 주지만(FlappyFlapComboRules.RewardIndex), 코인은 그대로다.
+            //  서버 고비는 FlappyComboStatKeys.Thresholds로만 세고, 한 연속에서 100은 한 번만 넘는다.
+            var registry = new EntityRegistry();
+            var bird = Bird(registry, "e-a");
+            var tally = new FlappyComboTallySystem(registry);
+            tally.Watch("e-a", "u-a");
+            long tick = 0;
+            ClimbTo(tally, bird, 1, 250, ref tick);
+            Assert.AreEqual(0.5f, FlappyFlapComboRules.Default.Gain(200), "전제: 게이지 쪽은 200에서도 준다");
+
+            var outcome = new MatchOutcome();
+            outcome.placements.Add(new MatchPlacement { userId = "u-a", placement = 1 });
+            tally.AttachTo(outcome);
+            var stats = outcome.placements[0].stats;
+            Assert.AreEqual(1, stats["flapCombo100"], "150·200·250은 100을 또 넘은 것이 아니다");
+            Assert.AreEqual(1, stats["flapCombo50"]);
+            Assert.AreEqual(6, stats.Count, "새 키가 생기지 않는다");
+            Assert.AreEqual(250, stats["flapComboBest"]);
+        }
+
         //  퀘스트 조건(spec 2026-10-30 §4) — 로비 퀘스트 표의 clauses가 같은 문자열로 찾는다.
         [Test]
         public void 퀘스트_키_문자열은_로비_퀘스트_표와_같다()

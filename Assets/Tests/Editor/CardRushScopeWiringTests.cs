@@ -85,6 +85,8 @@ namespace LOP.Tests
             builder.RegisterInstance<IMatchSeed>(new Seed());
             builder.RegisterInstance(new EntitySpawner(null, registry, new CardRushRunnerCreator(registry), null, null,
                 new FakePublisher<EntityCreated>(), new FakePublisher<EntityDestroyed>()));
+            //  실제로는 GameplayInstaller(공용 설치)가 주는 것 — 봇 시스템(Task 7)이 받아 쓴다.
+            builder.Register<InputBufferSystem>(Lifetime.Singleton);
 
             typeof(CardRushLifetimeScope).GetMethod("ConfigureGame", BindingFlags.Instance | BindingFlags.NonPublic)
                 .Invoke(scope, new object[] { builder });
@@ -111,6 +113,11 @@ namespace LOP.Tests
             var end = (System.Collections.IList)systems[typeof(LOP.Event.LOPRunner.Update.End)];
             Assert.IsNotNull(end);
             Assert.Contains(container.Resolve(typeof(FinishTrackingSystem)), end);
+
+            //  봇 시스템(Task 7)이 Begin 페이즈에 물렸다 — 빠지면 채운 봇이 영영 입력을 안 보내 판이 안 끝난다.
+            var begin = (System.Collections.IList)systems[typeof(LOP.Event.LOPRunner.Update.Begin)];
+            Assert.IsNotNull(begin);
+            Assert.Contains(container.Resolve(typeof(CardRushBotSystem)), begin);
         }
     }
 }

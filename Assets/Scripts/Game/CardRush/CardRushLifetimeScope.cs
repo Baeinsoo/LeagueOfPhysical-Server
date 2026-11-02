@@ -25,12 +25,27 @@ namespace LOP
 
             builder.Register<ICharacterCreator, CardRushRunnerCreator>(Lifetime.Singleton);
             builder.Register<FinishTrackingSystem>(Lifetime.Singleton);
+
+            //  최소 레인 채우기(매칭 규칙) + 시험 스위치. 스위치가 꺼져 있어도 config.MinLanes만큼은 채운다.
+            builder.Register(c => new CardRushBotFill(
+                CardRushTestBots.ReadFillTo, c.Resolve<CardRushConfig>().MinLanes), Lifetime.Singleton);
             builder.Register<IGameRuleSystem, CardRushRuleSystem>(Lifetime.Singleton);
+
+            builder.Register(c => new CardRushBotSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<CardRushWorld>(),
+                c.Resolve<InputBufferSystem>(),
+                c.Resolve<IMatchSeed>(),
+                c.Resolve<CardRushConfig>(),
+                MountedArcheryBots.IsBot), Lifetime.Singleton);
 
             //  도착 감시를 러너의 End 페이즈에 문다. 시스템이 스스로 IRunner를 잡으면
             //  러너→룰→도착→러너로 고리가 생겨 컨테이너가 아예 안 만들어진다(FlappyRaceLifetimeScope와 같다).
             builder.RegisterBuildCallback(container =>
             {
+                //  봇 입력은 사람 입력이 처리되기 전(Begin)에 이번 틱 번호로 넣어야 같은 틱에 쓰인다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.Begin>(
+                    container.Resolve<CardRushBotSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<FinishTrackingSystem>());
             });

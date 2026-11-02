@@ -22,6 +22,8 @@ namespace LOP
         private readonly FinishTrackingSystem finishSystem;
         private readonly CardRushWorld world;
         private readonly CardRushConfig config;
+        //  시험 봇 채우기 — 안 넘기면(단위 시험 등) 꺼진 것으로 본다(사람 수만 세운다).
+        private readonly CardRushBotFill botFill;
 
         //  등수를 답할 때 통과 기록(entityId)을 userId로 옮기고, 못 들어온 사람의 상태를 되찾는 데 쓴다.
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
@@ -35,7 +37,8 @@ namespace LOP
                                   GameFramework.World.EntityRegistry entityRegistry,
                                   FinishTrackingSystem finishSystem,
                                   CardRushWorld world,
-                                  CardRushConfig config)
+                                  CardRushConfig config,
+                                  CardRushBotFill botFill = null)
         {
             this.roomDataStore = roomDataStore;
             this.entitySpawner = entitySpawner;
@@ -43,6 +46,7 @@ namespace LOP
             this.finishSystem = finishSystem;
             this.world = world;
             this.config = config;
+            this.botFill = botFill ?? new CardRushBotFill(() => 0, 0);
         }
 
         public void Initialize()
@@ -54,8 +58,14 @@ namespace LOP
             //  지난 판이 남아 있으면 이번 판 등수 꼬리에 "나간 사람"으로 둔갑해 붙는다.
             entityIdToUserId.Clear();
 
-            //  사람 먼저, 그다음 봇(Task 7) — 레인 번호가 곧 참가 순서다.
+            //  사람 먼저, 그다음 봇 — 레인 번호가 곧 참가 순서다.
             var participants = new List<string>(roomDataStore.match.playerList);
+            int humans = participants.Count;
+            int botCount = botFill.BotsToAdd(humans);
+            for (int n = 1; n <= botCount; n++)
+            {
+                participants.Add(MountedArcheryBots.UserIdFor(n));
+            }
             if (participants.Count > CardRushLanes.MaxLanes)
             {
                 throw new InvalidOperationException(
@@ -67,6 +77,8 @@ namespace LOP
             for (int i = 0; i < participants.Count; i++)
             {
                 string userId = participants[i];
+                bool isBot = i >= humans;
+                int botNumber = i - humans + 1;
                 string entityId = entitySpawner.GenerateEntityId();
                 entityIdToUserId[entityId] = userId;
                 finishSystem.Watch(entityId);
@@ -86,7 +98,9 @@ namespace LOP
                     currentMP = 1000,
                     level = 1,
                     currentExp = 0,
-                    look = PlayerLookResolver.Resolve(roomDataStore.looks, userId, i),
+                    look = isBot
+                        ? new PlayerLook(null, MountedArcheryBots.DisplayNameFor(botNumber), 1)
+                        : PlayerLookResolver.Resolve(roomDataStore.looks, userId, i),
                 });
             }
         }

@@ -52,6 +52,8 @@ namespace LOP
         public KnockbackConfig Config;
         public int Ammo;
         public long CooldownEndTick;
+        public long KnockbackEndTick;
+        public bool Falling;
     }
 
     /// <summary>
@@ -219,6 +221,8 @@ namespace LOP
             if (view.Tick < nextFireTick) return;
 
             //  탄이 없거나 연사 간격 중이면 눌러도 헛방이다. 예약 틱을 밀지 않아야 탄이 차는 순간 바로 쏜다.
+            //  날려지는 중·떨어지는 중엔 월드가 발사를 버린다. 예약 틱을 밀지 않아야 끝나는 순간 바로 쏜다.
+            if (view.Tick < view.KnockbackEndTick || view.Falling) return;
             if (view.Ammo < 1 || view.Tick < view.CooldownEndTick) return;
 
             //  탄이 도착하는 동안 적이 걸어갈 만큼 앞을 겨눈다(얼마나 믿고 앞지를지는 봇마다 다르다).

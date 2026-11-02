@@ -252,5 +252,59 @@ namespace LOP.Tests
             system.Tick(FirstAnnounce, Dt);
             Assert.AreEqual(center, state.Crate.Value.Position);
         }
+
+        //  상자 칸만 무너지고 반대쪽 작은 원은 남는 단계를 floor와 state에 함께 넣는다.
+        ZoneStage CollapseAwayFrom(Vector2 crate)
+        {
+            var center = -crate.normalized * 8f;
+            var stage = new ZoneStage(1, FirstAnnounce, FirstAnnounce + 1, FirstAnnounce + 2, Vector2.zero, world.Floor.ZoneStartRadius, center, 4f, 0f);
+            world.Floor.SetZoneStages(new List<ZoneStage> { stage });
+            state.AddZoneStage(stage);
+            return stage;
+        }
+
+        [Test]
+        public void 상자_칸이_무너지면_사라지고_다음_간격에_새_상자가_예고된다()
+        {
+            Announce();
+            var crate = state.Crate.Value;
+            Assert.Greater(crate.Position.magnitude, 3f, "시험 전제 - 상자가 원점 근처가 아니다");
+            CollapseAwayFrom(crate.Position);
+
+            system.Tick(Land - 1, Dt);
+            Assert.IsTrue(state.Crate.HasValue, "떨어지기 전에는 치우지 않는다");
+
+            int version = state.Version;
+            system.Tick(Land, Dt);
+            Assert.IsFalse(state.Crate.HasValue);
+            Assert.Greater(state.Version, version, "치우면 방송 판본이 오른다");
+
+            system.Tick(FirstAnnounce + 1000, Dt);
+            Assert.IsTrue(state.Crate.HasValue, "다음 간격에 새 상자");
+            Assert.AreEqual(2, state.Crate.Value.Id);
+        }
+
+        [Test]
+        public void 서_있는_칸의_상자는_그대로_남는다()
+        {
+            Announce();
+            system.Tick(Land + 5, Dt);
+            Assert.IsTrue(state.Crate.HasValue, "양성 대조 - 칸이 멀쩡하면 치우지 않는다");
+        }
+
+        [Test]
+        public void 폴백_자리가_구멍이면_예고하지_않고_다음_간격에_다시_시도한다()
+        {
+            //  원 중심이 판 밖이고 여유가 없어 폴백(원 중심)으로 가는 경우.
+            state.AddZoneStage(new ZoneStage(1, 0, 10, 20, Vector2.zero, world.Floor.ZoneStartRadius, new Vector2(60f, 0f), 1.4f, 0f));
+            int version = state.Version;
+            system.Tick(FirstAnnounce, Dt);
+            Assert.IsFalse(state.Crate.HasValue);
+            Assert.AreEqual(version, state.Version);
+
+            state.AddZoneStage(new ZoneStage(2, 0, 10, 20, Vector2.zero, world.Floor.ZoneStartRadius, Vector2.zero, 6f, 0f));
+            system.Tick(FirstAnnounce + 1000, Dt);
+            Assert.IsTrue(state.Crate.HasValue, "다음 간격에는 다시 시도한다");
+        }
     }
 }

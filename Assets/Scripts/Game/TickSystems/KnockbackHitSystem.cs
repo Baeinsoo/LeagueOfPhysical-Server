@@ -23,6 +23,10 @@ namespace LOP
         private readonly List<(string id, Vector2 position)> targets = new List<(string, Vector2)>();
         private readonly List<(string id, Vector2 position, int team)> blastBodies = new List<(string, Vector2, int)>();
         private readonly List<(string id, Vector2 position)> shotTargets = new List<(string, Vector2)>();
+        private readonly List<(KnockbackShot shot, string victimId)> hitScratch = new List<(KnockbackShot, string)>();
+        private readonly KnockbackShot[] singleShot = new KnockbackShot[1];
+        private readonly HashSet<(string, long)> exploded = new HashSet<(string, long)>();
+        private readonly List<KnockbackShot> bombScratch = new List<KnockbackShot>();
         private readonly List<GameFramework.World.WorldEvent> events = new List<GameFramework.World.WorldEvent>();
 
         public KnockbackHitSystem(KnockbackWorld world, GameFramework.World.EntityRegistry registry,
@@ -44,8 +48,9 @@ namespace LOP
         private List<(KnockbackShot shot, string victimId)> FindHits(long tick)
         {
             var shots = world.Shots.Shots;
-            var hits = new List<(KnockbackShot, string)>();
-            var single = new KnockbackShot[1];
+            var hits = hitScratch;
+            hits.Clear();
+            var single = singleShot;
             for (int i = 0; i < shots.Count; i++)
             {
                 state.Team.TryGetValue(shots[i].ShooterId, out int shooterTeam);
@@ -151,13 +156,21 @@ namespace LOP
 
             events.Clear();
             //  터진 폭탄 탄은 여기 적어 두어 같은 틱에 두 번 터지지 않게 한다.
-            var exploded = new HashSet<(string, long)>();
+            exploded.Clear();
             foreach (var (shot, victimId) in hits)
             {
                 if (shot.IsBomb)
                 {
-                    var victimTarget = targets.Find(t => t.id == victimId);
-                    Explode(shot, HitPoint(shot, victimTarget.position, tick), tick);
+                    Vector2 victimPosition = default;
+                    foreach (var target in targets)
+                    {
+                        if (target.id == victimId)
+                        {
+                            victimPosition = target.position;
+                            break;
+                        }
+                    }
+                    Explode(shot, HitPoint(shot, victimPosition, tick), tick);
                     exploded.Add((shot.ShooterId, shot.FireTick));
                     continue;
                 }
@@ -176,7 +189,8 @@ namespace LOP
             }
 
             //  몸을 못 맞힌 폭탄도 기둥에 막히거나 사거리 끝에 닿으면 그 자리에서 터진다.
-            var bombs = new List<KnockbackShot>();
+            var bombs = bombScratch;
+            bombs.Clear();
             foreach (var shot in world.Shots.Shots)
             {
                 if (shot.IsBomb && tick >= shot.FireTick && exploded.Contains((shot.ShooterId, shot.FireTick)) == false)

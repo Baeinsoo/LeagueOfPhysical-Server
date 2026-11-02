@@ -47,6 +47,7 @@ namespace LOP
 
             //  줍기가 먼저다 — 같은 틱에 새 상자를 예고해도 막 주운 상자와 겹치지 않는다.
             TryPickUp(tick);
+            ClearIfFloorGone(tick);
 
             if (tick >= nextAnnounceTick)
             {
@@ -59,12 +60,30 @@ namespace LOP
                 if (state.Crate.HasValue == false)
                 {
                     long land = tick + config.CrateWarnTicks;
-                    state.AnnounceCrate(land, PickPosition(land));
+                    //  설 자리를 못 찾으면 이번 상자는 건너뛴다. 다음 간격에 다시 시도한다.
+                    if (TryPickPosition(land, out var position))
+                    {
+                        state.AnnounceCrate(land, position);
+                    }
                 }
             }
         }
 
-        private Vector2 PickPosition(long landTick)
+        //  줍을 수 없는 자리에 남은 상자가 다음 상자를 영영 막지 않게, 칸이 사라지면 치운다.
+        private void ClearIfFloorGone(long tick)
+        {
+            if (state.Crate.HasValue == false || tick < state.Crate.Value.LandTick)
+            {
+                return;
+            }
+            var crate = state.Crate.Value;
+            if (world.Floor.IsSolid(crate.Position.x, crate.Position.y, tick) == false)
+            {
+                state.ClearCrate();
+            }
+        }
+
+        private bool TryPickPosition(long landTick, out Vector2 position)
         {
             //  다음 원이 공개돼 있으면 그 안에 둔다 — 곧 사라질 자리에 떨구지 않는다.
             Vector2 center = Vector2.zero;
@@ -77,22 +96,24 @@ namespace LOP
             }
 
             float reach = radius - EdgeInset;
-            if (reach <= 0f)
+            if (reach > 0f)
             {
-                return center;
-            }
-            for (int i = 0; i < PickTries; i++)
-            {
-                //  거리에 제곱근을 써서 면적으로 고르게 퍼뜨린다.
-                float distance = reach * Mathf.Sqrt((float)random.NextDouble());
-                float angle = (float)random.NextDouble() * Mathf.PI * 2f;
-                var point = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
-                if (world.Floor.IsSolid(point.x, point.y, landTick))
+                for (int i = 0; i < PickTries; i++)
                 {
-                    return point;
+                    //  거리에 제곱근을 써서 면적으로 고르게 퍼뜨린다.
+                    float distance = reach * Mathf.Sqrt((float)random.NextDouble());
+                    float angle = (float)random.NextDouble() * Mathf.PI * 2f;
+                    var point = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
+                    if (world.Floor.IsSolid(point.x, point.y, landTick))
+                    {
+                        position = point;
+                        return true;
+                    }
                 }
             }
-            return center;
+            //  마지막 수단은 원 중심 - 그곳도 설 수 있는 칸일 때만.
+            position = center;
+            return world.Floor.IsSolid(center.x, center.y, landTick);
         }
 
         private void TryPickUp(long tick)

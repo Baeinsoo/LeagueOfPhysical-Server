@@ -217,5 +217,44 @@ namespace LOP.Tests
             Assert.AreEqual(12, Damage("b"));
             Assert.Greater(VelocityX("b"), 1f);
         }
+
+        //  실제 틱 순서: 월드 정리(막힌 탄·다 쓴 탄) 다음에 End 판정.
+        void RealTick(KnockbackHitSystem sys, KnockbackPillars pillars, long t)
+        {
+            world.Shots.RemoveBlocked(t - 1, pillars.CollectStanding, pillars.Radius, C, Dt);
+            world.Shots.RemoveSpent(t, C.ShotSpeed, C.ShotRange, Dt);
+            sys.Tick(t, Dt);
+        }
+
+        [Test]
+        public void 몸과_사거리_끝이_같은_틱이어도_월드_정리를_지나_한_번만_터진다()
+        {
+            //  사거리 끝(18 m) 바로 앞에 선 몸 - 몸 맞음과 사거리 끝이 겹친다.
+            AddBody("c", 18.6f, 0f);
+            var pillars = new KnockbackPillars(KnockbackPillarLayout.None, C.CreateFloor());
+            FireBomb();
+            for (long t = 10; t < 70; t++) RealTick(system, pillars, t);
+
+            Assert.AreEqual(1, Count<KnockbackBlastEvent>());
+            Assert.AreEqual(12, Damage("c"), "한 번만 민다");
+            Assert.AreEqual(0, world.Shots.Shots.Count);
+        }
+
+        [Test]
+        public void 몸과_기둥이_같은_틱이어도_월드_정리를_지나_한_번만_터진다()
+        {
+            var pillars = new KnockbackPillars(new KnockbackPillarLayout(1, 4f, 0.9f, 3f), C.CreateFloor());
+            var dir = pillars.Center(0).normalized;
+            var sys = new KnockbackHitSystem(world, registry, state, C, sink, pillars, Dt);
+            //  기둥 바로 앞에 붙어 선 몸 - 같은 선분이 몸과 기둥 둘 다에 닿는다.
+            var at = pillars.Center(0) - dir * (pillars.Radius + C.HitRadius + C.ShotRadius - 0.1f);
+            AddBody("c", at.x, at.y);
+            world.Shots.Add(new KnockbackShot("a", 10, Vector2.zero, dir, true));
+            for (long t = 10; t < 40; t++) RealTick(sys, pillars, t);
+
+            Assert.AreEqual(1, Count<KnockbackBlastEvent>());
+            Assert.AreEqual(12, Damage("c"));
+            Assert.AreEqual(0, world.Shots.Shots.Count);
+        }
     }
 }

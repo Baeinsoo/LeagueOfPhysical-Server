@@ -64,6 +64,14 @@ namespace LOP
                 c.Resolve<KnockbackConfig>(),
                 c.Resolve<KnockbackWorld>(),
                 new System.Random(unchecked((int)c.Resolve<IMatchSeed>().Value))), Lifetime.Singleton);
+            //  존 시스템과 난수 줄기를 나누려고 씨앗에 상수를 섞는다 — 같으면 상자 자리가 다음 원 자리와 붙어 다닌다.
+            builder.Register(c => new KnockbackCrateSystem(
+                c.Resolve<KnockbackMatchState>(),
+                c.Resolve<KnockbackConfig>(),
+                c.Resolve<KnockbackWorld>(),
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                new System.Random(unchecked((int)c.Resolve<IMatchSeed>().Value ^ 0x43524154)),
+                c.Resolve<KnockbackPillars>()), Lifetime.Singleton);
             builder.Register(c => new KnockbackChainCreditSystem(
                 c.Resolve<KnockbackWorld>(),
                 c.Resolve<KnockbackMatchState>()), Lifetime.Singleton);
@@ -86,6 +94,7 @@ namespace LOP
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackHitSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackFallSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackZoneSystem>());
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackCrateSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackStateBroadcastSystem>());
             });
         }

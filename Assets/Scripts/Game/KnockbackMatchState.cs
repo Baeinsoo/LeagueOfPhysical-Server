@@ -1,7 +1,23 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace LOP
 {
+    /// <summary>떨어졌거나 떨어질 예정인 상자 하나. 떨어지는 틱 전에는 예고만 있고 주울 수 없다.</summary>
+    public readonly struct KnockbackCrate
+    {
+        public readonly int Id;
+        public readonly long LandTick;
+        public readonly Vector2 Position;
+
+        public KnockbackCrate(int id, long landTick, Vector2 position)
+        {
+            Id = id;
+            LandTick = landTick;
+            Position = position;
+        }
+    }
+
     /// <summary>넉백 생존전 판 상태(서버). 누가 참가했고 누가 언제 떨어졌나.</summary>
     public class KnockbackMatchState
     {
@@ -27,6 +43,26 @@ namespace LOP
 
         /// <summary>서버가 공개한 원 단계(순서대로). 한 번 공개하면 바뀌지 않는다.</summary>
         public readonly List<ZoneStage> ZoneStages = new List<ZoneStage>();
+
+        /// <summary>지금 상자(충격파 폭탄이 든). 없으면 null. 아무도 안 주운 동안만 있다.</summary>
+        public KnockbackCrate? Crate { get; private set; }
+
+        /// <summary>다음에 예고할 상자 번호. 1부터, 상자마다 다르다.</summary>
+        public int NextCrateId { get; private set; } = 1;
+
+        public KnockbackCrate AnnounceCrate(long landTick, Vector2 position)
+        {
+            var crate = new KnockbackCrate(NextCrateId++, landTick, position);
+            Crate = crate;
+            MarkChanged();
+            return crate;
+        }
+
+        public void ClearCrate()
+        {
+            Crate = null;
+            MarkChanged();
+        }
 
         /// <summary>바뀔 때마다 오른다 — 방송 시스템이 판본을 보고 다시 보낸다.</summary>
         public int Version { get; private set; }

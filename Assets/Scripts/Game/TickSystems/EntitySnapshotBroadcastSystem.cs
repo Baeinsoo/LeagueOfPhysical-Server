@@ -107,6 +107,7 @@ namespace LOP
                     snap.KnockbackAmmo = knockbackGun.Ammo;
                     snap.KnockbackNextReloadTick = knockbackGun.NextReloadTick;
                     snap.KnockbackCooldownEndTick = knockbackGun.CooldownEndTick;
+                    snap.KnockbackHasBomb = knockbackGun.HasBomb;
                 }
 
                 var activation = worldEntity.Get<Abilities>()?.Activation;

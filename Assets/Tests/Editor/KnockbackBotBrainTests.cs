@@ -325,5 +325,46 @@ namespace LOP.Tests
             }
             Assert.IsTrue(fired);
         }
+
+        [Test]
+        public void 가까이_떨어진_상자_쪽으로_간다()
+        {
+            var view = View(new Vector2(0f, 0f));
+            view.CratePosition = new Vector2(4f, 0f);
+            var command = Brain().Think(view);
+            Assert.Greater(command.Horizontal, 0.8f);
+            Assert.Less(Mathf.Abs(command.Vertical), 0.01f);
+        }
+
+        [Test]
+        public void 멀거나_날려지는_중이거나_이미_폭탄을_들었으면_상자를_안_쫓는다()
+        {
+            var far = View(new Vector2(0f, 0f));
+            far.CratePosition = new Vector2(6.5f, 0f);
+            Assert.AreEqual(0f, Brain().Think(far).Horizontal, 1e-4f);
+
+            var flying = View(new Vector2(0f, 0f), knockbackEndTick: 2000);
+            flying.CratePosition = new Vector2(4f, 0f);
+            Assert.AreEqual(0f, Brain().Think(flying).Horizontal, 1e-4f);
+
+            var armed = View(new Vector2(0f, 0f));
+            armed.CratePosition = new Vector2(4f, 0f);
+            armed.HasBomb = true;
+            Assert.AreEqual(0f, Brain().Think(armed).Horizontal, 1e-4f);
+
+            //  양성 대조 - 6 m 안이면 쫓는다.
+            var near = View(new Vector2(0f, 0f));
+            near.CratePosition = new Vector2(5.9f, 0f);
+            Assert.Greater(Brain().Think(near).Horizontal, 0.8f);
+        }
+
+        [Test]
+        public void 가장자리_피하기가_상자보다_앞선다()
+        {
+            //  원 가장자리 바깥쪽에 상자가 있어도 중심으로 돌아온다.
+            var view = View(new Vector2(11.5f, 0f), zone: (Vector2.zero, 12f));
+            view.CratePosition = new Vector2(14f, 0f);
+            Assert.Less(Brain().Think(view).Horizontal, 0f);
+        }
     }
 }

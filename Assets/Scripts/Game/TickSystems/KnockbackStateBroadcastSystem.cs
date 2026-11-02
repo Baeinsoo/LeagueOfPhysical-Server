@@ -89,6 +89,11 @@ namespace LOP
                     DamagePerSecond = s.damagePerSecond,
                 });
             }
+            if (state.Crate.HasValue)
+            {
+                var crate = state.Crate.Value;
+                message.Crate = new KnockbackCrateWire { Id = crate.Id, LandTick = crate.LandTick, X = crate.Position.x, Z = crate.Position.y };
+            }
             return message;
         }
     }

@@ -90,5 +90,24 @@ namespace LOP.Tests
             Assert.AreEqual("a", wire.Players[2].KoBy);
             Assert.IsTrue(wire.Players[2].KoChain);
         }
+
+        [Test]
+        public void 상자가_있으면_상태에_실리고_없으면_비어_있다()
+        {
+            var state = new KnockbackMatchState();
+            var registry = new GameFramework.World.EntityRegistry();
+            Assert.IsNull(KnockbackStateBroadcastSystem.ToWire(state, registry).Crate);
+
+            state.AnnounceCrate(1175, new UnityEngine.Vector2(3.5f, -2f));
+            var crate = KnockbackStateBroadcastSystem.ToWire(state, registry).Crate;
+            Assert.IsNotNull(crate);
+            Assert.AreEqual(1, crate.Id);
+            Assert.AreEqual(1175, crate.LandTick);
+            Assert.AreEqual(3.5f, crate.X, 1e-6f);
+            Assert.AreEqual(-2f, crate.Z, 1e-6f);
+
+            state.ClearCrate();
+            Assert.IsNull(KnockbackStateBroadcastSystem.ToWire(state, registry).Crate);
+        }
     }
 }

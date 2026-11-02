@@ -21,6 +21,7 @@ namespace LOP
         private readonly KnockbackPillars pillars;
         private readonly List<UnityEngine.Vector2> standingPillars = new List<UnityEngine.Vector2>();
         private readonly List<(string id, Vector2 position)> targets = new List<(string, Vector2)>();
+        private readonly List<(string id, Vector2 position, int team)> blastBodies = new List<(string, Vector2, int)>();
         private readonly List<(string id, Vector2 position)> shotTargets = new List<(string, Vector2)>();
         private readonly List<GameFramework.World.WorldEvent> events = new List<GameFramework.World.WorldEvent>();
 
@@ -63,6 +64,66 @@ namespace LOP
             return hits;
         }
 
+        //  탄이 이번 틱 선분에서 몸의 원에 처음 닿은 자리.
+        private Vector2 HitPoint(in KnockbackShot shot, Vector2 bodyPosition, long tick)
+        {
+            KnockbackHits.Segment(shot, tick, config, tickInterval, out var from, out var to);
+            KnockbackHitTest.SegmentHitsCircle(from, to, bodyPosition, config.HitRadius + config.ShotRadius, out float t);
+            return Vector2.Lerp(from, to, t);
+        }
+
+        //  몸이 아닌 곳에서 폭탄이 끝나는 자리: 이번 틱 선분이 서 있는 기둥에 닿는 자리, 아니면 사거리 끝.
+        private bool TryFindBombEnd(in KnockbackShot shot, long tick, out Vector2 at)
+        {
+            KnockbackHits.Segment(shot, tick, config, tickInterval, out var from, out var to);
+            float pillarReach = pillars.Radius + config.ShotRadius;
+            float nearest = float.MaxValue;
+            for (int p = 0; p < standingPillars.Count; p++)
+            {
+                if (KnockbackHitTest.SegmentHitsCircle(from, to, standingPillars[p], pillarReach, out float t) && t < nearest)
+                {
+                    nearest = t;
+                }
+            }
+            if (nearest != float.MaxValue)
+            {
+                at = Vector2.Lerp(from, to, nearest);
+                return true;
+            }
+
+            at = to;
+            return config.ShotSpeed * (tick - shot.FireTick) * tickInterval >= config.ShotRange;
+        }
+
+        //  터진 자리의 반경 안 상대를 밀고, 막타 크레딧과 그림용 사건을 남긴다. 직접 맞힌 몸도 여기서 한 번만 민다.
+        private void Explode(in KnockbackShot shot, Vector2 center, long tick)
+        {
+            state.Team.TryGetValue(shot.ShooterId, out int shooterTeam);
+            blastBodies.Clear();
+            foreach (var target in targets)
+            {
+                state.Team.TryGetValue(target.id, out int team);
+                blastBodies.Add((target.id, target.position, team));
+            }
+
+            foreach (var (id, direction) in KnockbackBlast.Resolve(center, shot.Direction, config.BlastRadius, blastBodies, shot.ShooterId, shooterTeam))
+            {
+                var victim = registry.Get(id);
+                var body = victim.Get<KnockbackBody>();
+                var velocity = victim.Get<GameFramework.World.Velocity>();
+                if (body == null || velocity == null)
+                {
+                    continue;
+                }
+                KnockbackRules.ApplyHit(body, velocity, direction, tick, config, tickInterval);
+                state.Credit.RecordShotHit(id, shot.ShooterId, tick);
+                events.Add(new KnockbackHitEvent(shot.ShooterId, shot.FireTick, id));
+            }
+
+            world.RemoveShot(shot.ShooterId, shot.FireTick);
+            events.Add(new KnockbackBlastEvent(shot.ShooterId, center, tick));
+        }
+
         public void Tick(long tick, float deltaTime)
         {
             if (tick < world.GameplayStartTick || world.Shots.Shots.Count == 0)
@@ -87,14 +148,20 @@ namespace LOP
 
             pillars.CollectStanding(tick, standingPillars);
             var hits = FindHits(tick);
-            if (hits.Count == 0)
-            {
-                return;
-            }
 
             events.Clear();
+            //  터진 폭탄 탄은 여기 적어 두어 같은 틱에 두 번 터지지 않게 한다.
+            var exploded = new HashSet<(string, long)>();
             foreach (var (shot, victimId) in hits)
             {
+                if (shot.IsBomb)
+                {
+                    var victimTarget = targets.Find(t => t.id == victimId);
+                    Explode(shot, HitPoint(shot, victimTarget.position, tick), tick);
+                    exploded.Add((shot.ShooterId, shot.FireTick));
+                    continue;
+                }
+
                 var victim = registry.Get(victimId);
                 var body = victim.Get<KnockbackBody>();
                 var velocity = victim.Get<GameFramework.World.Velocity>();
@@ -106,6 +173,28 @@ namespace LOP
                 world.RemoveShot(shot.ShooterId, shot.FireTick);
                 state.Credit.RecordShotHit(victimId, shot.ShooterId, tick);
                 events.Add(new KnockbackHitEvent(shot.ShooterId, shot.FireTick, victimId));
+            }
+
+            //  몸을 못 맞힌 폭탄도 기둥에 막히거나 사거리 끝에 닿으면 그 자리에서 터진다.
+            var bombs = new List<KnockbackShot>();
+            foreach (var shot in world.Shots.Shots)
+            {
+                if (shot.IsBomb && tick >= shot.FireTick && exploded.Contains((shot.ShooterId, shot.FireTick)) == false)
+                {
+                    bombs.Add(shot);
+                }
+            }
+            foreach (var shot in bombs)
+            {
+                if (TryFindBombEnd(shot, tick, out var at))
+                {
+                    Explode(shot, at, tick);
+                }
+            }
+
+            if (events.Count == 0)
+            {
+                return;
             }
 
             state.MarkChanged();

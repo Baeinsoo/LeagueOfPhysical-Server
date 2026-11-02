@@ -54,6 +54,9 @@ namespace LOP
         public long CooldownEndTick;
         public long KnockbackEndTick;
         public bool Falling;
+        public bool HasBomb;
+        //  떨어진(주울 수 있는) 상자 자리. 없거나 아직 떨어지기 전이면 null.
+        public Vector2? CratePosition;
     }
 
     /// <summary>
@@ -65,6 +68,8 @@ namespace LOP
         const float EdgeMargin = 3.5f;
         const float DodgeWindowSeconds = 0.8f;
         const float DodgeDistance = 1.3f;
+        //  이 안의 상자만 집으러 간다.
+        const float CrateChaseDistance = 6f;
 
         readonly System.Random rng;
         readonly float reactionSeconds;
@@ -110,7 +115,12 @@ namespace LOP
 
             //  하나만 고르지 않고 섞는다 — 갈림길마다 틱 단위로 갈아타면 몸이 떨린다.
             Vector2 move = Dodge(view) + Inward(view);
-            if (target.HasValue)
+            if (CrateGoal(view) is Vector2 crate)
+            {
+                //  피하기·가장자리보다 약하고 적과의 거리 유지보다 앞선다.
+                move += (crate - view.Position).normalized * 1.2f;
+            }
+            else if (target.HasValue)
             {
                 move += KeepDistance(view, target.Value, distance);
             }
@@ -127,6 +137,16 @@ namespace LOP
                 TryFire(view, target.Value, distance, command);
             }
             return command;
+        }
+
+        //  집으러 갈 상자 자리. 날려지는 중이거나 이미 폭탄을 들었거나 너무 멀면 null.
+        static Vector2? CrateGoal(KnockbackBotView view)
+        {
+            if (view.CratePosition.HasValue == false || view.HasBomb || view.Tick < view.KnockbackEndTick)
+            {
+                return null;
+            }
+            return Vector2.Distance(view.CratePosition.Value, view.Position) <= CrateChaseDistance ? view.CratePosition : null;
         }
 
         // 목표는 0.6~1.2초마다, 또는 목표가 사라졌을 때만 가장 가까운 적으로 바꾼다.

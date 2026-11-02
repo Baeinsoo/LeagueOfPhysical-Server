@@ -79,5 +79,20 @@ namespace LOP.Tests
             Assert.AreEqual(long.MaxValue, SnapOf(registry, "body-1").KnockbackNextReloadTick);
             Assert.AreEqual(0, SnapOf(registry, "rock").KnockbackNextReloadTick, "총이 없는 몸은 0 — 다른 모드 스냅을 키우지 않는다");
         }
+
+        [Test]
+        public void 폭탄을_들었는지를_스냅에_싣는다()
+        {
+            var registry = new GameFramework.World.EntityRegistry();
+            var body = Body("body-1");
+            body.Add(new KnockbackGun(3) { HasBomb = true });
+            registry.Add(body);
+            var other = Body("body-2");
+            other.Add(new KnockbackGun(3));
+            registry.Add(other);
+
+            Assert.IsTrue(SnapOf(registry, "body-1").KnockbackHasBomb);
+            Assert.IsFalse(SnapOf(registry, "body-2").KnockbackHasBomb);
+        }
     }
 }

@@ -90,6 +90,8 @@ namespace LOP
                     CooldownEndTick = gun?.CooldownEndTick ?? 0,
                     KnockbackEndTick = entity.Get<KnockbackBody>()?.KnockbackEndTick ?? long.MinValue,
                     Falling = entity.Get<GameFramework.World.GroundState>() is { IsGrounded: false },
+                    HasBomb = gun?.HasBomb ?? false,
+                    CratePosition = state.Crate is { } crate && tick >= crate.LandTick ? crate.Position : (Vector2?)null,
                 };
 
                 var command = BrainFor(id).Think(view);

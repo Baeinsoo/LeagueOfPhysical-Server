@@ -68,6 +68,8 @@ namespace LOP
                     EliminatedTick = state.EliminatedTick.TryGetValue(id, out var t) ? t : -1,
                     DamagePercent = damage,
                     Team = state.Team.TryGetValue(id, out var team) ? team : 0,
+                    KoBy = state.KoBy.TryGetValue(id, out var koBy) ? koBy : string.Empty,
+                    KoChain = state.KoChain.Contains(id),
                 });
             }
             foreach (var s in state.ZoneStages)

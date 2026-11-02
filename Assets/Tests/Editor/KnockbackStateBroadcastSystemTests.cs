@@ -71,5 +71,24 @@ namespace LOP.Tests
             Assert.AreEqual(-1L, wire.Players[0].EliminatedTick);
             Assert.AreEqual(77L, wire.Players[1].EliminatedTick);
         }
+
+        [Test]
+        public void 장외시킨_사람과_연쇄_여부가_실린다()
+        {
+            var state = new KnockbackMatchState();
+            var registry = new GameFramework.World.EntityRegistry();
+            state.Players.Add("a"); state.Players.Add("b"); state.Players.Add("c");
+            state.Credit.RecordShotHit("b", "a", 100);
+            state.Credit.ApplyChains(new[] { ("c", "b") }, 120, state.Team);
+            state.Eliminate("c", 150);
+            state.Eliminate("b", 160);
+
+            var wire = KnockbackStateBroadcastSystem.ToWire(state, registry);
+            Assert.AreEqual("", wire.Players[0].KoBy);
+            Assert.AreEqual("a", wire.Players[1].KoBy);
+            Assert.IsFalse(wire.Players[1].KoChain);
+            Assert.AreEqual("a", wire.Players[2].KoBy);
+            Assert.IsTrue(wire.Players[2].KoChain);
+        }
     }
 }

@@ -198,25 +198,49 @@ namespace LOP.Tests
         }
 
         [Test]
-        public void 백_뒤_50마다_되풀이되는_대시_보상은_코인_고비로_안_센다()
+        public void 게이지_보상_규칙이_바뀌어도_코인_고비는_10_25_50_100에_한_번씩()
         {
-            //  11-02 — 대시 게이지는 150·200·250…에도 반 칸을 주지만(FlappyFlapComboRules.RewardIndex), 코인은 그대로다.
-            //  서버 고비는 FlappyComboStatKeys.Thresholds로만 세고, 한 연속에서 100은 한 번만 넘는다.
+            //  11-02 — 게이지는 10마다(표 → 160부터 0.25칸), 화면 고비는 10·30·50·100·150·200…. 코인은 그대로다.
+            //  실제 서버 시뮬과 같은 FlappyFlapComboSystem이 수를 올리고(게이지도 실제로 받는다) 집계가 매 틱 본다 —
+            //  집계를 게이지 규칙(Gain)이나 화면 고비(MilestoneIndex)로 바꾸는 리팩터는 여기서 걸린다:
+            //  25는 게이지도 화면 고비도 아니지만 코인 고비이고, 20·30·150·200은 그 반대다.
             var registry = new EntityRegistry();
             var bird = Bird(registry, "e-a");
+            var dash = new FlappyDash { Charge = 0f };
+            bird.Add(dash);
+            var config = new FlappyConfig(forwardSpeed: 11f, flapImpulse: 23f, gravity: 70f, maxFallSpeed: 30f,
+                                          bodyRadius: 0.45f, bodyHeight: 0.9f, restitution: 0.35f,
+                                          stunTime: 0.8f, invulnTime: 0.6f,
+                                          dashMult: 2f, dashDuration: 0.2f, dashChargeBase: 0.13f, dashChargeDive: 1.2f);
+            var rules = new FlappyMapRulesField();
+            rules.Set(chaser: false, manualDash: true);
+            var combo = new FlappyFlapComboSystem(new FlappyDashSystem(config, rules), rules);
             var tally = new FlappyComboTallySystem(registry);
             tally.Watch("e-a", "u-a");
+
             long tick = 0;
-            ClimbTo(tally, bird, 1, 250, ref tick);
-            Assert.AreEqual(0.5f, FlappyFlapComboRules.Default.Gain(200), "전제: 게이지 쪽은 200에서도 준다");
+            int grants = 0;
+            for (int n = 1; n <= 250; n++)
+            {
+                float before = dash.Charge;
+                combo.Flap(bird);
+                if (dash.Charge > before) grants++;
+                if (n == 200) dash.Charge = 0f;   //  상한(2칸)에 막혀 받은 횟수를 못 세지 않게 비운다
+                if (n == 150) dash.Charge = 0f;
+                tally.Tick(++tick, 0.02f);
+            }
+            Assert.AreEqual(25, grants, "전제: 게이지는 10마다 25번 받았다");
+            Assert.AreEqual(3, rules.FlapCombo.MilestoneIndex(200), "전제: 200은 화면 고비(전설!)");
 
             var outcome = new MatchOutcome();
             outcome.placements.Add(new MatchPlacement { userId = "u-a", placement = 1 });
             tally.AttachTo(outcome);
             var stats = outcome.placements[0].stats;
-            Assert.AreEqual(1, stats["flapCombo100"], "150·200·250은 100을 또 넘은 것이 아니다");
+            Assert.AreEqual(1, stats["flapCombo10"]);
+            Assert.AreEqual(1, stats["flapCombo25"], "25는 게이지 자리가 아니어도 코인 고비");
             Assert.AreEqual(1, stats["flapCombo50"]);
-            Assert.AreEqual(6, stats.Count, "새 키가 생기지 않는다");
+            Assert.AreEqual(1, stats["flapCombo100"], "150·200·250은 100을 또 넘은 것이 아니다");
+            Assert.AreEqual(6, stats.Count, "새 키(flapCombo30·150 등)가 생기지 않는다");
             Assert.AreEqual(250, stats["flapComboBest"]);
         }
 

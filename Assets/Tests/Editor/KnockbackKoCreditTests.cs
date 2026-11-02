@@ -132,6 +132,27 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 같은_묶음에서_앞_항목이_쓴_장부를_뒤_항목이_출처로_읽지_않는다()
+        {
+            var c = new KnockbackKoCredit(Dt);
+            c.RecordShotHit("b", "a", 100);
+            c.ApplyChains(new[] { ("c", "b"), ("d", "c") }, 120, NoTeams);
+            Assert.AreEqual("a", Ko(c, "c", 150, out _), "양성 대조 - 앞 항목은 기록된다");
+            Assert.AreEqual("", Ko(c, "d", 150, out _), "d의 출처 c는 묶음 시작 때 크레딧이 없었다");
+        }
+
+        [Test]
+        public void 같은_묶음의_서로_맞물린_연쇄는_둘_다_묶음_시작_장부로_읽는다()
+        {
+            var c = new KnockbackKoCredit(Dt);
+            c.RecordShotHit("b", "x", 100);
+            c.RecordShotHit("c", "y", 100);
+            c.ApplyChains(new[] { ("b", "c"), ("c", "b") }, 120, NoTeams);
+            Assert.AreEqual("y", Ko(c, "b", 150, out _));
+            Assert.AreEqual("x", Ko(c, "c", 150, out _));
+        }
+
+        [Test]
         public void 상태의_Eliminate가_장외시킨_사람과_연쇄를_남긴다()
         {
             var state = new KnockbackMatchState();

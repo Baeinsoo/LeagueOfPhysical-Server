@@ -46,10 +46,12 @@ namespace LOP
         public void ApplyChains(IReadOnlyList<(string targetId, string sourceId)> chains, long tick,
                                 IReadOnlyDictionary<string, int> teamOf)
         {
+            //  한 묶음은 같은 순간의 일이다 — 앞 항목이 쓴 장부를 뒤 항목이 출처로 읽으면 순서가 결과를 바꾼다.
+            var before = new Dictionary<string, Record>(records);
             for (int i = 0; i < chains.Count; i++)
             {
                 var (targetId, sourceId) = chains[i];
-                if (!records.TryGetValue(sourceId, out var source) || tick - source.Tick > windowTicks)
+                if (!before.TryGetValue(sourceId, out var source) || tick - source.Tick > windowTicks)
                 {
                     continue;
                 }

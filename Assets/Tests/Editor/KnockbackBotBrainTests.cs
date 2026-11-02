@@ -14,7 +14,8 @@ namespace LOP.Tests
 
         static KnockbackBotView View(Vector2 position, long tick = 1000,
                                      IReadOnlyList<KnockbackBotBody> enemies = null, IReadOnlyList<KnockbackBotShot> shots = null,
-                                     (Vector2, float)? zone = null, int ammo = 2, long cooldownEndTick = 0)
+                                     (Vector2, float)? zone = null, int ammo = 2, long cooldownEndTick = 0,
+                                     long knockbackEndTick = 0, bool falling = false)
         {
             var circle = zone ?? (Vector2.zero, 100f);
             return new KnockbackBotView
@@ -32,6 +33,8 @@ namespace LOP.Tests
                 Config = Config,
                 Ammo = ammo,
                 CooldownEndTick = cooldownEndTick,
+                KnockbackEndTick = knockbackEndTick,
+                Falling = falling,
             };
         }
 
@@ -96,6 +99,32 @@ namespace LOP.Tests
             Assert.IsTrue(fired);
             // +z(위쪽)에 있는 적 — 조준 오차 최대 0.14 rad 안에서 0도 근처를 향한다.
             Assert.AreEqual(0f, fire.AimYaw, 9f);
+        }
+
+        [Test]
+        public void 날아가는_중엔_쏘지_않고_예약도_안_민다()
+        {
+            var enemies = new List<KnockbackBotBody> { new KnockbackBotBody("enemy", new Vector2(0f, 10f), Vector2.zero) };
+            var brain = Brain();
+            // 예약 시각(최대 65틱)이 지나도록 날아가는 중 — 한 번도 쏘지 않는다.
+            for (int i = 0; i < 100; i++)
+            {
+                Assert.IsFalse(brain.Think(View(Vector2.zero, 1000 + i, enemies, knockbackEndTick: 1100)).Fire);
+            }
+            // 날림이 끝난 바로 그 틱에 쏜다(예약이 밀리지 않았다).
+            Assert.IsTrue(brain.Think(View(Vector2.zero, 1100, enemies, knockbackEndTick: 1100)).Fire);
+        }
+
+        [Test]
+        public void 떨어지는_중엔_쏘지_않고_예약도_안_민다()
+        {
+            var enemies = new List<KnockbackBotBody> { new KnockbackBotBody("enemy", new Vector2(0f, 10f), Vector2.zero) };
+            var brain = Brain();
+            for (int i = 0; i < 100; i++)
+            {
+                Assert.IsFalse(brain.Think(View(Vector2.zero, 1000 + i, enemies, falling: true)).Fire);
+            }
+            Assert.IsTrue(brain.Think(View(Vector2.zero, 1100, enemies)).Fire);
         }
 
         [Test]

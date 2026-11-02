@@ -88,6 +88,8 @@ namespace LOP
                     Config = config,
                     Ammo = gun?.Ammo ?? 0,
                     CooldownEndTick = gun?.CooldownEndTick ?? 0,
+                    KnockbackEndTick = entity.Get<KnockbackBody>()?.KnockbackEndTick ?? long.MinValue,
+                    Falling = entity.Get<GameFramework.World.GroundState>() is { IsGrounded: false },
                 };
 
                 var command = BrainFor(id).Think(view);

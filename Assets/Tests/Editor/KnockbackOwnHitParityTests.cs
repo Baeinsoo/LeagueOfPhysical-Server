@@ -1,17 +1,20 @@
 using System.Collections.Generic;
 using NUnit.Framework;
 using UnityEngine;
+using VContainer;
 
 namespace LOP.Tests
 {
     /// <summary>
     /// 클라가 예측하는 "내 몸이 남의 탄에 맞음"(KnockbackWorld Detection)이 서버 KnockbackHitSystem과 같은 틱에 같은 값을 내는지
-    /// 같은 입력으로 나란히 돌려 본다(§3.3.2). 그리고 서버 월드에서는 그 예측이 돌지 않는지.
+    /// 같은 입력으로 나란히 돌려 본다(§3.3.2) — 처음부터 안 탄, 늦게 알아 되감은 탄, 기둥이 있는 판.
+    /// 그리고 실제 서버 스코프 배선의 월드는 그 예측을 하지 않는지.
     /// </summary>
     public class KnockbackOwnHitParityTests
     {
         const float Dt = 0.02f;
         const long FireTick = 10;
+        const long Now = 45;
 
         static readonly KnockbackConfig C = new KnockbackConfig(120f, 6.2f, 14f, 17f, 1.5f, 0f, 5f, 11f,
             17f, 13f, 0.28f, 0.6f, 3, 0.95f, 0.26f, 1.2f, 12, 7f, 0.12f, 0.2f, 0.18f, 0.006f, 1.6f, 0.8f, 5f,
@@ -41,10 +44,24 @@ namespace LOP.Tests
             public void Emit(IReadOnlyList<GameFramework.World.WorldEvent> events) => Got.AddRange(events);
         }
 
-        static GameFramework.World.Entity Body(string id, float x, float z, bool simulated)
+        sealed class FixedSeed : IMatchSeed
+        {
+            public ulong Value => 1;
+        }
+
+        readonly List<System.IDisposable> disposables = new List<System.IDisposable>();
+
+        [TearDown]
+        public void DisposeAll()
+        {
+            foreach (var d in disposables) d.Dispose();
+            disposables.Clear();
+        }
+
+        static GameFramework.World.Entity Body(string id, Vector2 at, bool simulated)
         {
             var e = new GameFramework.World.Entity(id);
-            e.Add(new GameFramework.World.Transform { Position = new System.Numerics.Vector3(x, 0f, z) });
+            e.Add(new GameFramework.World.Transform { Position = new System.Numerics.Vector3(at.x, 0f, at.y) });
             e.Add(new GameFramework.World.Velocity());
             e.Add(new GameFramework.World.CapsuleShape(BodySizes.CharacterRadius, BodySizes.CharacterHeight));
             e.Add(new GameFramework.World.GroundState { IsGrounded = true });
@@ -59,16 +76,33 @@ namespace LOP.Tests
             return e;
         }
 
-        static KnockbackWorld World(GameFramework.World.EntityRegistry registry, KnockbackOwnHitPrediction prediction)
+        KnockbackWorld World(GameFramework.World.EntityRegistry registry, KnockbackPillars pillars, KnockbackOwnHitPrediction prediction)
         {
             var floor = C.CreateFloor();
+            KnockbackPillarColliders colliders = null;
+            if (pillars != null)
+            {
+                colliders = new KnockbackPillarColliders(pillars);
+                disposables.Add(colliders);
+            }
             return new KnockbackWorld(registry, new GameFramework.World.WorldEventBuffer(),
                 C.CreateMoveSystem(floor, new NeverHit(), ~0),
                 new NoopMotionBridge(), floor,
                 new KnockbackFireSystem(C),
                 new BodyCollisionSystem(BodySizes.CharacterRadius, BodySizes.CharacterHeight, C.BodyRestitution, new Vector3(1, 0, 1)),
-                C, null, null, prediction)
+                C, pillars, colliders, prediction)
             { GameplayStartTick = 0 };
+        }
+
+        /// <summary>판 하나의 조건: 내 몸 자리·걷는 방향, 탄 방향, 기둥 배치.</summary>
+        sealed class Setup
+        {
+            public Vector2 MeAt = new Vector2(7f, 0f);
+            public Vector2 Walk = new Vector2(-1f, 0f);
+            public Vector2 ShotDirection = Vector2.right;
+            public float MeZOffset;
+            public bool Bomb;
+            public KnockbackPillarLayout Pillars;
         }
 
         sealed class Server
@@ -76,19 +110,8 @@ namespace LOP.Tests
             public readonly GameFramework.World.EntityRegistry Registry = new GameFramework.World.EntityRegistry();
             public readonly KnockbackMatchState State = new KnockbackMatchState();
             public readonly FakeSink Sink = new FakeSink();
-            public readonly KnockbackWorld World;
-            public readonly KnockbackHitSystem Hits;
-
-            //  서버 스코프처럼 예측 설정 없이 만든다. 서버에서는 모든 몸이 시뮬 대상이다.
-            public Server(float meX, float meZ)
-            {
-                Registry.Add(Body("foe", 0f, 0f, simulated: true));
-                Registry.Add(Body("me", meX, meZ, simulated: true));
-                State.Players.Add("foe");
-                State.Players.Add("me");
-                World = KnockbackOwnHitParityTests.World(Registry, null);
-                Hits = new KnockbackHitSystem(World, Registry, State, C, Sink, new KnockbackPillars(KnockbackPillarLayout.None, C.CreateFloor()), Dt);
-            }
+            public KnockbackWorld World;
+            public KnockbackHitSystem Hits;
 
             public void Tick(long t)
             {
@@ -97,107 +120,202 @@ namespace LOP.Tests
             }
         }
 
-        sealed class Client
+        //  서버처럼: 모든 몸이 시뮬 대상, 예측 설정 없음, 맞음은 End의 KnockbackHitSystem.
+        Server MakeServer(Setup s)
         {
-            public readonly GameFramework.World.EntityRegistry Registry = new GameFramework.World.EntityRegistry();
-            public readonly KnockbackWorld World;
-
-            //  클라처럼 내 몸만 시뮬하고, 남은 시뮬하지 않는다.
-            public Client(float meX, float meZ)
-            {
-                Registry.Add(Body("foe", 0f, 0f, simulated: false));
-                Registry.Add(Body("me", meX, meZ, simulated: true));
-                World = KnockbackOwnHitParityTests.World(Registry, new KnockbackOwnHitPrediction(_ => 0));
-            }
-
-            public void Tick(long t)
-            {
-                World.Tick(t, Dt);
-                World.SaveState(t);
-            }
+            var server = new Server();
+            server.Registry.Add(Body("foe", Vector2.zero, simulated: true));
+            server.Registry.Add(Body("me", s.MeAt, simulated: true));
+            server.State.Players.Add("foe");
+            server.State.Players.Add("me");
+            var floor = C.CreateFloor();
+            var pillars = s.Pillars != null ? new KnockbackPillars(s.Pillars, floor) : null;
+            server.World = World(server.Registry, pillars, null);
+            server.Hits = new KnockbackHitSystem(server.World, server.Registry, server.State, C, server.Sink,
+                pillars ?? new KnockbackPillars(KnockbackPillarLayout.None, floor), Dt);
+            return server;
         }
 
-        static void SetInput(GameFramework.World.EntityRegistry registry, long t)
+        //  클라처럼: 내 몸만 시뮬, 남은 시뮬하지 않음, 예측 켬.
+        (KnockbackWorld world, GameFramework.World.EntityRegistry registry) MakeClient(Setup s)
         {
-            //  내 몸은 탄 쪽으로 걸어 들어간다 — 맞을 때 달리던 속도가 일부 남는 것까지 같아야 한다.
-            registry.Get("me").Get<InputBuffer>().Current = new InputCommand { Horizontal = -1f, Vertical = 0f };
+            var registry = new GameFramework.World.EntityRegistry();
+            registry.Add(Body("foe", Vector2.zero, simulated: false));
+            registry.Add(Body("me", s.MeAt, simulated: true));
+            var pillars = s.Pillars != null ? new KnockbackPillars(s.Pillars, C.CreateFloor()) : null;
+            return (World(registry, pillars, new KnockbackOwnHitPrediction(_ => 0)), registry);
+        }
+
+        static void SetInput(GameFramework.World.EntityRegistry registry, Setup s)
+        {
+            registry.Get("me").Get<InputBuffer>().Current = new InputCommand { Horizontal = s.Walk.x, Vertical = s.Walk.y };
             registry.Get("foe").Get<InputBuffer>().Current = null;
         }
 
-        static void AssertParity(bool bomb, float meZ)
+        static KnockbackShot ShotOf(Setup s) => new KnockbackShot("foe", FireTick, new Vector2(0f, s.MeZOffset), s.ShotDirection, s.Bomb);
+
+        struct MeState
         {
-            var server = new Server(7f, meZ);
-            var client = new Client(7f, meZ);
-            var shot = new KnockbackShot("foe", FireTick, Vector2.zero, Vector2.right, bomb);
-            server.World.Shots.Add(shot);
-            client.World.IngestRemoteShot(shot);
+            public int Damage;
+            public long End;
+            public System.Numerics.Vector3 Position;
+            public System.Numerics.Vector3 Velocity;
+        }
 
-            long serverHit = -1, clientHit = -1;
-            for (long t = 1; t <= 60; t++)
+        static MeState Read(GameFramework.World.EntityRegistry registry)
+        {
+            var me = registry.Get("me");
+            return new MeState
             {
-                SetInput(server.Registry, t);
-                SetInput(client.Registry, t);
+                Damage = me.Get<KnockbackBody>().DamagePercent,
+                End = me.Get<KnockbackBody>().KnockbackEndTick,
+                Position = me.Get<GameFramework.World.Transform>().Position,
+                Velocity = me.Get<GameFramework.World.Velocity>().Linear,
+            };
+        }
+
+        static void AssertSame(MeState s, MeState c, string label)
+        {
+            Assert.AreEqual(s.Damage, c.Damage, $"위험도 {label}");
+            Assert.AreEqual(s.End, c.End, $"날림 끝 틱 {label}");
+            Assert.AreEqual(s.Velocity.X, c.Velocity.X, 1e-5f, $"속도 x {label}");
+            Assert.AreEqual(s.Velocity.Z, c.Velocity.Z, 1e-5f, $"속도 z {label}");
+            Assert.AreEqual(s.Position.X, c.Position.X, 1e-5f, $"자리 x {label}");
+            Assert.AreEqual(s.Position.Z, c.Position.Z, 1e-5f, $"자리 z {label}");
+        }
+
+        //  서버와 클라를 틱마다 나란히 돌려 비교하고, 서버의 틱별 값을 돌려준다.
+        Dictionary<long, MeState> RunSideBySide(Setup s, bool expectHit)
+        {
+            var server = MakeServer(s);
+            var (client, registry) = MakeClient(s);
+            server.World.Shots.Add(ShotOf(s));
+            client.IngestRemoteShot(ShotOf(s));
+
+            var history = new Dictionary<long, MeState>();
+            long serverHit = -1, clientHit = -1;
+            for (long t = 1; t <= Now; t++)
+            {
+                SetInput(server.Registry, s);
+                SetInput(registry, s);
                 server.Tick(t);
-                client.Tick(t);
+                client.Tick(t, Dt);
+                client.SaveState(t);
 
-                var s = server.Registry.Get("me");
-                var c = client.Registry.Get("me");
-                if (serverHit < 0 && s.Get<KnockbackBody>().KnockbackEndTick != long.MinValue) serverHit = t;
-                if (clientHit < 0 && c.Get<KnockbackBody>().KnockbackEndTick != long.MinValue) clientHit = t;
-
-                Assert.AreEqual(s.Get<KnockbackBody>().DamagePercent, c.Get<KnockbackBody>().DamagePercent, $"위험도 t={t}");
-                Assert.AreEqual(s.Get<KnockbackBody>().KnockbackEndTick, c.Get<KnockbackBody>().KnockbackEndTick, $"날림 끝 틱 t={t}");
-                var sv = s.Get<GameFramework.World.Velocity>().Linear;
-                var cv = c.Get<GameFramework.World.Velocity>().Linear;
-                Assert.AreEqual(sv.X, cv.X, 1e-5f, $"속도 x t={t}");
-                Assert.AreEqual(sv.Z, cv.Z, 1e-5f, $"속도 z t={t}");
-                var sp = s.Get<GameFramework.World.Transform>().Position;
-                var cp = c.Get<GameFramework.World.Transform>().Position;
-                Assert.AreEqual(sp.X, cp.X, 1e-5f, $"자리 x t={t}");
-                Assert.AreEqual(sp.Z, cp.Z, 1e-5f, $"자리 z t={t}");
+                var a = Read(server.Registry);
+                var b = Read(registry);
+                history[t] = a;
+                if (serverHit < 0 && a.End != long.MinValue) serverHit = t;
+                if (clientHit < 0 && b.End != long.MinValue) clientHit = t;
+                AssertSame(a, b, $"t={t}");
             }
 
-            Assert.Greater(serverHit, FireTick, "서버에서 실제로 맞아야 시험이 의미 있다");
-            Assert.AreEqual(serverHit, clientHit, "같은 틱에 날기 시작");
-            Assert.AreEqual(12, client.Registry.Get("me").Get<KnockbackBody>().DamagePercent);
+            if (expectHit)
+            {
+                Assert.Greater(serverHit, FireTick, "서버에서 실제로 맞아야 시험이 의미 있다");
+                Assert.AreEqual(serverHit, clientHit, "같은 틱에 날기 시작");
+                Assert.AreEqual(12, Read(registry).Damage);
+            }
+            else
+            {
+                Assert.AreEqual(-1, serverHit, "서버도 안 맞는다");
+            }
+            return history;
         }
 
         [Test]
         public void 보통_탄_맞음_예측이_서버와_같은_틱_같은_값()
         {
-            AssertParity(bomb: false, meZ: 0f);
+            RunSideBySide(new Setup(), expectHit: true);
         }
 
         [Test]
         public void 폭탄_직격_예측이_서버와_같은_틱_같은_값()
         {
-            //  몸 중심을 탄 길에서 비켜 두어 "터진 자리 → 몸" 방향이 탄 방향과 다르게 한다.
-            AssertParity(bomb: true, meZ: 0.4f);
+            //  탄 길을 몸 중심에서 비켜 두어 "터진 자리 → 몸" 방향이 탄 방향과 다르게 한다.
+            RunSideBySide(new Setup { Bomb = true, MeZOffset = -0.4f }, expectHit: true);
         }
 
         [Test]
-        public void 서버_월드는_맞음을_예측하지_않는다()
+        public void 늦게_알아_되감은_예측이_서버와_같은_값()
         {
-            var server = new Server(7f, 0f);
-            server.World.Shots.Add(new KnockbackShot("foe", FireTick, Vector2.zero, Vector2.right));
-            var me = server.Registry.Get("me").Get<KnockbackBody>();
+            var s = new Setup();
+            var serverHistory = RunSideBySide(s, expectHit: true);
 
-            for (long t = 1; t <= 60; t++)
+            //  클라가 탄 사실을 맞은 틱이 지난 뒤에야 안다(클라가 서버보다 앞서 달려 늘 이렇다).
+            var (late, registry) = MakeClient(s);
+            for (long t = 1; t <= Now; t++)
             {
-                SetInput(server.Registry, t);
-                server.World.Tick(t, Dt);
-                int beforeRule = me.DamagePercent;
-                server.Hits.Tick(t, Dt);
-                if (me.DamagePercent > 0)
-                {
-                    Assert.AreEqual(0, beforeRule, "월드 틱이 먼저 맞음을 넣으면 안 된다 — 서버 판정만 넣는다");
-                    break;
-                }
+                SetInput(registry, s);
+                late.Tick(t, Dt);
+                late.SaveState(t);
             }
+            Assert.IsTrue(late.IngestRemoteShot(ShotOf(s), long.MinValue, out long? replayFrom));
+            Assert.IsNotNull(replayFrom);
+            Assert.IsTrue(late.LoadState(replayFrom.Value));
+            for (long t = replayFrom.Value + 1; t <= Now; t++)
+            {
+                SetInput(registry, s);
+                late.Tick(t, Dt);
+                late.SaveState(t);
+                AssertSame(serverHistory[t], Read(registry), $"재생 t={t}");
+            }
+        }
 
-            Assert.AreEqual(12, me.DamagePercent);
-            Assert.AreEqual(1, server.Sink.Got.Count, "맞음 사건과 막타 크레딧은 서버 판정이 낸다");
-            Assert.AreEqual("me", ((KnockbackHitEvent)server.Sink.Got[0]).victimId);
+        [Test]
+        public void 기둥이_있는_판에서도_서버와_같다()
+        {
+            var layout = new KnockbackPillarLayout(1, 3f, 0.9f, 3f);
+            var dir = new KnockbackPillars(layout, C.CreateFloor()).Center(0).normalized;
+
+            //  기둥 바로 뒤에 선 몸 — 서버도 클라도 안 맞는다.
+            RunSideBySide(new Setup { Pillars = layout, MeAt = dir * 6f, Walk = Vector2.zero, ShotDirection = dir }, expectHit: false);
+
+            //  기둥이 있지만 탄 길에서 벗어난 몸 — 둘 다 같은 틱에 맞는다.
+            var side = new Vector2(-dir.y, dir.x);
+            RunSideBySide(new Setup { Pillars = layout, MeAt = side * 6f, Walk = Vector2.zero, ShotDirection = side }, expectHit: true);
+        }
+
+        [Test]
+        public void 서버_스코프_배선의_월드는_맞음을_예측하지_않는다()
+        {
+            //  실제 서버 스코프의 월드 등록(KnockbackLifetimeScope.RegisterWorld)을 그대로 지난다.
+            var builder = new ContainerBuilder();
+            builder.RegisterInstance(C);
+            builder.RegisterInstance<IMatchSeed>(new FixedSeed());
+            builder.RegisterInstance(new GameFramework.World.EntityRegistry());
+            builder.RegisterInstance(new GameFramework.World.WorldEventBuffer());
+            builder.RegisterInstance<GameFramework.World.IMotionBridge>(new NoopMotionBridge());
+            builder.RegisterInstance<GameFramework.Physics.ICollisionQuery>(new NeverHit());
+            KnockbackLifetimeScope.RegisterWorld(builder);
+
+            using (var container = builder.Build())
+            {
+                var world = container.Resolve<KnockbackWorld>();
+                world.GameplayStartTick = 0;
+                var registry = world.EntityRegistry;
+                registry.Add(Body("foe", Vector2.zero, simulated: true));
+                registry.Add(Body("me", new Vector2(7f, 0f), simulated: true));
+                var state = new KnockbackMatchState();
+                state.Players.Add("foe");
+                state.Players.Add("me");
+                var sink = new FakeSink();
+                var hits = new KnockbackHitSystem(world, registry, state, C, sink, container.Resolve<KnockbackPillars>(), Dt);
+                world.Shots.Add(new KnockbackShot("foe", FireTick, Vector2.zero, Vector2.right));
+                var s = new Setup();
+
+                for (long t = 1; t <= Now && sink.Got.Count == 0; t++)
+                {
+                    SetInput(registry, s);
+                    world.Tick(t, Dt);
+                    Assert.AreEqual(0, registry.Get("me").Get<KnockbackBody>().DamagePercent, "월드 틱이 먼저 맞음을 넣으면 안 된다");
+                    hits.Tick(t, Dt);
+                }
+
+                Assert.AreEqual(12, registry.Get("me").Get<KnockbackBody>().DamagePercent);
+                Assert.AreEqual(1, sink.Got.Count, "맞음 사건과 막타 크레딧은 서버 판정이 낸다");
+                Assert.AreEqual("me", ((KnockbackHitEvent)sink.Got[0]).victimId);
+            }
         }
     }
 }

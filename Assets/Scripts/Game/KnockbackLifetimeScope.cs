@@ -12,34 +12,7 @@ namespace LOP
             builder.Register<KnockbackConfig>(c => c.Resolve<KnockbackConfigProvider>().Get(), Lifetime.Singleton);
             builder.Register<KnockbackMatchMode>(c => c.Resolve<KnockbackConfigProvider>().GetMatchMode(), Lifetime.Singleton);
 
-            // 바닥은 월드와 이동 시스템이 같은 한 개를 나눠 쓴다.
-            builder.Register<KnockbackFloor>(c => c.Resolve<KnockbackConfig>().CreateFloor(), Lifetime.Singleton);
-            builder.Register<KnockbackMoveSystem>(c => c.Resolve<KnockbackConfig>().CreateMoveSystem(
-                c.Resolve<KnockbackFloor>(),
-                c.Resolve<GameFramework.Physics.ICollisionQuery>(),
-                LayerMask.GetMask("Default", "Character")), Lifetime.Singleton);
-
-            builder.Register(c => new KnockbackFireSystem(c.Resolve<KnockbackConfig>()), Lifetime.Singleton);
-            builder.Register(c => new BodyCollisionSystem(
-                BodySizes.CharacterRadius, BodySizes.CharacterHeight,
-                c.Resolve<KnockbackConfig>().BodyRestitution, new UnityEngine.Vector3(1, 0, 1)), Lifetime.Singleton);
-
-            builder.Register(c => new KnockbackPillars(c.Resolve<KnockbackConfig>().Pillars, c.Resolve<KnockbackFloor>(), c.Resolve<IMatchSeed>()), Lifetime.Singleton);
-            //  IDisposable이라 스코프가 끝날 때 컨테이너가 기둥 몸(GameObject)을 지운다.
-            builder.Register(c => new KnockbackPillarColliders(c.Resolve<KnockbackPillars>()), Lifetime.Singleton);
-
-            builder.Register<KnockbackWorld>(c => new KnockbackWorld(
-                c.Resolve<GameFramework.World.EntityRegistry>(),
-                c.Resolve<GameFramework.World.WorldEventBuffer>(),
-                c.Resolve<KnockbackMoveSystem>(),
-                c.Resolve<GameFramework.World.IMotionBridge>(),
-                c.Resolve<KnockbackFloor>(),
-                c.Resolve<KnockbackFireSystem>(),
-                c.Resolve<BodyCollisionSystem>(),
-                c.Resolve<KnockbackConfig>(),
-                c.Resolve<KnockbackPillars>(),
-                c.Resolve<KnockbackPillarColliders>()), Lifetime.Singleton)
-                .As<GameFramework.World.IWorld>().AsSelf();
+            RegisterWorld(builder);
 
             builder.Register<ICharacterCreator, KnockbackPlayerCreator>(Lifetime.Singleton);
             builder.Register<KnockbackMatchState>(Lifetime.Singleton);
@@ -97,6 +70,44 @@ namespace LOP
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackCrateSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackStateBroadcastSystem>());
             });
+        }
+
+        /// <summary>
+        /// 월드와 월드가 쓰는 시스템을 등록한다. 설정(KnockbackConfig)과 공용 서비스는 부르는 쪽이 등록한다.
+        /// 시험이 실제 배선을 지나도록 따로 뺐다.
+        /// </summary>
+        public static void RegisterWorld(IContainerBuilder builder)
+        {
+            // 바닥은 월드와 이동 시스템이 같은 한 개를 나눠 쓴다.
+            builder.Register<KnockbackFloor>(c => c.Resolve<KnockbackConfig>().CreateFloor(), Lifetime.Singleton);
+            builder.Register<KnockbackMoveSystem>(c => c.Resolve<KnockbackConfig>().CreateMoveSystem(
+                c.Resolve<KnockbackFloor>(),
+                c.Resolve<GameFramework.Physics.ICollisionQuery>(),
+                LayerMask.GetMask("Default", "Character")), Lifetime.Singleton);
+
+            builder.Register(c => new KnockbackFireSystem(c.Resolve<KnockbackConfig>()), Lifetime.Singleton);
+            builder.Register(c => new BodyCollisionSystem(
+                BodySizes.CharacterRadius, BodySizes.CharacterHeight,
+                c.Resolve<KnockbackConfig>().BodyRestitution, new UnityEngine.Vector3(1, 0, 1)), Lifetime.Singleton);
+
+            builder.Register(c => new KnockbackPillars(c.Resolve<KnockbackConfig>().Pillars, c.Resolve<KnockbackFloor>(), c.Resolve<IMatchSeed>()), Lifetime.Singleton);
+            //  IDisposable이라 스코프가 끝날 때 컨테이너가 기둥 몸(GameObject)을 지운다.
+            builder.Register(c => new KnockbackPillarColliders(c.Resolve<KnockbackPillars>()), Lifetime.Singleton);
+
+            builder.Register<KnockbackWorld>(c => new KnockbackWorld(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<GameFramework.World.WorldEventBuffer>(),
+                c.Resolve<KnockbackMoveSystem>(),
+                c.Resolve<GameFramework.World.IMotionBridge>(),
+                c.Resolve<KnockbackFloor>(),
+                c.Resolve<KnockbackFireSystem>(),
+                c.Resolve<BodyCollisionSystem>(),
+                c.Resolve<KnockbackConfig>(),
+                c.Resolve<KnockbackPillars>(),
+                //  내 몸 맞음 예측(KnockbackOwnHitPrediction)은 주지 않는다 — 서버에선 모든 몸이 시뮬 대상이라
+                //  켜면 KnockbackHitSystem보다 먼저 탄을 먹어 맞음 사건·막타 크레딧이 사라진다.
+                c.Resolve<KnockbackPillarColliders>()), Lifetime.Singleton)
+                .As<GameFramework.World.IWorld>().AsSelf();
         }
     }
 }

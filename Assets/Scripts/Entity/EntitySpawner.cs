@@ -17,6 +17,7 @@ namespace LOP
         private readonly ICharacterCreator characterCreator;
         private readonly ItemCreator itemCreator;
         private readonly CoinCreator coinCreator;
+        private readonly BarrelCreator barrelCreator;
         private readonly IPublisher<EntityCreated> entityCreatedPublisher;
         private readonly IPublisher<EntityDestroyed> entityDestroyedPublisher;
 
@@ -34,7 +35,23 @@ namespace LOP
             CoinCreator coinCreator,
             IPublisher<EntityCreated> entityCreatedPublisher,
             IPublisher<EntityDestroyed> entityDestroyedPublisher)
+            : this(sessionManager, entityRegistry, characterCreator, itemCreator, coinCreator,
+                   new BarrelCreator(entityRegistry), entityCreatedPublisher, entityDestroyedPublisher)
         {
+        }
+
+        // DI는 인자가 더 많은 이 생성자를 고른다.
+        public EntitySpawner(
+            ISessionManager sessionManager,
+            GameFramework.World.EntityRegistry entityRegistry,
+            ICharacterCreator characterCreator,
+            ItemCreator itemCreator,
+            CoinCreator coinCreator,
+            BarrelCreator barrelCreator,
+            IPublisher<EntityCreated> entityCreatedPublisher,
+            IPublisher<EntityDestroyed> entityDestroyedPublisher)
+        {
+            this.barrelCreator = barrelCreator;
             this.sessionManager = sessionManager;
             this.entityRegistry = entityRegistry;
             this.characterCreator = characterCreator;
@@ -87,6 +104,12 @@ namespace LOP
         public void Spawn(CoinCreationData creationData)
         {
             coinCreator.Create(creationData);
+            entityCreatedPublisher.Publish(new EntityCreated(creationData.entityId));
+        }
+
+        public void Spawn(BarrelCreationData creationData)
+        {
+            barrelCreator.Create(creationData);
             entityCreatedPublisher.Publish(new EntityCreated(creationData.entityId));
         }
 

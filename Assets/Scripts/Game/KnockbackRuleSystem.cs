@@ -4,12 +4,12 @@ using UnityEngine;
 
 namespace LOP
 {
-    /// <summary>둘레 위 자리와 그 자리에서 가운데를 보는 각.</summary>
+    /// <summary>둘레 위 자리와 그 자리에서 가운데를 보는 각. rotationDegrees는 기둥 고리를 돌린 각과 같게 줘서 둘이 같이 돈다.</summary>
     public static class KnockbackSpawn
     {
-        public static Vector3 Position(int index, int count, float radius)
+        public static Vector3 Position(int index, int count, float radius, float rotationDegrees = 0f)
         {
-            float theta = index / (float)count * 2f * Mathf.PI;
+            float theta = (index / (float)count * 360f + rotationDegrees) * Mathf.Deg2Rad;
             return new Vector3(radius * Mathf.Sin(theta), 0f, radius * Mathf.Cos(theta));
         }
 
@@ -31,12 +31,16 @@ namespace LOP
         private readonly KnockbackConfig config;
         private readonly KnockbackTestBotFill fillTo;
         private readonly KnockbackMatchMode mode;
+        private readonly KnockbackPillars pillars;
+        private readonly IMatchSeed seed;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
 
         public KnockbackRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner,
                                    KnockbackMatchState state, KnockbackConfig config, KnockbackTestBotFill fillTo = null,
-                                   KnockbackMatchMode mode = null)
+                                   KnockbackMatchMode mode = null, KnockbackPillars pillars = null, IMatchSeed seed = null)
         {
+            this.pillars = pillars;
+            this.seed = seed;
             this.mode = mode ?? KnockbackMatchMode.Solo;
             this.fillTo = fillTo ?? new KnockbackTestBotFill(() => 0);
             this.roomDataStore = roomDataStore;
@@ -68,7 +72,7 @@ namespace LOP
                 if (isBot) state.Bots.Add(entityId);
                 state.Team[entityId] = KnockbackTeams.TeamForSeat(i, mode.TeamCount);
 
-                var position = KnockbackSpawn.Position(i, total, config.SpawnRadius);
+                var position = KnockbackSpawn.Position(i, total, config.SpawnRadius, pillars?.RotationDegrees ?? 0f);
                 entitySpawner.Spawn(new CharacterCreationData
                 {
                     userId = userId,
@@ -89,8 +93,41 @@ namespace LOP
                         : PlayerLookResolver.Resolve(roomDataStore.looks, userId, i),
                 });
             }
+            SpawnBarrels();
             //  팀을 채운 상태를 틱 0부터 보낸다 — 판본이 0이면 첫 원 공개(8초)까지 클라가 팀을 모른다.
             state.MarkChanged();
+        }
+
+        //  드럼통 시작 자리는 씨앗으로 정해 클라가 따로 계산하지 않는다 - 엔티티로 보내 스냅샷이 따라오게 한다.
+        private void SpawnBarrels()
+        {
+            var layout = config.Barrels;
+            if (layout.Count <= 0)
+            {
+                return;
+            }
+            var centers = new List<Vector2>();
+            float pillarRadius = 0f;
+            if (pillars != null)
+            {
+                for (int i = 0; i < pillars.Count; i++)
+                {
+                    centers.Add(pillars.Center(i));
+                }
+                pillarRadius = pillars.Radius;
+            }
+            var spawns = KnockbackMapRandom.BarrelSpawns(seed?.Value ?? 0UL, layout, centers, pillarRadius);
+            for (int i = 0; i < spawns.Length; i++)
+            {
+                entitySpawner.Spawn(new BarrelCreationData
+                {
+                    entityId = entitySpawner.GenerateEntityId(),
+                    position = new Vector3(spawns[i].x, 0f, spawns[i].y),
+                    rotation = Vector3.zero,
+                    velocity = Vector3.zero,
+                    visualId = KnockbackBarrel.VisualId,
+                });
+            }
         }
 
         public void Deinitialize() { }

@@ -28,6 +28,8 @@ namespace LOP
         private readonly HashSet<(string, long)> exploded = new HashSet<(string, long)>();
         private readonly List<KnockbackShot> bombScratch = new List<KnockbackShot>();
         private readonly List<GameFramework.World.WorldEvent> events = new List<GameFramework.World.WorldEvent>();
+        private readonly List<GameFramework.World.Entity> barrelEntities = new List<GameFramework.World.Entity>();
+        private readonly List<KnockbackShot> shotScratch = new List<KnockbackShot>();
 
         public KnockbackHitSystem(KnockbackWorld world, GameFramework.World.EntityRegistry registry,
                                   KnockbackMatchState state, KnockbackConfig config,
@@ -125,8 +127,117 @@ namespace LOP
                 events.Add(new KnockbackHitEvent(shot.ShooterId, shot.FireTick, id));
             }
 
+            //  반경 안 드럼통도 터진 자리에서 바깥으로 민다.
+            if (barrelEntities.Count > 0)
+            {
+                var fallback = shot.Direction.sqrMagnitude > 0f ? shot.Direction.normalized : Vector2.right;
+                for (int i = 0; i < barrelEntities.Count; i++)
+                {
+                    var barrelPosition = BarrelPosition(barrelEntities[i]);
+                    var offset = barrelPosition - center;
+                    if (offset.sqrMagnitude > config.BlastRadius * config.BlastRadius)
+                    {
+                        continue;
+                    }
+                    PushBarrel(barrelEntities[i], offset.sqrMagnitude > 1e-8f ? offset.normalized : fallback, shot.ShooterId);
+                }
+            }
+
             world.RemoveShot(shot.ShooterId, shot.FireTick);
             events.Add(new KnockbackBlastEvent(shot.ShooterId, center, tick));
+        }
+
+        private static Vector2 BarrelPosition(GameFramework.World.Entity barrel)
+        {
+            var p = barrel.Get<GameFramework.World.Transform>().Position;
+            return new Vector2(p.X, p.Z);
+        }
+
+        //  탄이나 폭풍이 드럼통에 주는 속도. 민 사람을 기억해 두었다가 드럼통이 몸을 칠 때 막타로 쓴다.
+        private void PushBarrel(GameFramework.World.Entity barrel, Vector2 direction, string pusherId)
+        {
+            var velocity = barrel.Get<GameFramework.World.Velocity>();
+            var v = velocity.Linear;
+            float impulse = config.Barrels.ShotImpulse;
+            velocity.Linear = new System.Numerics.Vector3(v.X + direction.x * impulse, v.Y, v.Z + direction.y * impulse);
+            barrel.Get<KnockbackBarrel>().PusherId = pusherId;
+        }
+
+        //  탄이 몸보다(또 기둥보다) 먼저 드럼통에 닿으면 드럼통이 맞는다. 몸에 간 맞음 목록에서 그 탄을 뺀다.
+        private void ResolveBarrelHits(long tick, List<(KnockbackShot shot, string victimId)> hits)
+        {
+            shotScratch.Clear();
+            shotScratch.AddRange(world.Shots.Shots);
+            float barrelReach = config.Barrels.Radius + config.ShotRadius;
+            float bodyReach = config.HitRadius + config.ShotRadius;
+            float pillarReach = pillars.Radius + config.ShotRadius;
+
+            foreach (var shot in shotScratch)
+            {
+                if (tick < shot.FireTick)
+                {
+                    continue;
+                }
+                KnockbackHits.Segment(shot, tick, config, tickInterval, out var from, out var to);
+
+                float limit = float.MaxValue;
+                for (int p = 0; p < standingPillars.Count; p++)
+                {
+                    if (KnockbackHitTest.SegmentHitsCircle(from, to, standingPillars[p], pillarReach, out float pt) && pt < limit)
+                    {
+                        limit = pt;
+                    }
+                }
+                //  이 탄이 몸을 맞혔다면 그 몸이 먼저 닿는 자리까지만 드럼통이 앞설 수 있다.
+                for (int h = 0; h < hits.Count; h++)
+                {
+                    if (hits[h].shot.ShooterId != shot.ShooterId || hits[h].shot.FireTick != shot.FireTick)
+                    {
+                        continue;
+                    }
+                    foreach (var target in targets)
+                    {
+                        if (target.id == hits[h].victimId
+                            && KnockbackHitTest.SegmentHitsCircle(from, to, target.position, bodyReach, out float bt) && bt < limit)
+                        {
+                            limit = bt;
+                        }
+                    }
+                }
+
+                GameFramework.World.Entity hitBarrel = null;
+                float best = float.MaxValue;
+                for (int b = 0; b < barrelEntities.Count; b++)
+                {
+                    //  쏜 자리가 드럼통 안이면 그 드럼통은 표적이 아니다 - 발밑 드럼통에 탄이 먹히지 않게.
+                    if ((shot.Origin - BarrelPosition(barrelEntities[b])).sqrMagnitude < barrelReach * barrelReach)
+                    {
+                        continue;
+                    }
+                    if (KnockbackHitTest.SegmentHitsCircle(from, to, BarrelPosition(barrelEntities[b]), barrelReach, out float t)
+                        && t < best && t < limit)
+                    {
+                        best = t;
+                        hitBarrel = barrelEntities[b];
+                    }
+                }
+                if (hitBarrel == null)
+                {
+                    continue;
+                }
+
+                hits.RemoveAll(h => h.shot.ShooterId == shot.ShooterId && h.shot.FireTick == shot.FireTick);
+                if (shot.IsBomb)
+                {
+                    Explode(shot, Vector2.Lerp(from, to, best), tick);
+                    //  주변에 몸이 없어도 클라가 이 폭탄 탄을 지우도록, 보통 탄처럼 맞은 드럼통 id로 사건을 낸다.
+                    events.Add(new KnockbackHitEvent(shot.ShooterId, shot.FireTick, hitBarrel.Id));
+                    continue;
+                }
+                PushBarrel(hitBarrel, shot.Direction.sqrMagnitude > 0f ? shot.Direction.normalized : Vector2.right, shot.ShooterId);
+                world.RemoveShot(shot.ShooterId, shot.FireTick);
+                events.Add(new KnockbackHitEvent(shot.ShooterId, shot.FireTick, hitBarrel.Id));
+            }
         }
 
         public void Tick(long tick, float deltaTime)
@@ -155,6 +266,12 @@ namespace LOP
             var hits = FindHits(tick);
 
             events.Clear();
+            barrelEntities.Clear();
+            if (config.Barrels.Count > 0)
+            {
+                KnockbackBarrelSystem.CollectRolling(registry, barrelEntities);
+                ResolveBarrelHits(tick, hits);
+            }
             //  터진 폭탄 탄은 여기 적어 두어 같은 틱에 두 번 터지지 않게 한다.
             exploded.Clear();
             foreach (var (shot, victimId) in hits)

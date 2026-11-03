@@ -230,6 +230,8 @@ namespace LOP
                 if (shot.IsBomb)
                 {
                     Explode(shot, Vector2.Lerp(from, to, best), tick);
+                    //  주변에 몸이 없어도 클라가 이 폭탄 탄을 지우도록, 보통 탄처럼 맞은 드럼통 id로 사건을 낸다.
+                    events.Add(new KnockbackHitEvent(shot.ShooterId, shot.FireTick, hitBarrel.Id));
                     continue;
                 }
                 PushBarrel(hitBarrel, shot.Direction.sqrMagnitude > 0f ? shot.Direction.normalized : Vector2.right, shot.ShooterId);

@@ -183,12 +183,25 @@ namespace LOP.Tests
             Assert.AreEqual(0f, Vel(victim).y, 1e-5f);
             state.Eliminate("v", 100);
             Assert.AreEqual("shooter", state.KoBy["v"]);
-            Assert.Greater(Vel(b).x, 0f, "드럼통은 무거워서 계속 간다");
-            Assert.LessOrEqual(Vel(b).x, Vel(victim).x + 1e-3f, "몸보다 빠르게 몸 쪽으로 가지 않는다");
+            Assert.AreEqual(6f, Vel(b).x, 0.3f, "드럼통 속도는 그대로 - 몸을 쳐도 느려지지 않는다");
 
             long firstEnd = body.KnockbackEndTick;
             barrelSystem.Tick(1, Dt);
             Assert.AreEqual(firstEnd, body.KnockbackEndTick, "같은 몸을 다음 틱에 또 치지 않는다");
+        }
+
+        [Test]
+        public void 달아나는_몸을_쳐도_드럼통_속도는_그대로다()
+        {
+            Build();
+            var victim = AddBody("v", 2f, 0f);
+            victim.Get<GameFramework.World.Velocity>().Linear = new System.Numerics.Vector3(3.5f, 0f, 0f);
+            var b = AddBarrel("b1", 1.0f, 0f, 6f, 0f);
+
+            barrelSystem.Tick(0, Dt);
+
+            Assert.Greater(victim.Get<KnockbackBody>().KnockbackEndTick, 0, "먼저 쳤다는 것");
+            Assert.AreEqual(6f, Vel(b).x, 0.3f, "몸이 달아나도 드럼통은 느려지지 않는다");
         }
 
         [Test]
@@ -299,6 +312,8 @@ namespace LOP.Tests
 
             Assert.AreEqual(0, world.Shots.Shots.Count);
             Assert.IsTrue(sink.Got.Exists(e => e is KnockbackBlastEvent));
+            Assert.IsTrue(sink.Got.Exists(e => e is KnockbackHitEvent h && h.shooterId == "a" && h.fireTick == 10),
+                "맞은 드럼통 id로 맞음 사건이 나가야 클라가 폭탄 탄을 지운다");
             Assert.Greater(Vel(side).y, 5f, "터진 자리에서 바깥(위)으로");
             Assert.Greater(Vel(hit).magnitude, 5f, "맞은 드럼통도 민다");
             Assert.AreEqual(0f, Vel(far).magnitude, 1e-6f, "반경 밖은 안 민다");

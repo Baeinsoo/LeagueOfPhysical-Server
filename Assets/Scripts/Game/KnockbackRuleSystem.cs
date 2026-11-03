@@ -4,12 +4,12 @@ using UnityEngine;
 
 namespace LOP
 {
-    /// <summary>둘레 위 자리와 그 자리에서 가운데를 보는 각.</summary>
+    /// <summary>둘레 위 자리와 그 자리에서 가운데를 보는 각. rotationDegrees는 기둥 고리를 돌린 각과 같게 줘서 둘이 같이 돈다.</summary>
     public static class KnockbackSpawn
     {
-        public static Vector3 Position(int index, int count, float radius)
+        public static Vector3 Position(int index, int count, float radius, float rotationDegrees = 0f)
         {
-            float theta = index / (float)count * 2f * Mathf.PI;
+            float theta = (index / (float)count * 360f + rotationDegrees) * Mathf.Deg2Rad;
             return new Vector3(radius * Mathf.Sin(theta), 0f, radius * Mathf.Cos(theta));
         }
 
@@ -72,7 +72,7 @@ namespace LOP
                 if (isBot) state.Bots.Add(entityId);
                 state.Team[entityId] = KnockbackTeams.TeamForSeat(i, mode.TeamCount);
 
-                var position = KnockbackSpawn.Position(i, total, config.SpawnRadius);
+                var position = KnockbackSpawn.Position(i, total, config.SpawnRadius, pillars?.RotationDegrees ?? 0f);
                 entitySpawner.Spawn(new CharacterCreationData
                 {
                     userId = userId,

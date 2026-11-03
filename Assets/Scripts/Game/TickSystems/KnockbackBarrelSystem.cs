@@ -234,11 +234,6 @@ namespace LOP
                             state.Credit.RecordShotHit(id, pusher, tick);
                         }
                     }
-
-                    //  친 드럼통은 몸의 새 속도보다 빠르게 몸 쪽으로 가지 않는다 - 같은 몸을 매 틱 다시 치지 않게.
-                    float bodyAfter = Vector2.Dot(new Vector2(velocity.Linear.X, velocity.Linear.Z), direction);
-                    barrelVel = KnockbackBarrelPhysics.YieldToBody(barrelVel, direction, bodyAfter);
-                    bv.Linear = new System.Numerics.Vector3(barrelVel.x, bv.Linear.Y, barrelVel.y);
                 }
             }
 

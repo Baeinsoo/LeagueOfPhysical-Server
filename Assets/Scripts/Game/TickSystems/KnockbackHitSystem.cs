@@ -130,13 +130,14 @@ namespace LOP
         }
 
         //  사람·기둥에 안 막히고 사거리 끝까지 간 보통 탄은 그 끝 칸에 금을 낸다. 폭탄은 거기서 터지므로 금이 없다.
-        //  탄은 사거리에 닿는 틱에 딱 한 번 여기를 지난다(다음 틱엔 월드가 치운다).
+        //  다 쓴 탄은 건너뛰어, 월드 정리가 늦어져도 같은 탄이 금을 두 번 내지 않는다.
         private void CrackFloorAtRangeEnd(long tick)
         {
             var floor = world.Floor;
             foreach (var shot in world.Shots.Shots)
             {
                 if (shot.IsBomb || tick < shot.FireTick
+                    || shot.IsSpent(tick, config.ShotSpeed, config.ShotRange, tickInterval)
                     || config.ShotSpeed * (tick - shot.FireTick) * tickInterval < config.ShotRange)
                 {
                     continue;

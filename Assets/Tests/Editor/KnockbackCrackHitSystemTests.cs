@@ -9,7 +9,7 @@ namespace LOP.Tests
     {
         const float Dt = 0.02f;
 
-        static KnockbackConfig Make(int crackEnabled) => new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, 18f, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 12, 6f, 0.2f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 8f,
+        static KnockbackConfig Make(int crackEnabled, float range = 18f) => new KnockbackConfig(120f, 6f, 10f, 12f, 2f, 0.5f, 5f, 11f, 30f, range, 0.3f, 0.55f, 3, 0.95f, 0.26f, 1.2f, 12, 6f, 0.2f, 0.5f, 0.3f, 0.1f, 0.2f, 0.8f, 8f,
             new List<MountedArcheryZoneStageConfig>(), null, 0, 0f, 1f, 20f, 20f, 1.5f, 0.9f, 2.5f, crackEnabled, 2, 1f);
 
         sealed class FakeSink : GameFramework.World.IEventSink
@@ -24,9 +24,9 @@ namespace LOP.Tests
         KnockbackHitSystem system;
         KnockbackPillars pillars;
 
-        void Build(int crackEnabled, KnockbackPillarLayout layout = null)
+        void Build(int crackEnabled, KnockbackPillarLayout layout = null, float range = 18f)
         {
-            config = Make(crackEnabled);
+            config = Make(crackEnabled, range);
             registry = new GameFramework.World.EntityRegistry();
             state = new KnockbackMatchState();
             var floor = config.CreateFloor();
@@ -136,16 +136,54 @@ namespace LOP.Tests
             Assert.AreEqual(0, state.Cracks.Count);
         }
 
+        //  사거리를 틱 걸음(0.6m)의 배수가 아니게 해서 마지막 틱 선분이 짧게 남게 한다(17.4 -> 17.8m).
+        //  탄은 기둥 중심으로 향하고 사거리 끝은 중심 앞 1m(원판 안)라, 기둥 닿는 범위(1.2m)에 처음 들어가는 곳이
+        //  그 마지막 선분 안이다. 월드의 앞 틱 정리(RemoveBlocked)는 그 선분을 아직 못 본다.
+        const float OddRange = 17.8f;
+        static readonly KnockbackPillarLayout OnePillar = new KnockbackPillarLayout(1, 4f, 0.9f, 3f);
+
+        void FireAtPillarEnd(Vector2 center, long fireTick)
+        {
+            var dir = center.normalized;
+            world.Shots.Add(new KnockbackShot("a", fireTick, center - dir - dir * OddRange, dir));
+        }
+
         [Test]
         public void 기둥에_막힌_탄은_금을_내지_않는다()
         {
-            Build(1, new KnockbackPillarLayout(1, 4f, 0.9f, 3f));
-            var dir = pillars.Center(0).normalized;
-            world.Shots.Add(new KnockbackShot("a", 10, Vector2.zero, dir));
+            Build(1, OnePillar, OddRange);
+            FireAtPillarEnd(pillars.Center(0), 10);
 
             Run(10, 60);
 
             Assert.AreEqual(0, state.Cracks.Count);
+        }
+
+        [Test]
+        public void 대조_기둥이_없으면_같은_탄이_금을_낸다()
+        {
+            Build(1, OnePillar, OddRange);
+            var center = pillars.Center(0);
+            Build(1, null, OddRange);
+            FireAtPillarEnd(center, 10);
+
+            Run(10, 60);
+
+            Assert.AreEqual(1, state.Cracks.Count);
+        }
+
+        [Test]
+        public void 월드_정리가_늦어도_같은_탄이_금을_두_번_내지_않는다()
+        {
+            Build(1);
+            Fire("a", 10);
+
+            //  월드 정리(RemoveSpent) 없이 사거리 끝 틱과 그다음 틱을 연달아 돌린다.
+            //  (부동소수 올림 때문에 사거리 끝 틱은 41이다.)
+            system.Tick(41, Dt);
+            system.Tick(42, Dt);
+
+            Assert.AreEqual(1, state.Cracks[EndTile()].cracks);
         }
 
         [Test]

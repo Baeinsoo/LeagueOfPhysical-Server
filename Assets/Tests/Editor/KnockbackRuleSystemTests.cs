@@ -20,6 +20,34 @@ namespace LOP.Tests
             Assert.AreEqual(0f, Mathf.DeltaAngle(-90f, KnockbackSpawn.YawFacingCenter(new Vector3(11, 0, 0))), 0.01f);
         }
 
+        class FakeSeed : IMatchSeed
+        {
+            public ulong Value { get; set; }
+        }
+
+        //  기둥 고리를 돌리면 출발 자리도 같이 돌아야 기둥이 늘 출발 자리와 반 칸 비켜 선다 - 한 팀만 기둥 뒤가 되지 않게.
+        [Test]
+        public void 어떤_씨앗이든_출발_자리와_가장_가까운_기둥의_각_간격이_반_칸이다()
+        {
+            var layout = new KnockbackPillarLayout(4, 9.5f, 0.9f, 3f);
+            for (ulong s = 1; s <= 60; s++)
+            {
+                var pillars = new KnockbackPillars(layout, new KnockbackFloor(23f, 1.5f, 0f), new FakeSeed { Value = s });
+                for (int i = 0; i < 8; i++)
+                {
+                    var spawn = KnockbackSpawn.Position(i, 8, 15f, pillars.RotationDegrees);
+                    float spawnDeg = Mathf.Atan2(spawn.x, spawn.z) * Mathf.Rad2Deg;
+                    float nearest = float.MaxValue;
+                    for (int p = 0; p < pillars.Count; p++)
+                    {
+                        float pillarDeg = Mathf.Atan2(pillars.Center(p).x, pillars.Center(p).y) * Mathf.Rad2Deg;
+                        nearest = Mathf.Min(nearest, Mathf.Abs(Mathf.DeltaAngle(spawnDeg, pillarDeg)));
+                    }
+                    Assert.AreEqual(22.5f, nearest, 0.01f, $"씨앗 {s} 자리 {i}");
+                }
+            }
+        }
+
         [Test]
         public void 혼자면_떨어져야_끝난다()
         {

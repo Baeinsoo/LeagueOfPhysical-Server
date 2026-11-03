@@ -121,6 +121,32 @@ namespace LOP.Tests
             }
         }
 
+        //  서버 EntityBinder는 스폰된 모든 몸에 PhysX 대리 몸을 세운다(PhysicsBodyFactory.Create). 모양·물리 설정이 없으면
+        //  첫 스폰에서 throw → 방 초기화가 끝나지 않아 7777이 안 열린다(Task 14 실제 판에서 확인).
+        [Test]
+        public void 서버_몸에도_물리_대리_몸을_세울_수_있다()
+        {
+            var f = Build(new[] { "a", "b" });
+            f.Rule.Initialize();
+
+            foreach (var user in new[] { "a", "b" })
+            {
+                var body = f.BodyOf(user);
+                var root = new GameObject("card-rush-proxy-test");
+                try
+                {
+                    PhysicsBody proxy = null;
+                    Assert.DoesNotThrow(() => proxy = PhysicsBodyFactory.Create(root, body), user);
+                    Assert.IsTrue(proxy.IsKinematic, $"{user}: 대리 몸은 아무것도 밀지 않는다(키네마틱)");
+                    Assert.IsTrue(body.Get<PhysicsConfig>().IsTrigger, $"{user}: 트리거 — 선수끼리 안 부딪힌다");
+                }
+                finally
+                {
+                    UnityEngine.Object.DestroyImmediate(root);
+                }
+            }
+        }
+
         [Test]
         public void 모두_완주하고_150틱_뒤_끝()
         {

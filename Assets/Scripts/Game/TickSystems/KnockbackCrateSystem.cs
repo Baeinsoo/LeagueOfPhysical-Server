@@ -119,7 +119,7 @@ namespace LOP
                     float distance = reach * Mathf.Sqrt((float)random.NextDouble());
                     float angle = (float)random.NextDouble() * Mathf.PI * 2f;
                     var point = center + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * distance;
-                    if (world.Floor.IsSolid(point.x, point.y, landTick) && NearPillar(point, clearance) == false)
+                    if (world.Floor.IsSolid(point.x, point.y, landTick) && WillCollapse(point) == false && NearPillar(point, clearance) == false)
                     {
                         position = point;
                         return true;
@@ -128,7 +128,14 @@ namespace LOP
             }
             //  마지막 수단은 원 중심 - 그곳도 설 수 있는 칸일 때만.
             position = center;
-            return world.Floor.IsSolid(center.x, center.y, landTick) && NearPillar(center, clearance) == false;
+            return world.Floor.IsSolid(center.x, center.y, landTick) && WillCollapse(center) == false && NearPillar(center, clearance) == false;
+        }
+
+        //  무너지기로 정해진 칸에는 상자를 놓지 않는다(주우러 가다 떨어진다).
+        private bool WillCollapse(Vector2 point)
+        {
+            int tile = world.Floor.TileIndexAt(point.x, point.y);
+            return tile >= 0 && world.Floor.CollapseTickOf(tile) != KnockbackFloor.NoCollapse;
         }
 
         private bool NearPillar(Vector2 point, float clearance)

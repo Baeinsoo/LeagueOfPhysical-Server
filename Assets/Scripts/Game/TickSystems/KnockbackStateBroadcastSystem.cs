@@ -94,6 +94,10 @@ namespace LOP
                 var crate = state.Crate.Value;
                 message.Crate = new KnockbackCrateWire { Id = crate.Id, LandTick = crate.LandTick, X = crate.Position.x, Z = crate.Position.y };
             }
+            foreach (var pair in state.Cracks)
+            {
+                message.Cracks.Add(new KnockbackCrackWire { Tile = pair.Key, Cracks = pair.Value.cracks, CollapseTick = pair.Value.collapseTick });
+            }
             return message;
         }
     }

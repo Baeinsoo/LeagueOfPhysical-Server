@@ -64,6 +64,9 @@ namespace LOP
             MarkChanged();
         }
 
+        /// <summary>금 간 칸 번호 → (금 수, 무너지는 틱 — 아직이면 -1). 금 가는 바닥 맵만 쓴다. 판정용 사실은 바닥(KnockbackFloor)에도 넣는다.</summary>
+        public readonly SortedDictionary<int, (int cracks, long collapseTick)> Cracks = new SortedDictionary<int, (int, long)>();
+
         /// <summary>바뀔 때마다 오른다 — 방송 시스템이 판본을 보고 다시 보낸다.</summary>
         public int Version { get; private set; }
 

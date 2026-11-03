@@ -92,6 +92,7 @@ namespace LOP
                     Falling = entity.Get<GameFramework.World.GroundState>() is { IsGrounded: false },
                     HasBomb = gun?.HasBomb ?? false,
                     CratePosition = state.Crate is { } crate && tick >= crate.LandTick ? crate.Position : (Vector2?)null,
+                    WarningTileCenter = WarningTileUnder(position, tick),
                 };
 
                 var command = BrainFor(id).Think(view);
@@ -101,6 +102,18 @@ namespace LOP
                 sequences[id] = sequence;
                 inputBufferSystem.Enqueue(entity.Get<InputBuffer>(), tick, command);
             }
+        }
+
+        private Vector2? WarningTileUnder(Vector3 position, long tick)
+        {
+            if (config.CrackEnabled == false) return null;
+            var (tx, tz) = KnockbackFloor.TileAt(position.x, position.z, world.Floor.TileSize);
+            if (world.Floor.HasTile(tx, tz) == false || world.Floor.IsWarning(tx, tz, tick, config.CrackCollapseTicks) == false)
+            {
+                return null;
+            }
+            var center = world.Floor.TileCenter(tx, tz);
+            return new Vector2(center.x, center.z);
         }
 
         /// <summary>같은 팀 몸은 적이 아니고 같은 팀이 쏜 탄은 피할 필요가 없다. 팀 0(개인전)은 아무도 거르지 않는다.</summary>

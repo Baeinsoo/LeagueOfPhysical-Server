@@ -129,6 +129,57 @@ namespace LOP
             events.Add(new KnockbackBlastEvent(shot.ShooterId, center, tick));
         }
 
+        //  사람·기둥에 안 막히고 사거리 끝까지 간 보통 탄은 그 끝 칸에 금을 낸다. 폭탄은 거기서 터지므로 금이 없다.
+        //  탄은 사거리에 닿는 틱에 딱 한 번 여기를 지난다(다음 틱엔 월드가 치운다).
+        private void CrackFloorAtRangeEnd(long tick)
+        {
+            var floor = world.Floor;
+            foreach (var shot in world.Shots.Shots)
+            {
+                if (shot.IsBomb || tick < shot.FireTick
+                    || config.ShotSpeed * (tick - shot.FireTick) * tickInterval < config.ShotRange)
+                {
+                    continue;
+                }
+                if (BlockedByPillar(shot, tick))
+                {
+                    continue;
+                }
+
+                var end = shot.PositionWithinRange(tick, config.ShotSpeed, config.ShotRange, tickInterval);
+                int tile = floor.TileIndexAt(end.x, end.y);
+                if (tile < 0 || floor.CollapseTickOf(tile) != KnockbackFloor.NoCollapse || floor.IsSolid(end.x, end.y, tick) == false)
+                {
+                    continue;
+                }
+
+                state.Cracks.TryGetValue(tile, out var crack);
+                int cracks = crack.cracks + 1;
+                long collapseTick = -1;
+                if (cracks >= config.CrackHitsToCollapse)
+                {
+                    collapseTick = tick + config.CrackCollapseTicks;
+                    floor.SetCollapseTick(tile, collapseTick);
+                }
+                state.Cracks[tile] = (cracks, collapseTick);
+                state.MarkChanged();
+            }
+        }
+
+        private bool BlockedByPillar(in KnockbackShot shot, long tick)
+        {
+            KnockbackHits.Segment(shot, tick, config, tickInterval, out var from, out var to);
+            float reach = pillars.Radius + config.ShotRadius;
+            for (int p = 0; p < standingPillars.Count; p++)
+            {
+                if (KnockbackHitTest.SegmentHitsCircle(from, to, standingPillars[p], reach, out _))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public void Tick(long tick, float deltaTime)
         {
             if (tick < world.GameplayStartTick || world.Shots.Shots.Count == 0)
@@ -204,6 +255,11 @@ namespace LOP
                 {
                     Explode(shot, at, tick);
                 }
+            }
+
+            if (config.CrackEnabled)
+            {
+                CrackFloorAtRangeEnd(tick);
             }
 
             if (events.Count == 0)

@@ -57,6 +57,8 @@ namespace LOP
         public bool HasBomb;
         //  떨어진(주울 수 있는) 상자 자리. 없거나 아직 떨어지기 전이면 null.
         public Vector2? CratePosition;
+        //  내가 선 칸이 곧 무너질 예정(깜박이는 중)이면 그 칸의 가운데. 아니면 null.
+        public Vector2? WarningTileCenter;
     }
 
     /// <summary>
@@ -114,7 +116,7 @@ namespace LOP
             var target = HoldTarget(view, out float distance);
 
             //  하나만 고르지 않고 섞는다 — 갈림길마다 틱 단위로 갈아타면 몸이 떨린다.
-            Vector2 move = Dodge(view) + Inward(view);
+            Vector2 move = Dodge(view) + Inward(view) + LeaveWarningTile(view);
             if (CrateGoal(view) is Vector2 crate)
             {
                 //  피하기·가장자리보다 약하고 적과의 거리 유지보다 앞선다.
@@ -216,6 +218,20 @@ namespace LOP
             var offset = circle.center - view.Position;
             float weight = Mathf.Clamp01((offset.magnitude - (circle.radius - EdgeMargin)) / 1.2f);
             return weight <= 0f ? Vector2.zero : offset.normalized * weight * 2f;
+        }
+
+        //  깜박이는 칸 위에 서 있으면 칸 가운데에서 멀어지는 쪽(가운데 위면 원 가운데 쪽)으로 서둘러 벗어난다.
+        static Vector2 LeaveWarningTile(KnockbackBotView view)
+        {
+            if (view.WarningTileCenter.HasValue == false) return Vector2.zero;
+            var away = view.Position - view.WarningTileCenter.Value;
+            if (away.sqrMagnitude < 0.01f)
+            {
+                var circle = view.NextZone.radius > 0f ? view.NextZone : view.Zone;
+                away = circle.center - view.Position;
+                if (away.sqrMagnitude < 0.01f) away = Vector2.right;
+            }
+            return away.normalized * 2.5f;
         }
 
         Vector2 KeepDistance(KnockbackBotView view, KnockbackBotBody enemy, float distance)

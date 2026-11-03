@@ -110,6 +110,8 @@ namespace LOP
                     snap.KnockbackHasBomb = knockbackGun.HasBomb;
                 }
 
+                FillCardRush(snap, worldEntity);
+
                 var activation = worldEntity.Get<Abilities>()?.Activation;
                 if (activation != null)
                 {
@@ -172,5 +174,21 @@ namespace LOP
         }
 
         //  남은 시간(초) → 끝나는 절대 틱. 0 이하면 0(= 해당 상태 아님).
+
+        //  카드 러시 판 전용. 클라가 내 선수 예측을 이 다섯 칸으로 맞춘다. 선수가 아닌 몸은 0(다른 모드 스냅을 키우지 않게 —
+        //  넉백 총 칸과 같은 방식). 멈춤은 이미 "끝나는 절대 틱"이라 그대로 싣는다.
+        private static void FillCardRush(EntitySnap snap, GameFramework.World.Entity entity)
+        {
+            var runner = entity.Get<CardRushRunner>();
+            if (runner == null)
+            {
+                return;
+            }
+            snap.CardStep = runner.State.Step;
+            snap.CardAttempt = runner.State.Attempt;
+            snap.CardMoveStartTick = runner.State.MoveStartTick;
+            snap.CardStunEndTick = runner.State.StunEndTick;
+            snap.CardStreak = runner.State.Streak;
+        }
     }
 }

@@ -64,6 +64,14 @@ namespace LOP
         /// </summary>
         public bool IsAway(string userId) => matchStarted && leftOrder.ContainsKey(userId);
 
+        /// <summary>
+        /// 출발 뒤 지금 판에 없나 — 끊겼거나(<see cref="IsAway"/>) <b>한 번도 안 들어왔다</b>. 몸만 서 있는 사람을 레이스가
+        /// 기다리지 않을 때 쓴다(시작 게이트는 늦는 사람 없이 출발한다). 출발 전엔 늘 false라 로딩 중인 사람을 빼지 않는다.
+        /// 명단 밖(봇)은 아니다.
+        /// </summary>
+        public bool IsAbsent(string userId)
+            => matchStarted && roster.Contains(userId) && (leftOrder.ContainsKey(userId) || joined.Contains(userId) == false);
+
         /// <summary>판 도중 지금 끊겨 있는 사람과 명단 순번(1부터) — 화면이 "2P 선수 연결 끊김"이라고 쓴다. 출발 전엔 비어 있다.</summary>
         public IReadOnlyList<(string userId, int slot)> AwaySlots
         {

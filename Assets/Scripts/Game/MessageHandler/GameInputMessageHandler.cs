@@ -71,6 +71,7 @@ namespace LOP
                 Drawing = inputCommand.Drawing,
                 Release = inputCommand.Release,
                 Fire = inputCommand.Fire,
+                Grab = inputCommand.Grab,
                 DrawRatio = inputCommand.DrawRatio,
                 ViewTick = inputCommand.ViewTick,
             };

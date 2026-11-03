@@ -70,8 +70,7 @@ namespace LOP.Tests
 
                 brain.ShouldGrab(s, gameplayStart, gameplayStart, course, config.Timing);
 
-                bool shown = CardRushCard.TryColorAt(s, brain.PlannedTick, gameplayStart, course,
-                    config.Timing.MoveTicks, out var color);
+                bool shown = CardRushCard.TryColorAt(s, brain.PlannedTick, course, out var color);
                 Assert.IsTrue(shown, $"seed={seed}");
                 Assert.AreEqual(course.RequiredColor(s.Step), color, $"seed={seed}");
             }
@@ -91,8 +90,7 @@ namespace LOP.Tests
 
                 brain.ShouldGrab(s, gameplayStart, gameplayStart, course, config.Timing);
 
-                bool shown = CardRushCard.TryColorAt(s, brain.PlannedTick, gameplayStart, course,
-                    config.Timing.MoveTicks, out var color);
+                bool shown = CardRushCard.TryColorAt(s, brain.PlannedTick, course, out var color);
                 Assert.IsTrue(shown, $"seed={seed}");
                 Assert.AreNotEqual(course.RequiredColor(s.Step), color, $"seed={seed}");
             }

@@ -28,7 +28,7 @@ namespace LOP
         public bool ShouldGrab(in CardRushRunnerState s, long tick, long gameplayStartTick, CardRushCourse course, in CardRushTiming timing)
         {
             if (course == null || s.IsFinished(course.StepCount) || gameplayStartTick == long.MaxValue) return false;
-            long cardStart = CardRushCard.CardStartTick(s, gameplayStartTick, timing.MoveTicks);
+            long cardStart = CardRushCard.ReadyTick(s, gameplayStartTick, timing.MoveTicks);
             var key = (s.Step, s.Attempt, cardStart);
             if (key != plannedFor)
             {

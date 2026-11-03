@@ -51,13 +51,6 @@ namespace LOP
                 c.Resolve<EntitySpawner>().Despawn), Lifetime.Singleton);
             builder.RegisterInstance(new KnockbackTestBotFill(KnockbackTestBots.ReadFillTo));
             builder.Register<IGameRuleSystem, KnockbackRuleSystem>(Lifetime.Singleton);
-            builder.Register(c => new KnockbackBarrelSystem(
-                c.Resolve<KnockbackMatchState>(),
-                c.Resolve<KnockbackConfig>(),
-                c.Resolve<KnockbackWorld>(),
-                c.Resolve<GameFramework.World.EntityRegistry>(),
-                c.Resolve<KnockbackPillars>(),
-                c.Resolve<EntitySpawner>().Despawn), Lifetime.Singleton);
 
             builder.Register(c => new KnockbackHitSystem(
                 c.Resolve<KnockbackWorld>(),
@@ -99,7 +92,6 @@ namespace LOP
                 //  순서가 뜻이다: 연쇄 크레딧(이번 틱 탄 맞음이 덮기 전) → 맞음 → 떨어짐/사라짐 → 원 공개 → 방송.
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackChainCreditSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackHitSystem>());
-                runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackBarrelSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackFallSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackZoneSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<KnockbackCrateSystem>());

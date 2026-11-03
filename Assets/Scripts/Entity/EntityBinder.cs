@@ -55,12 +55,6 @@ namespace LOP
                 return;
             }
 
-            //  드럼통은 유니티 몸이 없는 순수 데이터 엔티티다 — 서버에서 그릴 것도 부딪힐 것도 없다.
-            if (kind.Kind == EntityType.Barrel)
-            {
-                return;
-            }
-
             GameObject root = new GameObject($"Actor_{entityCreated.entityId}");
             LOPActor actor = root.AddComponent<LOPActor>();
             objectResolver.Inject(actor);

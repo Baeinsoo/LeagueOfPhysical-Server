@@ -74,7 +74,7 @@ namespace LOP.Tests
         {
             foreach (float miss in new[] { 0f, 1f })
             {
-                var brain = new CardRushBotBrain(new System.Random(11), Config(miss));
+                var brain = new CardRushBotBrain(new System.Random(1), Config(miss));
                 for (int step = 0; step < 40; step++)
                 {
                     var s = new CardRushRunnerState { Step = step, MoveStartTick = 2000, SpinStartTick = 2015 };

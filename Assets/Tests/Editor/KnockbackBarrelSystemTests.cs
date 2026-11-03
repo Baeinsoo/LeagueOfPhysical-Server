@@ -306,6 +306,156 @@ namespace LOP.Tests
         }
 
         [Test]
+        public void 서_있는_드럼통에_걸어_들어가도_아무_일도_없다()
+        {
+            Build();
+            var body = AddBody("v", 1.7f, 0f);
+            body.Get<GameFramework.World.Velocity>().Linear = new System.Numerics.Vector3(-6f, 0f, 0f);
+            AddBarrel("b1", 1.0f, 0f);
+
+            barrelSystem.Tick(0, Dt);
+
+            Assert.AreEqual(long.MinValue, body.Get<KnockbackBody>().KnockbackEndTick, "걸어서는 못 친다 - 몸은 지나간다");
+            Assert.AreEqual(-6f, Vel(body).x, 1e-6f, "속도도 그대로");
+        }
+
+        [Test]
+        public void 몸_쪽으로_문턱_미만으로_가는_드럼통은_안_치고_문턱_이상이면_친다()
+        {
+            Build();
+            var slowVictim = AddBody("slow", 1.8f, 0f);
+            AddBarrel("s", 1.0f, 0f, 0.3f, 0f);
+            barrelSystem.Tick(0, Dt);
+            Assert.AreEqual(long.MinValue, slowVictim.Get<KnockbackBody>().KnockbackEndTick, "느린 드럼통은 안 친다");
+
+            Build();
+            var fastVictim = AddBody("fast", 1.8f, 0f);
+            AddBarrel("f", 1.0f, 0f, 0.8f, 0f);
+            barrelSystem.Tick(0, Dt);
+            Assert.Greater(fastVictim.Get<KnockbackBody>().KnockbackEndTick, 0, "양성 대조: 문턱 이상이면 친다");
+        }
+
+        [Test]
+        public void 막혀서_낀_몸은_같은_드럼통에_매틱_다시_맞지_않는다()
+        {
+            Build();
+            var body = AddBody("v", 2.0f, 0f);
+            AddBarrel("b1", 1.0f, 0f, 6f, 0f);
+
+            barrelSystem.Tick(0, Dt);
+            long firstEnd = body.Get<KnockbackBody>().KnockbackEndTick;
+            Assert.Greater(firstEnd, 0, "처음엔 맞는다");
+
+            for (long t = 1; t <= 20; t++)
+            {
+                //  기둥·벽에 막혀 몸이 못 움직이는 걸 흉내 낸다.
+                body.Get<GameFramework.World.Velocity>().Linear = System.Numerics.Vector3.Zero;
+                body.Get<GameFramework.World.Transform>().Position = new System.Numerics.Vector3(2.0f, 0f, 0f);
+                registry.Get("b1").Get<GameFramework.World.Velocity>().Linear = new System.Numerics.Vector3(6f, 0f, 0f);
+                barrelSystem.Tick(t, Dt);
+            }
+
+            Assert.AreEqual(firstEnd, body.Get<KnockbackBody>().KnockbackEndTick, "겹침이 풀리기 전엔 다시 치지 않는다");
+        }
+
+        [Test]
+        public void 겹침이_풀리면_다시_칠_수_있다()
+        {
+            Build();
+            var body = AddBody("v", 2.0f, 0f);
+            var barrel = AddBarrel("b1", 1.0f, 0f, 6f, 0f);
+            barrelSystem.Tick(0, Dt);
+            long firstEnd = body.Get<KnockbackBody>().KnockbackEndTick;
+
+            //  드럼통이 멀어졌다가(겹침 풀림) 다시 몸 쪽으로 온다.
+            barrel.Get<GameFramework.World.Transform>().Position = new System.Numerics.Vector3(-5f, 0f, 0f);
+            barrel.Get<GameFramework.World.Velocity>().Linear = System.Numerics.Vector3.Zero;
+            body.Get<GameFramework.World.Transform>().Position = new System.Numerics.Vector3(2.0f, 0f, 0f);
+            barrelSystem.Tick(1, Dt);
+            barrel.Get<GameFramework.World.Transform>().Position = new System.Numerics.Vector3(1.0f, 0f, 0f);
+            barrel.Get<GameFramework.World.Velocity>().Linear = new System.Numerics.Vector3(6f, 0f, 0f);
+            body.Get<GameFramework.World.Velocity>().Linear = System.Numerics.Vector3.Zero;
+            barrelSystem.Tick(2, Dt);
+
+            Assert.Greater(body.Get<KnockbackBody>().KnockbackEndTick, firstEnd, "풀렸다 다시 닿으면 다시 친다");
+        }
+
+        [Test]
+        public void 드럼통이_거의_서면_민_사람_크레딧을_지운다()
+        {
+            Build();
+            var slow = AddBarrel("slow", 0f, 0f, 0.4f, 0f);
+            slow.Get<KnockbackBarrel>().PusherId = "old";
+            var fast = AddBarrel("fast", 0f, 6f, 5f, 0f);
+            fast.Get<KnockbackBarrel>().PusherId = "now";
+
+            barrelSystem.Tick(0, Dt);
+
+            Assert.IsNull(slow.Get<KnockbackBarrel>().PusherId, "문턱 아래로 느려지면 옛 크레딧은 사라진다");
+            Assert.AreEqual("now", fast.Get<KnockbackBarrel>().PusherId, "아직 빠른 쪽은 그대로");
+        }
+
+        [Test]
+        public void 드럼통끼리_부딪히면_친_쪽의_민_사람이_맞은_드럼통으로_넘어간다()
+        {
+            Build();
+            var a = AddBarrel("a", 0f, 0f, 5f, 0f);
+            a.Get<KnockbackBarrel>().PusherId = "p";
+            var b = AddBarrel("b", 1.0f, 0f);
+            b.Get<KnockbackBarrel>().PusherId = "other";
+
+            barrelSystem.Tick(0, Dt);
+
+            Assert.AreEqual("p", b.Get<KnockbackBarrel>().PusherId, "더 빠른 쪽의 민 사람이 막타를 물려준다");
+            Assert.AreEqual("p", a.Get<KnockbackBarrel>().PusherId);
+        }
+
+        [Test]
+        public void 드럼통끼리_부딪힐_때_친_쪽에_민_사람이_없으면_맞은_쪽도_지워진다()
+        {
+            Build();
+            AddBarrel("a", 0f, 0f, 5f, 0f);
+            var b = AddBarrel("b", 1.0f, 0f);
+            b.Get<KnockbackBarrel>().PusherId = "old";
+
+            barrelSystem.Tick(0, Dt);
+
+            Assert.IsNull(b.Get<KnockbackBarrel>().PusherId, "친 쪽에 크레딧이 없으면 옛 크레딧을 남기지 않는다");
+        }
+
+        [Test]
+        public void 탄_출발점이_드럼통_안이면_그_드럼통은_표적에서_빠지고_탄은_뒤의_드럼통을_민다()
+        {
+            Build();
+            AddBody("a", 0f, 0f);
+            var inside = AddBarrel("in", 0.2f, 0f);
+            var outside = AddBarrel("out", 4f, 0f);
+            world.Shots.Add(new KnockbackShot("a", 10, Vector2.zero, Vector2.right));
+
+            for (long t = 10; t <= 20; t++) hitSystem.Tick(t, Dt);
+
+            Assert.AreEqual(0f, Vel(inside).magnitude, 1e-6f, "발밑 드럼통은 안 맞는다");
+            Assert.Greater(Vel(outside).x, 5f, "양성 대조: 탄은 지나가 뒤의 드럼통을 민다");
+        }
+
+        [Test]
+        public void 치운_드럼통_번호는_치운_뒤_다시_쓰여도_다시_치울_수_있다()
+        {
+            Build();
+            AddBarrel("b1", 11.5f, 0f, 6f, 0f);
+            long tick = 0;
+            while (tick < 400 && despawned.Count == 0) barrelSystem.Tick(tick++, Dt);
+            Assert.AreEqual(1, despawned.Count);
+
+            registry.Remove("b1");
+            barrelSystem.Tick(tick++, Dt);
+            AddBarrel("b1", 11.5f, 0f, 6f, 0f);
+            while (tick < 900 && despawned.Count == 1) barrelSystem.Tick(tick++, Dt);
+
+            Assert.AreEqual(2, despawned.Count, "새 판의 같은 번호도 치워진다");
+        }
+
+        [Test]
         public void 같은_초기_조건이면_같은_결과다()
         {
             List<Vector2> Simulate()

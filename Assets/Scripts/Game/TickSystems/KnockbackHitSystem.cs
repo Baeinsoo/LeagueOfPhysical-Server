@@ -209,6 +209,11 @@ namespace LOP
                 float best = float.MaxValue;
                 for (int b = 0; b < barrelEntities.Count; b++)
                 {
+                    //  쏜 자리가 드럼통 안이면 그 드럼통은 표적이 아니다 - 발밑 드럼통에 탄이 먹히지 않게.
+                    if ((shot.Origin - BarrelPosition(barrelEntities[b])).sqrMagnitude < barrelReach * barrelReach)
+                    {
+                        continue;
+                    }
                     if (KnockbackHitTest.SegmentHitsCircle(from, to, BarrelPosition(barrelEntities[b]), barrelReach, out float t)
                         && t < best && t < limit)
                     {

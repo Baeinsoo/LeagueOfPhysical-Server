@@ -26,6 +26,9 @@ namespace LOP
         private readonly List<GameFramework.World.Entity> barrels = new List<GameFramework.World.Entity>();
         private readonly List<Vector2> standingPillars = new List<Vector2>();
         private readonly HashSet<string> despawned = new HashSet<string>();
+        //  이미 친 (드럼통, 몸) 쌍. 겹침이 풀릴 때까지 다시 치지 않는다 - 벽에 낀 몸이 매 틱 맞아 날림이 늘어나지 않게.
+        private readonly HashSet<(string barrel, string body)> touching = new HashSet<(string, string)>();
+        private readonly HashSet<(string barrel, string body)> overlapping = new HashSet<(string, string)>();
 
         public KnockbackBarrelSystem(KnockbackMatchState state, KnockbackConfig config, KnockbackWorld world,
                                      GameFramework.World.EntityRegistry registry, KnockbackPillars pillars,
@@ -67,6 +70,8 @@ namespace LOP
             {
                 if (entity.Has<KnockbackBarrel>()) barrels.Add(entity);
             }
+            //  치워서 레지스트리에서 사라진 번호는 잊는다 - 다음 판에서 같은 번호가 다시 쓰여도 치울 수 있게.
+            despawned.RemoveWhere(id => registry.Contains(id) == false);
             if (barrels.Count == 0) return;
             barrels.Sort((a, b) => string.CompareOrdinal(a.Id, b.Id));
 
@@ -125,6 +130,11 @@ namespace LOP
                 }
                 y = 0f;
                 vy = 0f;
+                //  거의 선 드럼통은 오래전에 민 사람의 막타가 되지 않게 한다.
+                if (horizontal.magnitude < KnockbackBarrelPhysics.MinClosingSpeed)
+                {
+                    barrel.Get<KnockbackBarrel>().PusherId = null;
+                }
             }
 
             transform.Position = new System.Numerics.Vector3(position.x, y, position.y);
@@ -148,6 +158,17 @@ namespace LOP
             Vector2 hb = new Vector2(vb.Linear.X, vb.Linear.Z);
             if ((pb - pa).sqrMagnitude >= reach * reach) return;
 
+            //  더 빠른 쪽이 친 쪽이다. 맞은 드럼통은 친 쪽의 민 사람을 물려받는다(없으면 없음).
+            Vector2 toB = (pb - pa).normalized;
+            float speedA = ha.magnitude;
+            float speedB = hb.magnitude;
+            if (Vector2.Dot(ha - hb, toB) > 0f && !Mathf.Approximately(speedA, speedB))
+            {
+                var hitter = speedA > speedB ? a : b;
+                var struck = speedA > speedB ? b : a;
+                struck.Get<KnockbackBarrel>().PusherId = hitter.Get<KnockbackBarrel>().PusherId;
+            }
+
             KnockbackBarrelPhysics.BouncePair(ref pa, ref ha, ref pb, ref hb, reach, restitution);
             ta.Position = new System.Numerics.Vector3(pa.x, ta.Position.Y, pa.y);
             tb.Position = new System.Numerics.Vector3(pb.x, tb.Position.Y, pb.y);
@@ -158,6 +179,7 @@ namespace LOP
         private void HitBodies(long tick, KnockbackBarrelLayout layout)
         {
             float reach = layout.Radius + config.HitRadius;
+            overlapping.Clear();
             foreach (var id in state.Players)
             {
                 if (state.EliminatedTick.ContainsKey(id) || registry.TryGet(id, out var entity) == false)
@@ -182,11 +204,23 @@ namespace LOP
                     Vector2 barrelVel = new Vector2(bv.Linear.X, bv.Linear.Z);
                     Vector2 bodyPos = new Vector2(t.Position.X, t.Position.Z);
                     Vector2 bodyVel = new Vector2(velocity.Linear.X, velocity.Linear.Z);
+                    var pair = (barrel.Id, id);
+                    if ((bodyPos - barrelPos).sqrMagnitude <= reach * reach)
+                    {
+                        overlapping.Add(pair);
+                        if (touching.Contains(pair)) continue;
+                    }
                     if (KnockbackBarrelPhysics.TryHitBody(barrelPos, barrelVel, bodyPos, bodyVel, reach, layout.HitScale,
                                                           out var direction, out float strength) == false)
                     {
                         continue;
                     }
+                    //  몸은 걸어서 드럼통을 치지 못한다 - 드럼통 자신이 몸 쪽으로 가는 속도가 문턱 이상일 때만 친다.
+                    if (Vector2.Dot(barrelVel, direction) < KnockbackBarrelPhysics.MinClosingSpeed)
+                    {
+                        continue;
+                    }
+                    touching.Add(pair);
 
                     KnockbackRules.ApplyPush(body, velocity, direction, strength, tick, config);
 
@@ -207,6 +241,8 @@ namespace LOP
                     bv.Linear = new System.Numerics.Vector3(barrelVel.x, bv.Linear.Y, barrelVel.y);
                 }
             }
+
+            touching.IntersectWith(overlapping);
         }
     }
 }

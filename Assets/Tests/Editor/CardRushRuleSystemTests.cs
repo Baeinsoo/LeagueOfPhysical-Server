@@ -66,7 +66,7 @@ namespace LOP.Tests
             {
                 marker = new GameObject("card-rush-rules-test");
                 marker.AddComponent<CardRushMapRules>();
-                field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f, CardRushSections.Default,
+                field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f,
                           new Vector3(10f, 0f, 5f), Vector3.right);
             }
             var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), Config().Timing);

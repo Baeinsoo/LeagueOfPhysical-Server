@@ -59,7 +59,7 @@ namespace LOP.Tests
             var body = Body("runner-1");
             body.Add(new CardRushRunner
             {
-                State = new CardRushRunnerState { Step = 7, Attempt = 2, MoveStartTick = 1234, StunEndTick = 1300, Streak = 0, BestStreak = 9, Misses = 4 },
+                State = new CardRushRunnerState { Step = 7, Attempt = 2, MoveStartTick = 1234, StunEndTick = 1300, SpinStartTick = 4321, Streak = 0, BestStreak = 9, Misses = 4 },
             });
             registry.Add(body);
 
@@ -68,6 +68,7 @@ namespace LOP.Tests
             Assert.AreEqual(2, snap.CardAttempt);
             Assert.AreEqual(1234L, snap.CardMoveStartTick);
             Assert.AreEqual(1300L, snap.CardStunEndTick);
+            Assert.AreEqual(4321L, snap.CardSpinStartTick);
             Assert.AreEqual(0, snap.CardStreak);
         }
 
@@ -93,6 +94,7 @@ namespace LOP.Tests
             Assert.AreEqual(0, snap.CardAttempt);
             Assert.AreEqual(0L, snap.CardMoveStartTick);
             Assert.AreEqual(0L, snap.CardStunEndTick);
+            Assert.AreEqual(0L, snap.CardSpinStartTick);
             Assert.AreEqual(0, snap.CardStreak);
         }
     }

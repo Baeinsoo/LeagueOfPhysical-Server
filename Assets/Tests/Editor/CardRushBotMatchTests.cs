@@ -65,14 +65,20 @@ namespace LOP.Tests
             }
 
             Assert.IsTrue(finish.AllWatchedFinished, "7500틱 안에 8명 모두 완주해야 한다");
+            var seconds = new List<float>();
             foreach (var id in ids)
             {
                 var state = registry.Get(id).Get<FinishState>();
                 Assert.IsTrue(state.Finished, id);
-                float elapsedSeconds = (state.FinishedTick - start) * CardRushTiming.TickInterval;
-                //  봇 수치(반응·흔들림·실수) 회귀 경보 — 범위를 벗어나면 그 수치가 바뀌었다는 뜻이다.
-                Assert.GreaterOrEqual(elapsedSeconds, 45f, $"{id}: {elapsedSeconds}초");
-                Assert.LessOrEqual(elapsedSeconds, 75f, $"{id}: {elapsedSeconds}초");
+                seconds.Add((state.FinishedTick - start) * CardRushTiming.TickInterval);
+            }
+            //  봇 수치(반응·흔들림·실수) 회귀 경보 — 범위를 벗어나면 그 수치가 바뀌었다는 뜻이다.
+            //  두 번 누르기(spec 2026-11-03 §7) 어림 55~95초.
+            string allSeconds = string.Join(", ", System.Linq.Enumerable.Zip(ids, seconds, (id, sec) => $"{id}={sec}초"));
+            for (int i = 0; i < ids.Count; i++)
+            {
+                Assert.GreaterOrEqual(seconds[i], 50f, allSeconds);
+                Assert.LessOrEqual(seconds[i], 105f, allSeconds);
             }
         }
 

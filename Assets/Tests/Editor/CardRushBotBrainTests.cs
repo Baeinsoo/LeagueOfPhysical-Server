@@ -16,7 +16,7 @@ namespace LOP.Tests
         public void 같은_난수면_같은_계획()
         {
             var config = Config(0f);
-            var course = new CardRushCourse(1, 40, CardRushSections.Default);
+            var course = new CardRushCourse(1, 40);
             var a = new CardRushBotBrain(new System.Random(5), config);
             var b = new CardRushBotBrain(new System.Random(5), config);
             var s = new CardRushRunnerState();
@@ -36,7 +36,7 @@ namespace LOP.Tests
 
             for (int seed = 0; seed < 30; seed++)
             {
-                var course = new CardRushCourse((ulong)seed, 40, CardRushSections.Default);
+                var course = new CardRushCourse((ulong)seed, 40);
 
                 //  두뇌 생성자가 가장 먼저 뽑는 난수와 똑같은 걸 똑같은 씨앗으로 미리 뽑아,
                 //  이 두뇌의 실제 반응 틱을 안다(두뇌 안의 private 값이라 밖에서 다시 계산해야 한다).
@@ -64,7 +64,7 @@ namespace LOP.Tests
 
             for (int seed = 0; seed < 50; seed++)
             {
-                var course = new CardRushCourse((ulong)seed, 40, CardRushSections.Default);
+                var course = new CardRushCourse((ulong)seed, 40);
                 var brain = new CardRushBotBrain(new System.Random(seed), config);
                 var s = new CardRushRunnerState();
 
@@ -84,7 +84,7 @@ namespace LOP.Tests
 
             for (int seed = 0; seed < 50; seed++)
             {
-                var course = new CardRushCourse((ulong)seed, 40, CardRushSections.Default);
+                var course = new CardRushCourse((ulong)seed, 40);
                 var brain = new CardRushBotBrain(new System.Random(seed), config);
                 var s = new CardRushRunnerState();
 

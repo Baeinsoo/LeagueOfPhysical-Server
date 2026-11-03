@@ -22,7 +22,7 @@ namespace LOP.Tests
         {
             var registry = new EntityRegistry();
             var field = new CardRushMapRulesField();
-            field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f, CardRushSections.Default,
+            field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f,
                       Vector3.zero, Vector3.forward);
             var config = Config();
             var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), config.Timing);

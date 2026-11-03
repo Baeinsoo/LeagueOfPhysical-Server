@@ -40,7 +40,7 @@ namespace LOP
 
         private long Plan(in CardRushRunnerState s, long cardStart, CardRushCourse course)
         {
-            int dwell = course.DwellTicks(s.Step);
+            int dwell = CardRushCard.DwellTicks;
             int k = ((int)course.RequiredColor(s.Step) - (int)course.StartColor(s.Step, s.Attempt) + CardColors.Count) % CardColors.Count;
             long windowStart = cardStart + (long)k * dwell;
             //  카드를 보고 반응 시간이 지나기 전에 가운데가 오는 창은 못 노린다 — 한 바퀴 뒤 창으로.

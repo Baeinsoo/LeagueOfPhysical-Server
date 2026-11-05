@@ -24,8 +24,8 @@ namespace LOP
             this.rng = rng;
             float react = config.BotReactMinSeconds + (float)rng.NextDouble() * (config.BotReactMaxSeconds - config.BotReactMinSeconds);
             reactTicks = CardRushTiming.Ticks(react);
-            jitterTicks = (int)System.Math.Round(config.BotTimingJitterSeconds / CardRushTiming.TickInterval);
-            missChance = config.BotMissChance;
+            jitterTicks = (int)System.Math.Round(config.BotReactExtraSeconds / CardRushTiming.TickInterval);
+            missChance = config.BotHesitateChance;
         }
 
         public long PlannedTick => plannedTick;

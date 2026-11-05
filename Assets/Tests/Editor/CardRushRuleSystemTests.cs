@@ -30,8 +30,12 @@ namespace LOP.Tests
         private sealed class Seed : IMatchSeed { public ulong Value => 7UL; }
 
         private static CardRushConfig Config()
-            => new CardRushConfig(matchDurationSeconds: 120f, moveSeconds: 0.3f, stunSeconds: 0.6f, minLanes: 4,
-                                  botReactMinSeconds: 0.2f, botReactMaxSeconds: 0.5f, botTimingJitterSeconds: 0.05f, botMissChance: 0.1f);
+            => new CardRushConfig(matchDurationSeconds: 120f, minLanes: 4, trackLengthM: 140f,
+                                  obstacleGapMinM: 11f, obstacleGapMaxM: 19f, barricadeShare: 0.5f,
+                                  zoneGapMinM: 28f, zoneGapMaxM: 48f, barricadeWaitSeconds: 1.2f,
+                                  rollKnockM: 1.39f, rollStunSeconds: 0.7f, zoneKnockM: 2.77f, zoneStunSeconds: 1f,
+                                  botReactMinSeconds: 0.2f, botReactMaxSeconds: 0.5f, botReactExtraSeconds: 0.05f,
+                                  botHesitateChance: 0.1f, botFreeDashChance: 0.5f);
 
         private sealed class Fixture
         {

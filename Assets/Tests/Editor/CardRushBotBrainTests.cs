@@ -9,7 +9,8 @@ namespace LOP.Tests
         private static readonly CardRushTiming timing = new CardRushTiming(15, 30);
 
         private static CardRushConfig Config(float miss = 0f)
-            => new CardRushConfig(120f, 0.3f, 0.6f, 4, 0.22f, 0.40f, 0.04f, miss);
+            => new CardRushConfig(120f, 4, 140f, 11f, 19f, 0.5f, 28f, 48f, 1.2f, 1.39f, 0.7f, 2.77f, 1f,
+                                  0.22f, 0.40f, 0.04f, miss, 0.5f);
 
         private static long FirstTap(CardRushBotBrain brain, CardRushRunnerState s, long from)
         {

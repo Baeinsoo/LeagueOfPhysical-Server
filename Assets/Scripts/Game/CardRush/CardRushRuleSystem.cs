@@ -176,8 +176,8 @@ namespace LOP
                 var runner = RunnerOf(pair.Key);
                 if (runner != null)
                 {
-                    //  판 기준 틱으로 바꿔 매긴다 — 서버 절대 틱을 그대로 넣으면 오래 켠 서버에서 같은 칸 이웃 틱이 뭉개진다.
-                    unfinished.Add((pair.Value, world.RankingProgress(runner.State, finishSystem.LastTick)));
+                    //  못 들어온 사람은 간 거리 큰 순(spec §3.10).
+                    unfinished.Add((pair.Value, world.RankingProgress(runner.State)));
                     continue;
                 }
                 left.Add(pair.Value);

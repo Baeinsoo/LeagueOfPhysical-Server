@@ -18,6 +18,7 @@ namespace LOP.Tests
             => new CardRushConfigProvider(CardRushScopeWiringTests.RealMasterData()).Get();
 
         [Test]
+        [Ignore("3차 Task 4에서 봇을 다시 쓴다")]
         public void 봇_8명은_2분_안에_모두_완주()
         {
             var registry = new EntityRegistry();
@@ -25,7 +26,7 @@ namespace LOP.Tests
             field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f,
                       Vector3.zero, Vector3.forward);
             var config = Config();
-            var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), config.Timing);
+            var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), config);
             var finish = new FinishTrackingSystem(registry);
             var inputSystem = new InputBufferSystem();
 

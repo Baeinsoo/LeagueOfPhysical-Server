@@ -73,11 +73,11 @@ namespace LOP.Tests
                 field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f,
                           new Vector3(10f, 0f, 5f), Vector3.right);
             }
-            var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), Config().Timing);
+            var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), Config());
             var spawner = new EntitySpawner(
                 sessionManager: null,
                 entityRegistry: registry,
-                characterCreator: new CardRushRunnerCreator(registry),
+                characterCreator: new CardRushRunnerCreator(registry, field),
                 itemCreator: null,
                 coinCreator: null,
                 entityCreatedPublisher: new FakePublisher<EntityCreated>(),
@@ -227,38 +227,20 @@ namespace LOP.Tests
         }
 
         [Test]
-        public void 못_한_사람은_칸_다음_도착_틱()
+        public void 못_한_사람은_간_거리_큰_순()
         {
-            var f = Build(new[] { "late", "early", "behind" });
+            var f = Build(new[] { "behind", "ahead", "middle" });
             f.Rule.Initialize();
-            //  "late"가 먼저 스폰돼 같은 값이면 앞에 남는다 — 도착 틱이 실제로 갈라야 early가 앞선다.
-            f.BodyOf("late").Get<CardRushRunner>().State = new CardRushRunnerState { Step = 10, MoveStartTick = 7000 };
-            f.BodyOf("early").Get<CardRushRunner>().State = new CardRushRunnerState { Step = 10, MoveStartTick = 6900 };
-            f.BodyOf("behind").Get<CardRushRunner>().State = new CardRushRunnerState { Step = 9, MoveStartTick = 100 };
+            //  먼저 스폰된 "behind"가 앞에 남지 않게 — 1 mm 차이도 갈라야 한다. 장애물 번호는 안 본다(거리만).
+            f.BodyOf("behind").Get<CardRushRunner>().State = new CardRushRunnerState { PosMm = 30_000, ObstacleIndex = 9 };
+            f.BodyOf("ahead").Get<CardRushRunner>().State = new CardRushRunnerState { PosMm = 42_001 };
+            f.BodyOf("middle").Get<CardRushRunner>().State = new CardRushRunnerState { PosMm = 42_000 };
             f.Finish.Tick(7500, 0.02f);
 
             var outcome = f.Rule.ResolveOutcome();
-            Assert.AreEqual(1, PlacementOf(outcome, "early"));
-            Assert.AreEqual(2, PlacementOf(outcome, "late"));
-            Assert.AreEqual(3, PlacementOf(outcome, "behind"), "칸이 적으면 도착이 빨라도 뒤");
-        }
-
-        //  컨트롤러 판정: 순위 진행은 world.RankingProgress(판 기준 틱)로 매긴다. 서버 절대 틱을 그대로
-        //  ForRanking에 넣으면 오래 켠 서버(여기선 출발 틱 20억)에서 같은 칸의 100틱 차이가 float에 뭉개진다.
-        [Test]
-        public void 오래_켠_서버에서도_같은_칸은_도착_틱으로_가른다()
-        {
-            var f = Build(new[] { "late", "early" });
-            f.Rule.Initialize();
-            const long start = 2_000_000_000L;
-            f.World.GameplayStartTick = start;
-            f.BodyOf("late").Get<CardRushRunner>().State = new CardRushRunnerState { Step = 10, MoveStartTick = start + 7000 };
-            f.BodyOf("early").Get<CardRushRunner>().State = new CardRushRunnerState { Step = 10, MoveStartTick = start + 6900 };
-            f.Finish.Tick(start + 7500, 0.02f);
-
-            var outcome = f.Rule.ResolveOutcome();
-            Assert.AreEqual(1, PlacementOf(outcome, "early"));
-            Assert.AreEqual(2, PlacementOf(outcome, "late"));
+            Assert.AreEqual(1, PlacementOf(outcome, "ahead"));
+            Assert.AreEqual(2, PlacementOf(outcome, "middle"));
+            Assert.AreEqual(3, PlacementOf(outcome, "behind"));
         }
 
         [Test]

@@ -20,7 +20,7 @@ namespace LOP
                 c.Resolve<GameFramework.World.WorldEventBuffer>(),
                 c.Resolve<CardRushMapRulesField>(),
                 c.Resolve<IMatchSeed>(),
-                c.Resolve<CardRushConfig>().Timing), Lifetime.Singleton)
+                c.Resolve<CardRushConfig>()), Lifetime.Singleton)
                 .As<GameFramework.World.IWorld>().AsSelf();
 
             builder.Register<ICharacterCreator, CardRushRunnerCreator>(Lifetime.Singleton);

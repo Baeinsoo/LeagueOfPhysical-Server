@@ -6,35 +6,39 @@ using UnityEngine;
 namespace LOP.Tests
 {
     /// <summary>
-    /// 카드 러시 봇이 실제로 끝까지 판을 돈다 — 두뇌·채우기·입력이 맞물려 8명이 2분 상한 안에 완주하는지,
-    /// 그리고 완주 시각이 봇 수치(반응·흔들림·실수)가 바뀌었을 때 알 수 있을 만큼 합리적인 범위인지(회귀 경보).
+    /// 카드 러시 봇이 실제로 끝까지 판을 돈다 — 두뇌·입력·월드가 맞물려 씨앗 20개 × 8명이 2분 상한 안에 완주하는지,
+    /// 그리고 완주 시간 중앙값이 봇·표 수치가 바뀌었을 때 알 수 있을 만큼 합리적인 범위인지(회귀 경보).
     /// </summary>
     public class CardRushBotMatchTests
     {
-        private sealed class Seed : IMatchSeed { public ulong Value => 42UL; }
+        private sealed class Seed : IMatchSeed
+        {
+            public Seed(ulong value) { Value = value; }
+            public ulong Value { get; }
+        }
 
         //  출시 표(#CardRushConfig 1행) 그대로 — 손으로 적은 수치로 돌리면 표를 고쳐도 이 경보가 안 울린다(최종 리뷰 M5).
         private static CardRushConfig Config()
             => new CardRushConfigProvider(CardRushScopeWiringTests.RealMasterData()).Get();
 
-        [Test]
-        [Ignore("3차 Task 4에서 봇을 다시 쓴다")]
-        public void 봇_8명은_2분_안에_모두_완주()
+        private const long Start = 1000;
+        private const long MatchTicks = 6000;   // 2분 상한
+        private const int Bots = 8;
+
+        //  한 판: 봇 8명(레인 0~7)을 출시 봇으로 2분 돌려 선수별 완주 초(못 하면 null).
+        private static float?[] Play(CardRushConfig config, ulong seed)
         {
             var registry = new EntityRegistry();
             var field = new CardRushMapRulesField();
             field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f,
                       Vector3.zero, Vector3.forward);
-            var config = Config();
-            var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), config);
+            var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(seed), config);
             var finish = new FinishTrackingSystem(registry);
             var inputSystem = new InputBufferSystem();
-
-            const long start = 1000;
-            world.GameplayStartTick = start;
+            world.GameplayStartTick = Start;
 
             var ids = new List<string>();
-            for (int i = 0; i < 8; i++)
+            for (int i = 0; i < Bots; i++)
             {
                 string id = MountedArcheryBots.UserIdFor(i + 1);
                 var entity = new Entity(id);
@@ -45,16 +49,15 @@ namespace LOP.Tests
                 entity.Add(new FinishState());
                 entity.Add(new FinishPlacement());
                 entity.Add(new Ownership(id));
-                entity.Add(new CardRushRunner { LaneOrigin = field.LaneOrigin(i) });
+                entity.Add(new CardRushRunner { LaneOrigin = field.LaneOrigin(i), Lane = i });
                 registry.Add(entity);
                 finish.Watch(id);
                 ids.Add(id);
             }
 
-            var botSystem = new CardRushBotSystem(registry, world, inputSystem, new Seed(), config, MountedArcheryBots.IsBot);
+            var botSystem = new CardRushBotSystem(registry, world, inputSystem, new Seed(seed), config, MountedArcheryBots.IsBot);
 
-            long tick = start;
-            for (; tick < start + 7500 && finish.AllWatchedFinished == false; tick++)
+            for (long tick = Start; tick < Start + MatchTicks && finish.AllWatchedFinished == false; tick++)
             {
                 botSystem.Tick(tick, 0.02f);
                 foreach (var id in ids)
@@ -65,22 +68,42 @@ namespace LOP.Tests
                 finish.Tick(tick, 0.02f);
             }
 
-            Assert.IsTrue(finish.AllWatchedFinished, "7500틱 안에 8명 모두 완주해야 한다");
-            var seconds = new List<float>();
-            foreach (var id in ids)
+            var seconds = new float?[Bots];
+            for (int i = 0; i < Bots; i++)
             {
-                var state = registry.Get(id).Get<FinishState>();
-                Assert.IsTrue(state.Finished, id);
-                seconds.Add((state.FinishedTick - start) * CardRushTiming.TickInterval);
+                var state = registry.Get(ids[i]).Get<FinishState>();
+                seconds[i] = state.Finished ? (state.FinishedTick - Start) * CardRushTiming.TickInterval : (float?)null;
             }
-            //  봇 수치(반응·흔들림·실수) 회귀 경보 — 범위를 벗어나면 그 수치가 바뀌었다는 뜻이다.
-            //  두 번 누르기(spec 2026-11-03 §7) 어림 55~95초.
-            string allSeconds = string.Join(", ", System.Linq.Enumerable.Zip(ids, seconds, (id, sec) => $"{id}={sec}초"));
-            for (int i = 0; i < ids.Count; i++)
+            return seconds;
+        }
+
+        [Test]
+        public void 봇_8명은_2분_안에_모두_완주()
+        {
+            var config = Config();
+            var all = new List<float>();
+            int unfinished = 0;
+            var perSeed = new System.Text.StringBuilder();
+            for (ulong seed = 1; seed <= 20; seed++)
             {
-                Assert.GreaterOrEqual(seconds[i], 50f, allSeconds);
-                Assert.LessOrEqual(seconds[i], 105f, allSeconds);
+                var seconds = Play(config, seed);
+                var sorted = new List<float>();
+                foreach (var sec in seconds)
+                {
+                    if (sec.HasValue) { sorted.Add(sec.Value); all.Add(sec.Value); }
+                    else unfinished++;
+                }
+                sorted.Sort();
+                perSeed.Append($"씨앗 {seed}: 완주 {sorted.Count}/{Bots} [{string.Join(", ", sorted.ConvertAll(x => x.ToString("0.0")))}]\n");
             }
+            all.Sort();
+            float median = all.Count == 0 ? float.NaN : (all[(all.Count - 1) / 2] + all[all.Count / 2]) / 2f;
+            string report = $"중앙값 {median:0.0}초, 미완주 {unfinished}/{20 * Bots}\n{perSeed}";
+
+            //  모두 2분 안 + 중앙값이 넓은 경보 범위(45~85초) 안 — Task 8 하네스 결과로 좁힌다.
+            Assert.AreEqual(0, unfinished, report);
+            Assert.That(median, Is.InRange(45f, 85f), report);
+            TestContext.WriteLine(report);
         }
 
         [Test]

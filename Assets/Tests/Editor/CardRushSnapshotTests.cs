@@ -96,12 +96,22 @@ namespace LOP.Tests
             var registry = new GameFramework.World.EntityRegistry();
             registry.Add(Body("rock"));
 
+            //  카드 칸 16개 전부 — 하나라도 다른 모드 몸에 값이 새면 걸린다.
             var snap = SnapOf(registry, "rock");
             Assert.AreEqual(0, snap.CardPosMm);
             Assert.AreEqual(0, snap.CardUseCount);
             Assert.AreEqual(0L, snap.CardSpinStartTick);
+            Assert.AreEqual(0L, snap.CardDashStartTick);
+            Assert.AreEqual(0L, snap.CardBlockEndTick);
             Assert.AreEqual(0L, snap.CardStunEndTick);
+            Assert.AreEqual(0, snap.CardObstacleIndex);
             Assert.AreEqual(0L, snap.CardObstacleTick);
+            Assert.AreEqual(0, snap.CardZoneIndex);
+            Assert.AreEqual(0L, snap.CardZoneTick);
+            Assert.AreEqual(0, snap.CardObstacleEvent);
+            Assert.AreEqual(0L, snap.CardObstacleEventTick);
+            Assert.AreEqual(0, snap.CardZoneEvent);
+            Assert.AreEqual(0L, snap.CardZoneEventTick);
             Assert.AreEqual(0L, snap.CardFinishTick);
             Assert.AreEqual(0, snap.CardCleanStreak);
         }

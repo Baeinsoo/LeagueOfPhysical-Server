@@ -9,7 +9,7 @@ using UnityEngine;
 namespace LOP.Tests
 {
     /// <summary>
-    /// 카드 러시 룰(서버) — 레인 출발, 완주 여운, 2분 상한, 순위(완주 순 → 칸·도착 틱), 결과 지표, 마커 검사.
+    /// 카드 러시 룰(서버) — 레인 출발·레인 번호, 완주 여운, 2분 상한, 순위(완주 순 → 간 거리), 결과 지표, 마커 검사.
     /// </summary>
     public class CardRushRuleSystemTests
     {
@@ -226,8 +226,23 @@ namespace LOP.Tests
             Assert.AreEqual(6000L, f.Rule.MatchDurationTicks);
         }
 
+        //  레인 번호는 첫 장 씨앗 — 크리에이터가 레인을 잘못 적으면 서버 첫 장이 클라 예측과 갈려 매 스냅 되감는다(T3 리뷰 I1).
+        //  맵 진행 방향이 +x라 출발점이 비스듬한 경우도 같이 본다.
         [Test]
-        public void 못_한_사람은_간_거리_큰_순()
+        public void 참가자_i의_몸은_레인_i()
+        {
+            var users = new[] { "a", "b", "c", "d", "e" };
+            var f = Build(users);
+            f.Rule.Initialize();
+
+            for (int i = 0; i < users.Length; i++)
+            {
+                Assert.AreEqual(i, f.BodyOf(users[i]).Get<CardRushRunner>().Lane, users[i]);
+            }
+        }
+
+        [Test]
+        public void 못_한_사람은_멀리_간_순()
         {
             var f = Build(new[] { "behind", "ahead", "middle" });
             f.Rule.Initialize();
@@ -261,14 +276,21 @@ namespace LOP.Tests
         }
 
         [Test]
-        public void 통계_키()
+        public void 통계는_무사_통과_최고와_맞은_수()
         {
             var f = Build(new[] { "done", "running", "gone" });
             f.Rule.Initialize();
             var done = f.BodyOf("done");
-            done.Get<CardRushRunner>().State = new CardRushRunnerState { Step = 40, MoveStartTick = 900, BestStreak = 12, Misses = 3 };
+            //  지금 연속(CleanStreak)·옛 칸(BestStreak·Misses)은 다른 값으로 둔다 — 잘못 읽으면 걸린다.
+            done.Get<CardRushRunner>().State = new CardRushRunnerState
+            {
+                PosMm = 140_000, FinishTick = 900, CleanStreak = 2, BestCleanStreak = 12, Hits = 3, BestStreak = 40, Misses = 41,
+            };
             done.Get<FinishState>().FinishedTick = 900;
-            f.BodyOf("running").Get<CardRushRunner>().State = new CardRushRunnerState { Step = 20, MoveStartTick = 800, BestStreak = 5, Misses = 7 };
+            f.BodyOf("running").Get<CardRushRunner>().State = new CardRushRunnerState
+            {
+                PosMm = 70_000, CleanStreak = 1, BestCleanStreak = 5, Hits = 7, BestStreak = 50, Misses = 51,
+            };
             f.Registry.Remove(f.Spawner.GetEntityIdByUserId("gone"));
             f.Finish.Tick(1000, 0.02f);
 
@@ -277,19 +299,22 @@ namespace LOP.Tests
             {
                 var row = RowOf(outcome, user);
                 Assert.IsNotNull(row?.stats, user);
-                Assert.IsTrue(row.stats.ContainsKey(CardRushStatKeys.StreakBest), user);
-                Assert.IsTrue(row.stats.ContainsKey(CardRushStatKeys.Misses), user);
+                Assert.IsTrue(row.stats.ContainsKey(CardRushStatKeys.CleanBest), user);
+                Assert.IsTrue(row.stats.ContainsKey(CardRushStatKeys.Hits), user);
                 Assert.IsTrue(row.stats.ContainsKey(RaceStatKeys.Finished), user);
+                Assert.IsFalse(row.stats.ContainsKey("cardStreakBest"), $"{user}: 옛 키는 안 싣는다");
+                Assert.IsFalse(row.stats.ContainsKey("cardMisses"), $"{user}: 옛 키는 안 싣는다");
             }
-            Assert.AreEqual("cardStreakBest", CardRushStatKeys.StreakBest);
-            Assert.AreEqual("cardMisses", CardRushStatKeys.Misses);
-            Assert.AreEqual(12, RowOf(outcome, "done").stats[CardRushStatKeys.StreakBest]);
-            Assert.AreEqual(3, RowOf(outcome, "done").stats[CardRushStatKeys.Misses]);
+            Assert.AreEqual("cardCleanBest", CardRushStatKeys.CleanBest);
+            Assert.AreEqual("cardHits", CardRushStatKeys.Hits);
+            Assert.AreEqual(12, RowOf(outcome, "done").stats[CardRushStatKeys.CleanBest]);
+            Assert.AreEqual(3, RowOf(outcome, "done").stats[CardRushStatKeys.Hits]);
             Assert.AreEqual(1, RowOf(outcome, "done").stats[RaceStatKeys.Finished]);
-            Assert.AreEqual(5, RowOf(outcome, "running").stats[CardRushStatKeys.StreakBest]);
-            Assert.AreEqual(7, RowOf(outcome, "running").stats[CardRushStatKeys.Misses]);
+            Assert.AreEqual(5, RowOf(outcome, "running").stats[CardRushStatKeys.CleanBest]);
+            Assert.AreEqual(7, RowOf(outcome, "running").stats[CardRushStatKeys.Hits]);
             Assert.AreEqual(0, RowOf(outcome, "running").stats[RaceStatKeys.Finished]);
-            Assert.AreEqual(0, RowOf(outcome, "gone").stats[CardRushStatKeys.StreakBest], "몸이 없으면 0");
+            Assert.AreEqual(0, RowOf(outcome, "gone").stats[CardRushStatKeys.CleanBest], "몸이 없으면 0");
+            Assert.AreEqual(0, RowOf(outcome, "gone").stats[CardRushStatKeys.Hits], "몸이 없으면 0");
             Assert.AreEqual(3, PlacementOf(outcome, "gone"), "나간 사람은 맨 뒤");
         }
 

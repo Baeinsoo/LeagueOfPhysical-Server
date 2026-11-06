@@ -30,7 +30,7 @@ namespace LOP.Tests
         {
             var registry = new EntityRegistry();
             var field = new CardRushMapRulesField();
-            field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f,
+            field.Set(CardRushTheme.StoneBridge, 2.6f,
                       Vector3.zero, Vector3.forward);
             var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(seed), config);
             var finish = new FinishTrackingSystem(registry);

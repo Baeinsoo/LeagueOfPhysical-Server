@@ -70,7 +70,7 @@ namespace LOP.Tests
             {
                 marker = new GameObject("card-rush-rules-test");
                 marker.AddComponent<CardRushMapRules>();
-                field.Set(CardRushTheme.StoneBridge, 40, 2.2f, 2.6f,
+                field.Set(CardRushTheme.StoneBridge, 2.6f,
                           new Vector3(10f, 0f, 5f), Vector3.right);
             }
             var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(), Config());
@@ -281,15 +281,15 @@ namespace LOP.Tests
             var f = Build(new[] { "done", "running", "gone" });
             f.Rule.Initialize();
             var done = f.BodyOf("done");
-            //  지금 연속(CleanStreak)·옛 칸(BestStreak·Misses)은 다른 값으로 둔다 — 잘못 읽으면 걸린다.
+            //  지금 연속(CleanStreak)은 최고와 다른 값으로 둔다 — 잘못 읽으면 걸린다.
             done.Get<CardRushRunner>().State = new CardRushRunnerState
             {
-                PosMm = 140_000, FinishTick = 900, CleanStreak = 2, BestCleanStreak = 12, Hits = 3, BestStreak = 40, Misses = 41,
+                PosMm = 140_000, FinishTick = 900, CleanStreak = 2, BestCleanStreak = 12, Hits = 3,
             };
             done.Get<FinishState>().FinishedTick = 900;
             f.BodyOf("running").Get<CardRushRunner>().State = new CardRushRunnerState
             {
-                PosMm = 70_000, CleanStreak = 1, BestCleanStreak = 5, Hits = 7, BestStreak = 50, Misses = 51,
+                PosMm = 70_000, CleanStreak = 1, BestCleanStreak = 5, Hits = 7,
             };
             f.Registry.Remove(f.Spawner.GetEntityIdByUserId("gone"));
             f.Finish.Tick(1000, 0.02f);

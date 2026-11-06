@@ -211,17 +211,13 @@ namespace LOP.Tests
             RunGrid("grid2", list);
         }
 
-        /// <summary>고른 값 확인: 출시 표 그대로 + 고른 벌에서 길이만 바꿔 본다.</summary>
+        /// <summary>고른 값 확인: 출시 표 그대로 + 길이만 바꿔 본다(결승은 복도 205 m에서 15 m 이상 안쪽).</summary>
         [Test]
         public void 격자3_고른_값()
         {
             var list = new List<Candidate> { new Candidate() };
-            foreach (float track in new[] { 120f, 130f, 140f, 150f, 160f })
-                list.Add(new Candidate
-                {
-                    Track = track, ObstacleMin = 10f, ObstacleMax = 17f, ZoneMin = 28f, ZoneMax = 48f,
-                    BarricadeShare = 0.7f, BarricadeWait = 2.0f, RollKnock = 1.39f, RollStun = 1.0f, ZoneStun = 1.5f,
-                });
+            foreach (float track in new[] { 140f, 160f, 165f, 175f, 180f })
+                list.Add(new Candidate { Track = track });
             RunGrid("grid3", list);
         }
     }

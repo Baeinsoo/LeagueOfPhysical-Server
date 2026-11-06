@@ -202,6 +202,7 @@ namespace LOP
             snap.CardZoneEventTick = s.ZoneEventTick;
             snap.CardFinishTick = s.FinishTick;
             snap.CardCleanStreak = s.CleanStreak;
+            snap.CardWhiffTick = s.WhiffTick;
         }
     }
 }

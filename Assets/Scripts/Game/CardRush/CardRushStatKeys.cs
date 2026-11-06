@@ -6,11 +6,11 @@ namespace LOP
     /// <summary>카드 러시 결과 지표 키. 로비 퀘스트 표의 clauses가 같은 문자열로 찾는다.</summary>
     public static class CardRushStatKeys
     {
-        /// <summary>판 중 가장 길게 이어 맞힌 수.</summary>
-        public const string StreakBest = "cardStreakBest";
+        /// <summary>판 중 가장 길게 이어진 무사 통과(장애물·구역을 안 맞고 넘긴 수).</summary>
+        public const string CleanBest = "cardCleanBest";
 
-        /// <summary>판 중 틀린 횟수.</summary>
-        public const string Misses = "cardMisses";
+        /// <summary>판 중 맞은 수(꽈당 + 으악).</summary>
+        public const string Hits = "cardHits";
 
         /// <summary>
         /// 참가자의 등수 줄마다 두 지표를 싣는다. 몸이 이미 없어 상태를 모르면 0을 싣는다
@@ -28,8 +28,8 @@ namespace LOP
                 }
                 var state = stateOf(entityId);
                 placement.stats ??= new Dictionary<string, int>();
-                placement.stats[StreakBest] = state?.BestStreak ?? 0;
-                placement.stats[Misses] = state?.Misses ?? 0;
+                placement.stats[CleanBest] = state?.BestCleanStreak ?? 0;
+                placement.stats[Hits] = state?.Hits ?? 0;
             }
         }
     }

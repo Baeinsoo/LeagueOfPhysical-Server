@@ -84,7 +84,7 @@ namespace LOP.Tests
             builder.RegisterInstance(registry);
             builder.Register<GameFramework.World.WorldEventBuffer>(Lifetime.Singleton);
             builder.RegisterInstance<IMatchSeed>(new Seed());
-            builder.RegisterInstance(new EntitySpawner(null, registry, new CardRushRunnerCreator(registry), null, null,
+            builder.RegisterInstance(new EntitySpawner(null, registry, new CardRushRunnerCreator(registry, new CardRushMapRulesField()), null, null,
                 new FakePublisher<EntityCreated>(), new FakePublisher<EntityDestroyed>()));
             //  실제로는 GameplayInstaller(공용 설치)가 주는 것 — 봇 시스템(Task 7)이 받아 쓴다.
             builder.Register<InputBufferSystem>(Lifetime.Singleton);

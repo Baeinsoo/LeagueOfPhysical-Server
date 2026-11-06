@@ -5,15 +5,17 @@ namespace LOP
 {
     /// <summary>
     /// 카드 러시의 몸(서버). 시뮬에 물리가 없다 — 선수끼리 안 부딪히고, 자리는 월드가 상태에서 계산해 적는다(PhysX 대리 몸은 키네마틱 트리거).
-    /// 출발 자리가 곧 레인 출발점이다(룰이 레인 출발점에 스폰한다).
+    /// 출발 자리가 곧 레인 출발점이다(룰이 레인 출발점에 스폰한다). 레인 번호(첫 장 씨앗)는 클라와 같은 Shared 식으로 그 자리에서 구한다.
     /// </summary>
     public class CardRushRunnerCreator : ICharacterCreator
     {
         private readonly GameFramework.World.EntityRegistry entityRegistry;
+        private readonly CardRushMapRulesField rules;
 
-        public CardRushRunnerCreator(GameFramework.World.EntityRegistry entityRegistry)
+        public CardRushRunnerCreator(GameFramework.World.EntityRegistry entityRegistry, CardRushMapRulesField rules)
         {
             this.entityRegistry = entityRegistry;
+            this.rules = rules;
         }
 
         public void Create(CharacterCreationData creationData)
@@ -41,7 +43,11 @@ namespace LOP
             //  결승 틱은 월드가 상태에서 다시 적고, 등수는 FinishTrackingSystem이 적어 스냅에 싣는다.
             worldEntity.Add(new FinishState());
             worldEntity.Add(new FinishPlacement());
-            worldEntity.Add(new CardRushRunner { LaneOrigin = creationData.position });
+            worldEntity.Add(new CardRushRunner
+            {
+                LaneOrigin = creationData.position,
+                Lane = CardRushLanes.LaneIndexOf(rules, creationData.position),
+            });
 
             //  시뮬엔 물리가 없지만 EntityBinder가 모든 몸에 PhysX 대리 몸을 세운다(PhysicsBodyFactory) — 모양과 종류가 있어야 한다.
             //  클라와 같은 키네마틱 트리거라 아무것도 밀지 않고, 물리 루프도 키네마틱 몸은 월드 자리에 다시 쓰지 않는다.

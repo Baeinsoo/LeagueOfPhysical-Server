@@ -6,7 +6,7 @@ namespace LOP
 {
     /// <summary>
     /// 카드 러시 룰(서버). 참가자마다 레인 출발점에 몸을 세우고, 남아 있는 사람이 모두 결승에 닿으면
-    /// 여운 뒤 판을 끝낸다. 등수는 먼저 닿은 순 → 못 닿은 사람은 칸이 많은 순(같은 칸이면 먼저 도착한 순) → 나간 사람.
+    /// 여운 뒤 판을 끝낸다. 등수는 먼저 닿은 순 → 못 닿은 사람은 멀리 간 순(<see cref="CardRushWorld.RankingProgress"/> = PosMm) → 나간 사람.
     /// 닿은 순서를 매 틱 모으는 일은 <see cref="FinishTrackingSystem"/>이 한다(플래피 레이스와 같은 짝).
     /// </summary>
     public class CardRushRuleSystem : IGameRuleSystem, ISettledResults
@@ -176,8 +176,8 @@ namespace LOP
                 var runner = RunnerOf(pair.Key);
                 if (runner != null)
                 {
-                    //  판 기준 틱으로 바꿔 매긴다 — 서버 절대 틱을 그대로 넣으면 오래 켠 서버에서 같은 칸 이웃 틱이 뭉개진다.
-                    unfinished.Add((pair.Value, world.RankingProgress(runner.State, finishSystem.LastTick)));
+                    //  못 들어온 사람은 간 거리 큰 순(spec §3.10).
+                    unfinished.Add((pair.Value, world.RankingProgress(runner.State)));
                     continue;
                 }
                 left.Add(pair.Value);

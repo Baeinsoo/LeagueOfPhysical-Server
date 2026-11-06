@@ -11,71 +11,11 @@ namespace LOP.Tests
     /// </summary>
     public class CardRushBotMatchTests
     {
-        private sealed class Seed : IMatchSeed
-        {
-            public Seed(ulong value) { Value = value; }
-            public ulong Value { get; }
-        }
-
         //  출시 표(#CardRushConfig 1행) 그대로 — 손으로 적은 수치로 돌리면 표를 고쳐도 이 경보가 안 울린다(최종 리뷰 M5).
         private static CardRushConfig Config()
             => new CardRushConfigProvider(CardRushScopeWiringTests.RealMasterData()).Get();
 
-        private const long Start = 1000;
-        private const long MatchTicks = 6000;   // 2분 상한
-        private const int Bots = 8;
-
-        //  한 판: 봇 8명(레인 0~7)을 출시 봇으로 2분 돌려 선수별 완주 초(못 하면 null).
-        private static float?[] Play(CardRushConfig config, ulong seed)
-        {
-            var registry = new EntityRegistry();
-            var field = new CardRushMapRulesField();
-            field.Set(CardRushTheme.StoneBridge, 2.6f,
-                      Vector3.zero, Vector3.forward);
-            var world = new CardRushWorld(registry, new WorldEventBuffer(), field, new Seed(seed), config);
-            var finish = new FinishTrackingSystem(registry);
-            var inputSystem = new InputBufferSystem();
-            world.GameplayStartTick = Start;
-
-            var ids = new List<string>();
-            for (int i = 0; i < Bots; i++)
-            {
-                string id = MountedArcheryBots.UserIdFor(i + 1);
-                var entity = new Entity(id);
-                entity.Add(new GameFramework.World.Transform());
-                entity.Add(new Velocity());
-                entity.Add(new InputBuffer());
-                entity.Add(new Simulated());
-                entity.Add(new FinishState());
-                entity.Add(new FinishPlacement());
-                entity.Add(new Ownership(id));
-                entity.Add(new CardRushRunner { LaneOrigin = field.LaneOrigin(i), Lane = i });
-                registry.Add(entity);
-                finish.Watch(id);
-                ids.Add(id);
-            }
-
-            var botSystem = new CardRushBotSystem(registry, world, inputSystem, new Seed(seed), config, MountedArcheryBots.IsBot);
-
-            for (long tick = Start; tick < Start + MatchTicks && finish.AllWatchedFinished == false; tick++)
-            {
-                botSystem.Tick(tick, 0.02f);
-                foreach (var id in ids)
-                {
-                    inputSystem.Consume(registry.Get(id).Get<InputBuffer>(), tick);
-                }
-                world.Tick(tick, 0.02f);
-                finish.Tick(tick, 0.02f);
-            }
-
-            var seconds = new float?[Bots];
-            for (int i = 0; i < Bots; i++)
-            {
-                var state = registry.Get(ids[i]).Get<FinishState>();
-                seconds[i] = state.Finished ? (state.FinishedTick - Start) * CardRushTiming.TickInterval : (float?)null;
-            }
-            return seconds;
-        }
+        private const int Bots = CardRushMatchRunner.Bots;
 
         [Test]
         public void 봇_8명은_2분_안에_모두_완주()
@@ -86,11 +26,10 @@ namespace LOP.Tests
             var perSeed = new System.Text.StringBuilder();
             for (ulong seed = 1; seed <= 20; seed++)
             {
-                var seconds = Play(config, seed);
                 var sorted = new List<float>();
-                foreach (var sec in seconds)
+                foreach (var r in CardRushMatchRunner.Run(config, seed))
                 {
-                    if (sec.HasValue) { sorted.Add(sec.Value); all.Add(sec.Value); }
+                    if (r.Finished) { sorted.Add(r.Seconds); all.Add(r.Seconds); }
                     else unfinished++;
                 }
                 sorted.Sort();

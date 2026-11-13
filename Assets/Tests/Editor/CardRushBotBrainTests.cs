@@ -27,7 +27,7 @@ namespace LOP.Tests
         private static long FirstTickShowing(CardRushRunnerState s, long from, CardColor color, CardRushTrack track)
         {
             for (long t = from; t < from + 200; t++)
-                if (CardRushCard.TryCardAt(s, t, Start, Lane, track, out var c) && c == color) return t;
+                if (CardRushCard.CardAt(s, t, Start, Lane, track, out var c) && c == color) return t;
             Assert.Fail($"{color}이 안 보인다");
             return -1;
         }
@@ -36,14 +36,14 @@ namespace LOP.Tests
         private static long WindowStart(CardRushRunnerState s, long from, CardColor color, CardRushTrack track)
         {
             long t = FirstTickShowing(s, from, color, track);
-            while (CardRushCard.TryCardAt(s, t - 1, Start, Lane, track, out var c) && c == color) t--;
+            while (CardRushCard.CardAt(s, t - 1, Start, Lane, track, out var c) && c == color) t--;
             if (t < from) t += 3 * CardRushRules.CardDwellTicks;
             return t;
         }
 
         private static CardColor CardAt(CardRushRunnerState s, long tick, CardRushTrack track)
         {
-            Assert.IsTrue(CardRushCard.TryCardAt(s, tick, Start, Lane, track, out var c));
+            Assert.IsTrue(CardRushCard.CardAt(s, tick, Start, Lane, track, out var c));
             return c;
         }
 

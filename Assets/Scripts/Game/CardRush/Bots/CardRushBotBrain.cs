@@ -84,11 +84,13 @@ namespace LOP
         public bool ShouldTap(in CardRushRunnerState s, long tick, long gameplayStartTick, int lane, CardRushTrack track, in CardRushTuning tuning)
         {
             //  쓸 수 없는 틱(출발 전·쿨다운·기절·완주)엔 생각하지 않는다 — 시안 busy(r).
-            if (track == null || !CardRushCard.CanUse(s, tick, gameplayStartTick)) return false;
+            //  4차 임시(Task 3이 다시 짠다): 잡을 수 있거나 잡은 카드를 쓸 수 있을 때만 — 원하는 색이 보이면 잡고 다음 틱에 쓴다.
+            if (track == null
+                || !(CardRushCard.CanLock(s, tick, gameplayStartTick) || CardRushCard.CanUse(s, tick, gameplayStartTick, lane, track))) return false;
 
             if (!plan.Active || tick > plan.Until) plan = MakePlan(s, tick, track);
             if (plan.Want == null || tick < plan.ReactTick) return false;
-            if (!CardRushCard.TryCardAt(s, tick, gameplayStartTick, lane, track, out var card)) return false;
+            if (!CardRushCard.CardAt(s, tick, gameplayStartTick, lane, track, out var card)) return false;
 
             if (card == plan.Want)
             {
@@ -151,10 +153,9 @@ namespace LOP
         //  봇마다 한 번 뽑은 반응 + 계획마다 U(0, extra) 흔들림(시안 + random·0.2).
         private long ReactAt(long tick) => tick + reactTicks + rng.Next(0, extraTicks + 1);
 
-        //  판정과 같은 식(spec §3.5 빨강) — 손이 닿을 때만 빨강을 쓴다.
+        //  4차 임시(Task 3이 다시 짠다): 투사체 사거리 안일 때만 빨강을 쓴다(4차 spec §7).
         private static bool CanReach(in CardRushRunnerState s, long tick, CardRushTrack track)
             => CardRushRunnerSim.TryFront(s, tick, track, out int front)
-               && front - s.PosMm > -CardRushRules.SmashBackMm
-               && front - s.PosMm <= CardRushRules.SmashReachMm;
+               && front - (s.PosMm + CardRushRules.ShotStartAheadMm) <= CardRushRules.ShotRangeMm - 500;
     }
 }

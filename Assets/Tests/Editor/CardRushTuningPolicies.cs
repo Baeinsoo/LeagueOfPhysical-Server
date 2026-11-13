@@ -11,6 +11,9 @@ namespace LOP.Tests
         /// <summary>읽는 고수·파랑만의 반응 — 0.24초(spec §9.2 "모두 12틱").</summary>
         public const int ReactTicks = 12;
 
+        //  3차 값 — 4차 Shared에서 지워졌다. 컴파일만 지키는 임시(Task 3이 4차 정책으로 다시 짠다).
+        private const int LegacySmashReachMm = 1660, LegacySmashBackMm = 200, LegacyBlockTicks = 50;
+
         public const string Bot = "봇";
         public const string Judged = "읽는고수";
         public const string BlueOnly = "파랑만";
@@ -19,7 +22,7 @@ namespace LOP.Tests
         /// <summary>지금 보이는 카드를 이미 알아봤나 — 카드가 바뀐 지 react틱 지났으면 그 색을 돌려준다.</summary>
         public static bool TrySeenCard(in CardRushRunnerState s, long tick, long g, int lane, CardRushTrack track, int react, out CardColor card)
         {
-            if (!CardRushCard.CanUse(s, tick, g) || !CardRushCard.TryCardAt(s, tick, g, lane, track, out card))
+            if (!(CardRushCard.CanLock(s, tick, g) || CardRushCard.CanUse(s, tick, g, lane, track)) || !CardRushCard.CardAt(s, tick, g, lane, track, out card))
             {
                 card = default;
                 return false;
@@ -39,7 +42,7 @@ namespace LOP.Tests
         public sealed class MasherPolicy : ICardRushBotPolicy
         {
             public bool ShouldTap(in CardRushRunnerState s, long tick, long g, int lane, CardRushTrack track, in CardRushTuning tuning)
-                => track != null && CardRushCard.CanUse(s, tick, g);
+                => track != null && (CardRushCard.CanLock(s, tick, g) || CardRushCard.CanUse(s, tick, g, lane, track));
         }
 
         /// <summary>
@@ -68,18 +71,18 @@ namespace LOP.Tests
                 switch (card)
                 {
                     case CardColor.Red:
-                        return hasFront && gap > -CardRushRules.SmashBackMm && gap <= CardRushRules.SmashReachMm;
+                        return hasFront && gap > -LegacySmashBackMm && gap <= LegacySmashReachMm;
 
                     case CardColor.Yellow:
                         //  굴러오는 것: 다음 빨강이 닿기 전에 손에 안 들어오면, 방패 시간 안에 닿을 때 막는다.
                         if (rolling && !RedInTime(s, tick, g, lane, track, gap)
-                            && gap - CardRushRules.RollerContactMm < CardRushRules.RollerMmPerTick * (CardRushRules.BlockTicks - 2))
+                            && gap - CardRushRules.RollerContactMm < CardRushRules.RollerMmPerTick * (LegacyBlockTicks - 2))
                             return true;
                         if (zoneOn)
                         {
                             long left = boom - tick;
                             //  방패가 터지는 틱까지 켜져 있어야 한다(쓴 틱 + BlockTicks > 터짐).
-                            if (left >= CardRushRules.BlockTicks) return false;
+                            if (left >= LegacyBlockTicks) return false;
                             //  그냥 달려도 터질 때 밖이면 방패가 필요 없다.
                             int runAt = s.PosMm + CardRushRules.RunMmPerTick * (int)left;
                             if (!Inside(z, runAt)) return false;
@@ -103,7 +106,7 @@ namespace LOP.Tests
             private static bool RedInTime(in CardRushRunnerState s, long tick, long g, int lane, CardRushTrack track, int gap)
             {
                 const int closing = CardRushRules.RunMmPerTick + CardRushRules.RollerMmPerTick;
-                long reach = tick + System.Math.Max(0, (gap - CardRushRules.SmashReachMm + closing - 1) / closing);
+                long reach = tick + System.Math.Max(0, (gap - LegacySmashReachMm + closing - 1) / closing);
                 long contact = tick + (gap - CardRushRules.RollerContactMm - closing) / closing;
                 if (contact < reach) return false;
                 if (!TryNextSeen(s, tick, g, lane, track, CardColor.Red, out long from, out long to)) return false;

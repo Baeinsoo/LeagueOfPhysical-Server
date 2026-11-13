@@ -59,7 +59,8 @@ namespace LOP.Tests
         private static CardRushRunnerState Holding(CardRushRunnerState s, CardColor color, long now, CardRushTrack track)
         {
             long lockTick = now - 1;
-            while (!(CardRushCard.CardAt(s, lockTick, Start, Lane, track, out var c) && c == color)) lockTick--;
+            //  거꾸로 찾는 데 끝을 둔다 — 못 찾으면 끝없이 돌지 않고 아래 단정에서 실패한다.
+            while (lockTick > now - 3 * CardRushRules.CardDwellTicks && !(CardRushCard.CardAt(s, lockTick, Start, Lane, track, out var c) && c == color)) lockTick--;
             Assert.Greater(lockTick, now - 3 * CardRushRules.CardDwellTicks);
             s.LockTick = lockTick;
             Assert.AreEqual(color, CardAt(s, now, track));

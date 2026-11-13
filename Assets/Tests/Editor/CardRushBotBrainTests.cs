@@ -323,7 +323,7 @@ namespace LOP.Tests
             CollectionAssert.AreNotEqual(a, Play(43), "다른 난수면 다른 탭 열");
         }
 
-        //  4.1차: 평소엔 카드가 멈춰 있다 — 봇은 시작할 수 있게 된 뒤 반응 틱만큼 지나 돌린다(돌리는 데 손해가 없다).
+        //  4.1차: 평소엔 카드가 멈춰 있다 — 봇은 시작할 수 있게 되면 바로 돌린다(판단이 필요 없다).
         [Test]
         public void 평소엔_반응_틱_뒤_카드를_돌린다()
         {
@@ -332,9 +332,9 @@ namespace LOP.Tests
             var brain = Brain(config);
             var idle = new CardRushRunnerState { PosMm = 1_000, SpinStartTick = 3000, UseCount = 1 };
             Assert.IsFalse(brain.ShouldTap(idle, 2999, Start, Lane, track, config.Tuning), "쿨다운 중엔 안 돌린다");
-            Assert.AreEqual(3000 + React, FirstTap(brain, idle, 3000, 3100, track, config.Tuning), "시작할 수 있게 된 틱 + 반응");
-            var rolled = idle; rolled.RollStartTick = 3000 + React;
-            Assert.IsFalse(CardRushCard.CanStart(rolled, 3000 + React + 1, Start), "돌린 뒤엔 시작이 아니라 고르기");
+            Assert.AreEqual(3000, FirstTap(brain, idle, 2990, 3100, track, config.Tuning), "시작할 수 있게 된 틱");
+            var rolled = idle; rolled.RollStartTick = 3000;
+            Assert.IsFalse(CardRushCard.CanStart(rolled, 3001, Start), "돌린 뒤엔 시작이 아니라 고르기");
         }
 
         [Test]

@@ -85,6 +85,9 @@ namespace LOP
         //  망설여 넘긴 카드 한 장(쓴 횟수, 몇 번째 장) — 같은 장에서 다시 주사위를 굴리지 않는다.
         private int skippedUse = -1;
         private long skippedTurn = -1;
+        //  카드를 돌리기 시작할 틱 — 시작할 수 있게 된 뒤 반응 틱만큼. 쓴 횟수마다 한 번 정한다.
+        private int startUse = -1;
+        private long startAt;
 
         public CardRushBotBrain(System.Random rng, CardRushConfig config)
             : this(rng, PickReact(rng, config),
@@ -119,6 +122,16 @@ namespace LOP
         {
             //  손을 쓸 수 없는 틱(출발 전·쿨다운·기절·완주·공중의 노랑·파랑)엔 생각하지 않는다 — 계획도 그대로 둔다.
             if (track == null) return false;
+            //  돌리는 데는 손해가 없다 — 시작할 수 있으면 반응 틱 뒤 바로 돌린다.
+            if (CardRushCard.CanStart(s, tick, gameplayStartTick))
+            {
+                if (startUse != s.UseCount)
+                {
+                    startUse = s.UseCount;
+                    startAt = tick + reactTicks;
+                }
+                return tick >= startAt;
+            }
             bool canLock = CardRushCard.CanLock(s, tick, gameplayStartTick);
             bool canUse = CardRushCard.CanUse(s, tick, gameplayStartTick, lane, track);
             if (!canLock && !canUse) return false;
@@ -299,7 +312,7 @@ namespace LOP
         //  망설임은 카드 한 장에 한 번 굴린다 — 넘기면 그 장이 지나갈 때까지 안 잡는다.
         private bool Hesitates(in CardRushRunnerState s, long tick, long gameplayStartTick)
         {
-            long turn = (tick - CardRushCard.SpinBase(s, gameplayStartTick)) / CardRushRules.CardDwellTicks;
+            long turn = (tick - s.RollStartTick) / CardRushRules.CardDwellTicks;
             if (skippedUse == s.UseCount && skippedTurn == turn) return true;
             if (hesitateChance > 0 && rng.NextDouble() < hesitateChance)
             {

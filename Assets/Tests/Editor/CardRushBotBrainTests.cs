@@ -317,6 +317,8 @@ namespace LOP.Tests
             var b = Play(42);
             Assert.Greater(a.Count, 10, "판 중에 여러 번 잡고 쓴다");
             CollectionAssert.AreEqual(a, b);
+            //  양성 대조: 난수가 다르면 반응·흔들림이 달라 탭 열도 달라진다(난수를 안 쓰면 위 단정은 공짜로 통과한다).
+            CollectionAssert.AreNotEqual(a, Play(43), "다른 난수면 다른 탭 열");
         }
 
         [Test]

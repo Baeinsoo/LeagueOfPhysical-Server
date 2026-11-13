@@ -21,11 +21,13 @@ namespace LOP.Tests
     {
         private const int Seeds = 200;
 
-        //  4차 spec §8 목표 — 3차 그대로: 봇 중앙·p95·미완, 장애물/분 7~12·구역/분 2~4, 읽는 고수가 파랑만보다 15% 이상 빠름(R2),
-        //  막누름이 가장 느림, 봇이 막누름보다 8~12% 빠름.
+        //  4차 spec §8 목표 — 봇 중앙·p95·미완, 장애물/분 7~12·구역/분 2~4, 봇이 막누름보다 8~12% 빠름.
+        //  R2(판단이 이득)와 "막누름이 가장 느림"은 완주율 50% 이상인 정책끼리만 비교한다 — 파랑만은 구덩이를 못 건너 거의 다 미완이라
+        //  120초로 센 중앙값과 비교하면 어떤 표 값으로도 자동 통과·자동 경고가 된다(11-13 리뷰 I1).
+        //  R2 = (완주율 50% 이상인 "한 색만"과 막누름 중 가장 빠른 것) ÷ 고수 ≥ 1.15.
         private const float MedianMin = 55f, MedianMax = 75f, P95Max = 105f, DnfMax = 0.02f;
         private const float ObstaclesPerMinMin = 7f, ObstaclesPerMinMax = 12f, ZonesPerMinMin = 2f, ZonesPerMinMax = 4f;
-        private const float MasherRatioMin = 1.10f, BlueRatioMin = 1.15f, BotEdgeMin = 1.08f, BotEdgeMax = 1.12f, YellowRatioMin = 1.10f;
+        private const float R2RatioMin = 1.15f, BotEdgeMin = 1.08f, BotEdgeMax = 1.12f, EligibleFinishRate = 0.5f;
 
         /// <summary>후보 하나 — 출시 표 행에서 바꿀 열만. null이면 표 값 그대로.</summary>
         public sealed class Candidate
@@ -84,12 +86,44 @@ namespace LOP.Tests
         {
             public CardRushConfig Config;
             public PolicyStats Bot = new PolicyStats(), Judged = new PolicyStats(), BlueOnly = new PolicyStats(), Masher = new PolicyStats(), YellowOnly = new PolicyStats();
-            public float BlueRatio => BlueOnly.Median / Judged.Median;
             public float MasherRatio => Masher.Median / Judged.Median;
             /// <summary>봇이 막누름보다 얼마나 빠른가(막누름 중앙 ÷ 봇 중앙).</summary>
             public float BotEdge => Masher.Median / Bot.Median;
-            /// <summary>노랑 연타가 읽기보다 얼마나 느린가(노랑만 중앙 ÷ 고수 중앙) — 점프가 달리기보다 빨라 따로 잰다.</summary>
-            public float YellowRatio => YellowOnly.Median / Judged.Median;
+
+            /// <summary>완주율이 50% 이상이라 중앙값끼리 비교해도 되는 정책인가.</summary>
+            public static bool Eligible(PolicyStats p) => p.Runs > 0 && 1f - p.DnfRate >= EligibleFinishRate;
+
+            /// <summary>읽지 않는 정책(한 색만 둘 + 막누름) 중 비교할 수 있는 것.</summary>
+            public IEnumerable<(string Name, PolicyStats Stats)> Unreading()
+            {
+                if (Eligible(BlueOnly)) yield return (CardRushTuningPolicies.BlueOnly, BlueOnly);
+                if (Eligible(YellowOnly)) yield return (CardRushTuningPolicies.YellowOnly, YellowOnly);
+                if (Eligible(Masher)) yield return (CardRushTuningPolicies.Masher, Masher);
+            }
+
+            /// <summary>R2 — 읽지 않는 정책 중 가장 빠른 것 ÷ 고수. 비교할 것이 없으면 NaN.</summary>
+            public (string Name, float Ratio) R2()
+            {
+                string name = "-";
+                float best = float.NaN;
+                foreach (var (n, p) in Unreading())
+                    if (float.IsNaN(best) || p.Median < best) { best = p.Median; name = n; }
+                return (name, best / Judged.Median);
+            }
+
+            /// <summary>완주율 50% 이상인 정책 중 막누름보다 느린 것들 — "막누름이 가장 느림"이면 비어 있다.</summary>
+            public List<string> SlowerThanMasher()
+            {
+                var list = new List<string>();
+                if (!Eligible(Masher)) return list;
+                foreach (var (n, p) in new[]
+                         {
+                             (CardRushTuningPolicies.Bot, Bot), (CardRushTuningPolicies.Judged, Judged),
+                             (CardRushTuningPolicies.BlueOnly, BlueOnly), (CardRushTuningPolicies.YellowOnly, YellowOnly),
+                         })
+                    if (Eligible(p) && p.Median > Masher.Median) list.Add(n);
+                return list;
+            }
         }
 
         //  섞은 판의 레인 → 정책. 레인은 첫 장 씨앗일 뿐이라 정책을 레인에 고루 흩는다.
@@ -137,9 +171,12 @@ namespace LOP.Tests
         {
             var b = r.Bot;
             float med = b.Median, p95 = b.Q(0.95f);
+            var r2 = r.R2();
+            var slower = r.SlowerThanMasher();
             return string.Format(CultureInfo.InvariantCulture,
                 "{0} | 봇 {1,5:0.0}{2} p5 {3,5:0.0} p95 {4,5:0.0}{5} 미완 {6,4:0.0}%{7} | 장/분 {8,4:0.0}{9} 구/분 {10,3:0.0}{11} 맞음 {12,3:0.0} 기다림 {13,3:0.0}s 사용/분 {14,3:0} | " +
-                "고수 {15,5:0.0} p90 {16,5:0.0} 맞음 {17,3:0.0} 미완 {18,3:0.0}% | 파랑만 {19,5:0.0} 맞음 {20,5:0.1} 미완 {28,3:0}% | 막누름 {21,5:0.0} 맞음 {22,4:0.0} | 파랑만비 {23:0.00}{24} 막누름비 {25:0.00}{26} 봇/막누름 {29:0.00}{30}{27}",
+                "고수 {15,5:0.0} p90 {16,5:0.0} 맞음 {17,3:0.0} 미완 {18,3:0.0}% | 파랑만 {19,5:0.0} 맞음 {20,5:0.0} 미완 {28,3:0}% | 노랑만 {31,5:0.0} 맞음 {32,4:0.0} 미완 {33,3:0}% | " +
+                "막누름 {21,5:0.0} 맞음 {22,4:0.0} | R2비 {23:0.00}({24}){25} 막누름비 {26:0.00} 봇/막누름 {29:0.00}{30}{27}",
                 Candidate.Label(r.Config),
                 med, Flag(med >= MedianMin && med <= MedianMax), b.Q(0.05f), p95, Flag(p95 <= P95Max), b.DnfRate * 100f, Flag(b.DnfRate <= DnfMax),
                 b.ObstaclesPerMin, Flag(b.ObstaclesPerMin >= ObstaclesPerMinMin && b.ObstaclesPerMin <= ObstaclesPerMinMax),
@@ -148,11 +185,10 @@ namespace LOP.Tests
                 r.Judged.Median, r.Judged.Q(0.9f), r.Judged.Hits, r.Judged.DnfRate * 100f,
                 r.BlueOnly.Median, r.BlueOnly.Hits,
                 r.Masher.Median, r.Masher.Hits,
-                r.BlueRatio, Flag(r.BlueRatio >= BlueRatioMin), r.MasherRatio, Flag(r.MasherRatio >= MasherRatioMin),
-                r.Masher.Median > r.BlueOnly.Median ? "" : " !막누름이_파랑만보다_빠름",
-                r.BlueOnly.DnfRate * 100f, r.BotEdge, Flag(r.BotEdge >= BotEdgeMin && r.BotEdge <= BotEdgeMax))
-                + string.Format(CultureInfo.InvariantCulture, " | 노랑만 {0,5:0.0} 미완 {1,3:0}% 노랑만비 {2:0.00}{3}",
-                    r.YellowOnly.Median, r.YellowOnly.DnfRate * 100f, r.YellowRatio, Flag(r.YellowRatio >= YellowRatioMin));
+                r2.Ratio, r2.Name, Flag(r2.Ratio >= R2RatioMin), r.MasherRatio,
+                slower.Count == 0 ? "" : " !막누름보다_느림:" + string.Join(",", slower),
+                r.BlueOnly.DnfRate * 100f, r.BotEdge, Flag(r.BotEdge >= BotEdgeMin && r.BotEdge <= BotEdgeMax),
+                r.YellowOnly.Median, r.YellowOnly.Hits, r.YellowOnly.DnfRate * 100f);
         }
 
         private static CardRushConfig ShippedConfig()
@@ -168,7 +204,8 @@ namespace LOP.Tests
             head.AppendLine($"# 카드 러시 튜닝 {name} — 씨앗 {Seeds} × (출시 봇 8 + 섞은 판 8), 시작 {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             head.AppendLine($"# 출시 표: {Candidate.Label(shipped)}");
             head.AppendLine($"# 목표: 봇 중앙 {MedianMin}~{MedianMax}초, p95 ≤ {P95Max}, 미완 ≤ {DnfMax * 100}%, 장/분 {ObstaclesPerMinMin}~{ObstaclesPerMinMax}, 구/분 {ZonesPerMinMin}~{ZonesPerMinMax}, " +
-                            $"파랑만비 ≥ {BlueRatioMin}(R2), 막누름비 ≥ {MasherRatioMin}, 봇/막누름 {BotEdgeMin}~{BotEdgeMax}, 막누름이 가장 느림. 못 들어온 선수는 120초로 센다");
+                            $"R2비(완주율 {EligibleFinishRate * 100}% 이상인 파랑만·노랑만·막누름 중 가장 빠른 것 ÷ 고수) ≥ {R2RatioMin}, 봇/막누름 {BotEdgeMin}~{BotEdgeMax}, " +
+                            $"막누름이 가장 느림(완주율 {EligibleFinishRate * 100}% 이상끼리). 못 들어온 선수는 120초로 센다");
             File.WriteAllText(path, head.ToString());
 
             //  월드가 판마다 코스 지문을 찍는다 — 수천 줄이 콘솔을 덮지 않게 끈다.
@@ -222,11 +259,11 @@ namespace LOP.Tests
             RunGrid("v4-grid2", list);
         }
 
-        /// <summary>노랑만 확인(11-13 컨트롤러): 출시 표 그대로 한 줄 — 노랑 연타가 읽는 고수보다 10% 이상 느린가.</summary>
+        /// <summary>출시 표 그대로 한 줄 — 정책 넷(고수·파랑만·막누름·노랑만)과 R2·"막누름 최느림" 판정을 다시 찍는다.</summary>
         [Test]
-        public void 격자3_노랑만()
+        public void 격자3_출시_표()
         {
-            RunGrid("v4-grid3-yellow", new List<Candidate> { new Candidate() });
+            RunGrid("v4-grid3-shipped", new List<Candidate> { new Candidate() });
         }
     }
 }

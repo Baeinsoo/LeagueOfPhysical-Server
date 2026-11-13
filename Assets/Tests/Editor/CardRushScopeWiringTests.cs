@@ -66,6 +66,52 @@ namespace LOP.Tests
             Assert.AreEqual(6000L, config.MatchDurationTicks, "120초 × 50Hz");
         }
 
+        //  열마다 다른 값을 넣은 1행 — 제공자가 인수 둘을 바꿔 넘기면(같은 float라 컴파일은 된다) 어느 칸이든 값이 어긋난다.
+        private static readonly float[] DistinctRow =
+        {
+            111f, 150f, 10.5f, 16.5f, 0.31f, 27f, 47f, 1.9f, 1.3f, 1.1f, 2.6f, 1.4f,
+            0.21f, 0.43f, 0.17f, 0.03f, 0.66f, 0.19f, 0.7f,
+        };
+        private const int DistinctLanes = 5;
+
+        //  실제 표들은 그대로 읽고 tbcardrushconfig만 위 행 하나로 갈아 끼운다.
+        private static LOP.MasterData.LOPMasterData MasterDataWithDistinctRow()
+        {
+            var tables = new LOP.MasterData.Tables(file =>
+            {
+                if (file != "tbcardrushconfig")
+                    return new ByteBuf(File.ReadAllBytes(Path.GetFullPath(Folder + file + ".bytes")));
+                var buf = new ByteBuf(256);
+                buf.WriteSize(1);
+                buf.WriteInt(1);
+                buf.WriteFloat(DistinctRow[0]);
+                buf.WriteInt(DistinctLanes);
+                for (int i = 1; i < DistinctRow.Length; i++) buf.WriteFloat(DistinctRow[i]);
+                return buf;
+            });
+            var md = new LOP.MasterData.LOPMasterData();
+            typeof(LOP.MasterData.LOPMasterData).GetProperty(nameof(LOP.MasterData.LOPMasterData.Tables))
+                .SetValue(md, tables);
+            return md;
+        }
+
+        [Test]
+        public void 설정_제공자는_표_열을_같은_이름의_칸으로_넘긴다()
+        {
+            var c = new CardRushConfigProvider(MasterDataWithDistinctRow()).Get();
+            var got = new[]
+            {
+                c.MatchDurationSeconds, c.TrackLengthM, c.ObstacleGapMinM, c.ObstacleGapMaxM, c.BarricadeShare,
+                c.ZoneGapMinM, c.ZoneGapMaxM, c.BarricadeWaitSeconds, c.RollKnockM, c.RollStunSeconds, c.ZoneKnockM, c.ZoneStunSeconds,
+                c.BotReactMinSeconds, c.BotReactMaxSeconds, c.BotReactExtraSeconds, c.BotHesitateChance, c.BotFreeDashChance,
+                c.PitShare, c.PitStunSeconds,
+            };
+            CollectionAssert.AreEqual(DistinctRow, got);
+            Assert.AreEqual(DistinctLanes, c.MinLanes);
+            Assert.AreEqual(0.19f, c.PitShare, "끝에서 둘째 열 = 구덩이 비율");
+            Assert.AreEqual(0.7f, c.PitStunSeconds, "맨 끝 열 = 풍덩 기절");
+        }
+
         [Test]
         public void 스코프_등록만으로_룰_월드_몸이_만들어진다()
         {

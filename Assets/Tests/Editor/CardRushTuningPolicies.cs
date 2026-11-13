@@ -15,6 +15,7 @@ namespace LOP.Tests
         public const string Judged = "읽는고수";
         public const string BlueOnly = "파랑만";
         public const string Masher = "막누름";
+        public const string YellowOnly = "노랑만";
 
         /// <summary>
         /// 읽는 고수 — 출시 봇과 같은 판단(<see cref="CardRushBotBrain"/>)에 반응만 사람(12틱), 흔들림·망설임 없음, 빈 길이면 늘 대시.
@@ -32,6 +33,22 @@ namespace LOP.Tests
                 if (!CardRushCard.CanLock(s, tick, g) || !CardRushCard.CardAt(s, tick, g, lane, track, out var card)) return false;
                 long shown = (tick - CardRushCard.SpinBase(s, g)) % CardRushRules.CardDwellTicks;
                 return card == CardColor.Blue && shown >= ReactTicks;
+            }
+        }
+
+        /// <summary>
+        /// 노랑만 — 노랑을 알아보면 잡고 다음 틱에 쓴다(땅에서만 쓸 수 있으니 공중이면 내려앉을 때까지 쥔다).
+        /// 점프(3 m/s)가 달리기(1.8 m/s)보다 빨라 "노랑 연타"가 이득인지 잰다.
+        /// </summary>
+        public sealed class YellowOnlyPolicy : ICardRushBotPolicy
+        {
+            public bool ShouldTap(in CardRushRunnerState s, long tick, long g, int lane, CardRushTrack track, in CardRushTuning tuning)
+            {
+                if (track == null) return false;
+                if (s.LockTick != 0) return CardRushCard.CanUse(s, tick, g, lane, track);
+                if (!CardRushCard.CanLock(s, tick, g) || !CardRushCard.CardAt(s, tick, g, lane, track, out var card)) return false;
+                long shown = (tick - CardRushCard.SpinBase(s, g)) % CardRushRules.CardDwellTicks;
+                return card == CardColor.Yellow && shown >= ReactTicks;
             }
         }
 

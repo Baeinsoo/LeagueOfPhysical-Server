@@ -10,7 +10,7 @@ namespace LOP.Tests
 {
     /// <summary>
     /// 카드 러시 튜닝 하네스(3차 spec §9, 4차 spec §8) — 후보 설정마다 씨앗 200개로 봇 판을 끝까지 돌려 길이·빈도·벌·봇 열을 고른다.
-    /// 씨앗마다 두 판: ① 출시 봇 8명(인구 대리, 1600명분) ② 시험용 두뇌를 레인에 섞은 판(읽는 고수 0·3·6, 파랑만 1·4·7, 막누름 2·5).
+    /// 씨앗마다 두 판: ① 출시 봇 8명(인구 대리, 1600명분) ② 시험용 두뇌를 레인에 섞은 판(읽는 고수 0·4, 파랑만 1·5, 막누름 2·6, 노랑만 3·7).
     /// 결과는 <c>Logs/cardrush-tuning-&lt;시각&gt;-&lt;격자&gt;.txt</c>에 표로(한 줄 = 한 후보, 목표 밖 값엔 <c>!</c>) — 콘솔·Temp는 사라진다.
     /// 느리다(후보 하나 15~75초, 에디터가 뒤에 있으면 느려진다) — 평소 CI에서 안 돈다(<c>Explicit</c>). 이름 필터로만: <c>ats-sv.sh CardRushTuningHarness</c>.
     /// </summary>
@@ -25,7 +25,7 @@ namespace LOP.Tests
         //  막누름이 가장 느림, 봇이 막누름보다 8~12% 빠름.
         private const float MedianMin = 55f, MedianMax = 75f, P95Max = 105f, DnfMax = 0.02f;
         private const float ObstaclesPerMinMin = 7f, ObstaclesPerMinMax = 12f, ZonesPerMinMin = 2f, ZonesPerMinMax = 4f;
-        private const float MasherRatioMin = 1.10f, BlueRatioMin = 1.15f, BotEdgeMin = 1.08f, BotEdgeMax = 1.12f;
+        private const float MasherRatioMin = 1.10f, BlueRatioMin = 1.15f, BotEdgeMin = 1.08f, BotEdgeMax = 1.12f, YellowRatioMin = 1.10f;
 
         /// <summary>후보 하나 — 출시 표 행에서 바꿀 열만. null이면 표 값 그대로.</summary>
         public sealed class Candidate
@@ -83,26 +83,30 @@ namespace LOP.Tests
         public sealed class Row
         {
             public CardRushConfig Config;
-            public PolicyStats Bot = new PolicyStats(), Judged = new PolicyStats(), BlueOnly = new PolicyStats(), Masher = new PolicyStats();
+            public PolicyStats Bot = new PolicyStats(), Judged = new PolicyStats(), BlueOnly = new PolicyStats(), Masher = new PolicyStats(), YellowOnly = new PolicyStats();
             public float BlueRatio => BlueOnly.Median / Judged.Median;
             public float MasherRatio => Masher.Median / Judged.Median;
             /// <summary>봇이 막누름보다 얼마나 빠른가(막누름 중앙 ÷ 봇 중앙).</summary>
             public float BotEdge => Masher.Median / Bot.Median;
+            /// <summary>노랑 연타가 읽기보다 얼마나 느린가(노랑만 중앙 ÷ 고수 중앙) — 점프가 달리기보다 빨라 따로 잰다.</summary>
+            public float YellowRatio => YellowOnly.Median / Judged.Median;
         }
 
         //  섞은 판의 레인 → 정책. 레인은 첫 장 씨앗일 뿐이라 정책을 레인에 고루 흩는다.
-        private static string MixedPolicy(int lane) => (lane % 3) switch
+        private static string MixedPolicy(int lane) => (lane % 4) switch
         {
             0 => CardRushTuningPolicies.Judged,
             1 => CardRushTuningPolicies.BlueOnly,
-            _ => CardRushTuningPolicies.Masher,
+            2 => CardRushTuningPolicies.Masher,
+            _ => CardRushTuningPolicies.YellowOnly,
         };
 
-        private static ICardRushBotPolicy MakeMixed(int lane) => (lane % 3) switch
+        private static ICardRushBotPolicy MakeMixed(int lane) => (lane % 4) switch
         {
             0 => CardRushTuningPolicies.MakeJudged(),
             1 => new CardRushTuningPolicies.BlueOnlyPolicy(),
-            _ => (ICardRushBotPolicy)new CardRushTuningPolicies.MasherPolicy(),
+            2 => new CardRushTuningPolicies.MasherPolicy(),
+            _ => (ICardRushBotPolicy)new CardRushTuningPolicies.YellowOnlyPolicy(),
         };
 
         public static Row Measure(CardRushConfig config, int seeds)
@@ -118,11 +122,12 @@ namespace LOP.Tests
                     {
                         case CardRushTuningPolicies.Judged: row.Judged.Add(r, cap); break;
                         case CardRushTuningPolicies.BlueOnly: row.BlueOnly.Add(r, cap); break;
+                        case CardRushTuningPolicies.YellowOnly: row.YellowOnly.Add(r, cap); break;
                         default: row.Masher.Add(r, cap); break;
                     }
                 }
             }
-            row.Bot.Close(); row.Judged.Close(); row.BlueOnly.Close(); row.Masher.Close();
+            row.Bot.Close(); row.Judged.Close(); row.BlueOnly.Close(); row.Masher.Close(); row.YellowOnly.Close();
             return row;
         }
 
@@ -145,7 +150,9 @@ namespace LOP.Tests
                 r.Masher.Median, r.Masher.Hits,
                 r.BlueRatio, Flag(r.BlueRatio >= BlueRatioMin), r.MasherRatio, Flag(r.MasherRatio >= MasherRatioMin),
                 r.Masher.Median > r.BlueOnly.Median ? "" : " !막누름이_파랑만보다_빠름",
-                r.BlueOnly.DnfRate * 100f, r.BotEdge, Flag(r.BotEdge >= BotEdgeMin && r.BotEdge <= BotEdgeMax));
+                r.BlueOnly.DnfRate * 100f, r.BotEdge, Flag(r.BotEdge >= BotEdgeMin && r.BotEdge <= BotEdgeMax))
+                + string.Format(CultureInfo.InvariantCulture, " | 노랑만 {0,5:0.0} 미완 {1,3:0}% 노랑만비 {2:0.00}{3}",
+                    r.YellowOnly.Median, r.YellowOnly.DnfRate * 100f, r.YellowRatio, Flag(r.YellowRatio >= YellowRatioMin));
         }
 
         private static CardRushConfig ShippedConfig()
@@ -213,6 +220,13 @@ namespace LOP.Tests
             foreach (var (omin, omax) in new[] { (11f, 19f), (12f, 19f) })
                 list.Add(new Candidate { ObstacleMin = omin, ObstacleMax = omax });
             RunGrid("v4-grid2", list);
+        }
+
+        /// <summary>노랑만 확인(11-13 컨트롤러): 출시 표 그대로 한 줄 — 노랑 연타가 읽는 고수보다 10% 이상 느린가.</summary>
+        [Test]
+        public void 격자3_노랑만()
+        {
+            RunGrid("v4-grid3-yellow", new List<Candidate> { new Candidate() });
         }
     }
 }

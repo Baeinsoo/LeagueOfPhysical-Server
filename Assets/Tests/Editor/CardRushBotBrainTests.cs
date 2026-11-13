@@ -16,7 +16,7 @@ namespace LOP.Tests
 
         private static CardRushConfig Config(float hesitate = 0f, float freeDash = 0.5f, float reactMin = 0.24f, float reactMax = 0.24f, float extra = 0f)
             => new CardRushConfig(120f, 4, 140f, 11f, 19f, 0.5f, 28f, 48f, 1.2f, 1.39f, 0.7f, 2.77f, 1f,
-                                  reactMin, reactMax, extra, hesitate, freeDash);
+                                  reactMin, reactMax, extra, hesitate, freeDash, 0.35f, 0.8f);
 
         private static CardRushTrack Track(CardRushObstacle[] obstacles = null, CardRushZone[] zones = null)
             => CardRushTrack.ForTests(140_000, obstacles ?? new CardRushObstacle[0], zones ?? new CardRushZone[0], Seed);

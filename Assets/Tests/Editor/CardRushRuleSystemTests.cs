@@ -35,7 +35,7 @@ namespace LOP.Tests
                                   zoneGapMinM: 28f, zoneGapMaxM: 48f, barricadeWaitSeconds: 1.2f,
                                   rollKnockM: 1.39f, rollStunSeconds: 0.7f, zoneKnockM: 2.77f, zoneStunSeconds: 1f,
                                   botReactMinSeconds: 0.2f, botReactMaxSeconds: 0.5f, botReactExtraSeconds: 0.05f,
-                                  botHesitateChance: 0.1f, botFreeDashChance: 0.5f);
+                                  botHesitateChance: 0.1f, botFreeDashChance: 0.5f, pitShare: 0.35f, pitStunSeconds: 0.8f);
 
         private sealed class Fixture
         {

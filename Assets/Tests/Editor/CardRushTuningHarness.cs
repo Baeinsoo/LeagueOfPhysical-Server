@@ -36,7 +36,8 @@ namespace LOP.Tests
                 ObstacleMin ?? b.ObstacleGapMinM, ObstacleMax ?? b.ObstacleGapMaxM, BarricadeShare ?? b.BarricadeShare,
                 ZoneMin ?? b.ZoneGapMinM, ZoneMax ?? b.ZoneGapMaxM, BarricadeWait ?? b.BarricadeWaitSeconds,
                 RollKnock ?? b.RollKnockM, RollStun ?? b.RollStunSeconds, ZoneKnock ?? b.ZoneKnockM, ZoneStun ?? b.ZoneStunSeconds,
-                b.BotReactMinSeconds, b.BotReactMaxSeconds, b.BotReactExtraSeconds, b.BotHesitateChance, b.BotFreeDashChance);
+                b.BotReactMinSeconds, b.BotReactMaxSeconds, b.BotReactExtraSeconds, b.BotHesitateChance, b.BotFreeDashChance,
+                b.PitShare, b.PitStunSeconds);
 
             public static string Label(CardRushConfig c) => string.Format(CultureInfo.InvariantCulture,
                 "{0,3:0}m 장{1,4:0.#}~{2,-4:0.#} 구{3,4:0.#}~{4,-4:0.#} 바{5:0.0} 기{6:0.0} 굴{7:0.00}/{8:0.0} 구벌{9:0.00}/{10:0.0}",

@@ -119,6 +119,8 @@ namespace LOP
         {
             //  손을 쓸 수 없는 틱(출발 전·쿨다운·기절·완주·공중의 노랑·파랑)엔 생각하지 않는다 — 계획도 그대로 둔다.
             if (track == null) return false;
+            //  돌리는 데는 판단이 필요 없다 — 사람도 쿨다운이 끝나면 바로 누른다. 시작할 수 있으면 바로 돌린다.
+            if (CardRushCard.CanStart(s, tick, gameplayStartTick)) return true;
             bool canLock = CardRushCard.CanLock(s, tick, gameplayStartTick);
             bool canUse = CardRushCard.CanUse(s, tick, gameplayStartTick, lane, track);
             if (!canLock && !canUse) return false;
@@ -299,7 +301,7 @@ namespace LOP
         //  망설임은 카드 한 장에 한 번 굴린다 — 넘기면 그 장이 지나갈 때까지 안 잡는다.
         private bool Hesitates(in CardRushRunnerState s, long tick, long gameplayStartTick)
         {
-            long turn = (tick - CardRushCard.SpinBase(s, gameplayStartTick)) / CardRushRules.CardDwellTicks;
+            long turn = (tick - s.RollStartTick) / CardRushRules.CardDwellTicks;
             if (skippedUse == s.UseCount && skippedTurn == turn) return true;
             if (hesitateChance > 0 && rng.NextDouble() < hesitateChance)
             {

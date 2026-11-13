@@ -29,9 +29,10 @@ namespace LOP.Tests
             public bool ShouldTap(in CardRushRunnerState s, long tick, long g, int lane, CardRushTrack track, in CardRushTuning tuning)
             {
                 if (track == null) return false;
+                if (CardRushCard.CanStart(s, tick, g)) return true;
                 if (s.LockTick != 0) return CardRushCard.CanUse(s, tick, g, lane, track);
                 if (!CardRushCard.CanLock(s, tick, g) || !CardRushCard.CardAt(s, tick, g, lane, track, out var card)) return false;
-                long shown = (tick - CardRushCard.SpinBase(s, g)) % CardRushRules.CardDwellTicks;
+                long shown = (tick - s.RollStartTick) % CardRushRules.CardDwellTicks;
                 return card == CardColor.Blue && shown >= ReactTicks;
             }
         }
@@ -45,18 +46,19 @@ namespace LOP.Tests
             public bool ShouldTap(in CardRushRunnerState s, long tick, long g, int lane, CardRushTrack track, in CardRushTuning tuning)
             {
                 if (track == null) return false;
+                if (CardRushCard.CanStart(s, tick, g)) return true;
                 if (s.LockTick != 0) return CardRushCard.CanUse(s, tick, g, lane, track);
                 if (!CardRushCard.CanLock(s, tick, g) || !CardRushCard.CardAt(s, tick, g, lane, track, out var card)) return false;
-                long shown = (tick - CardRushCard.SpinBase(s, g)) % CardRushRules.CardDwellTicks;
+                long shown = (tick - s.RollStartTick) % CardRushRules.CardDwellTicks;
                 return card == CardColor.Yellow && shown >= ReactTicks;
             }
         }
 
-        /// <summary>막 누름 — 잡을 수 있거나 쓸 수 있으면 매 틱 누른다. 카드는 안 본다(쿨다운이 끝난 틱의 무작위 첫 장을 잡아 바로 쓴다).</summary>
+        /// <summary>막 누름 — 돌리거나 잡거나 쓸 수 있으면 매 틱 누른다. 카드는 안 본다(돌린 다음 틱의 첫 장을 잡아 바로 쓴다).</summary>
         public sealed class MasherPolicy : ICardRushBotPolicy
         {
             public bool ShouldTap(in CardRushRunnerState s, long tick, long g, int lane, CardRushTrack track, in CardRushTuning tuning)
-                => track != null && (CardRushCard.CanLock(s, tick, g) || CardRushCard.CanUse(s, tick, g, lane, track));
+                => track != null && (CardRushCard.CanStart(s, tick, g) || CardRushCard.CanLock(s, tick, g) || CardRushCard.CanUse(s, tick, g, lane, track));
         }
     }
 }

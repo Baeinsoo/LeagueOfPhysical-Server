@@ -62,10 +62,11 @@ namespace LOP.Tests
             {
                 State = new CardRushRunnerState
                 {
-                    PosMm = 12345, UseCount = 17, SpinStartTick = 1001, DashStartTick = 1002, BlockEndTick = 1003,
+                    PosMm = 12345, UseCount = 17, SpinStartTick = 1001, DashStartTick = 1002,
                     StunEndTick = 1004, ObstacleIndex = 5, ObstacleTick = 1006, ZoneIndex = 3, ZoneTick = 1008,
                     ObstacleEvent = (int)CardRushObstacleEvent.Tumbled, ObstacleEventTick = 1010,
                     ZoneEvent = (int)CardRushZoneEvent.Held, ZoneEventTick = 1012, FinishTick = 1013, CleanStreak = 6, WhiffTick = 1014,
+                    LockTick = 1015, ExpireTick = 1016, JumpStartTick = 1017, ShotTick = 1018, ShotFromMm = 1019,
                     BestCleanStreak = 9, Hits = 4,
                 },
             });
@@ -76,7 +77,6 @@ namespace LOP.Tests
             Assert.AreEqual(17, snap.CardUseCount);
             Assert.AreEqual(1001L, snap.CardSpinStartTick);
             Assert.AreEqual(1002L, snap.CardDashStartTick);
-            Assert.AreEqual(1003L, snap.CardBlockEndTick);
             Assert.AreEqual(1004L, snap.CardStunEndTick);
             Assert.AreEqual(5, snap.CardObstacleIndex);
             Assert.AreEqual(1006L, snap.CardObstacleTick);
@@ -88,7 +88,12 @@ namespace LOP.Tests
             Assert.AreEqual(1012L, snap.CardZoneEventTick);
             Assert.AreEqual(1013L, snap.CardFinishTick);
             Assert.AreEqual(6, snap.CardCleanStreak);
-            Assert.AreEqual(1014L, snap.CardWhiffTick, "헛방 틱(52)");
+            Assert.AreEqual(1014L, snap.CardWhiffTick, "투사체가 꺼진 틱(52)");
+            Assert.AreEqual(1015L, snap.CardLockTick);
+            Assert.AreEqual(1016L, snap.CardExpireTick);
+            Assert.AreEqual(1017L, snap.CardJumpStartTick);
+            Assert.AreEqual(1018L, snap.CardShotTick);
+            Assert.AreEqual(1019, snap.CardShotFromMm);
         }
 
         [Test]
@@ -97,13 +102,12 @@ namespace LOP.Tests
             var registry = new GameFramework.World.EntityRegistry();
             registry.Add(Body("rock"));
 
-            //  카드 칸 17개 전부 — 하나라도 다른 모드 몸에 값이 새면 걸린다.
+            //  카드 칸 21개 전부 — 하나라도 다른 모드 몸에 값이 새면 걸린다.
             var snap = SnapOf(registry, "rock");
             Assert.AreEqual(0, snap.CardPosMm);
             Assert.AreEqual(0, snap.CardUseCount);
             Assert.AreEqual(0L, snap.CardSpinStartTick);
             Assert.AreEqual(0L, snap.CardDashStartTick);
-            Assert.AreEqual(0L, snap.CardBlockEndTick);
             Assert.AreEqual(0L, snap.CardStunEndTick);
             Assert.AreEqual(0, snap.CardObstacleIndex);
             Assert.AreEqual(0L, snap.CardObstacleTick);
@@ -116,6 +120,11 @@ namespace LOP.Tests
             Assert.AreEqual(0L, snap.CardFinishTick);
             Assert.AreEqual(0, snap.CardCleanStreak);
             Assert.AreEqual(0L, snap.CardWhiffTick);
+            Assert.AreEqual(0L, snap.CardLockTick);
+            Assert.AreEqual(0L, snap.CardExpireTick);
+            Assert.AreEqual(0L, snap.CardJumpStartTick);
+            Assert.AreEqual(0L, snap.CardShotTick);
+            Assert.AreEqual(0, snap.CardShotFromMm);
         }
     }
 }

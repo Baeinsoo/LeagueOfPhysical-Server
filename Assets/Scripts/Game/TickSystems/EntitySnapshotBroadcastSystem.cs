@@ -175,7 +175,7 @@ namespace LOP
 
         //  남은 시간(초) → 끝나는 절대 틱. 0 이하면 0(= 해당 상태 아님).
 
-        //  카드 러시 판 전용. 클라가 내 선수 예측을 이 16칸으로 맞춘다(하나라도 빠지면 그 칸만 다른 어긋남을 영영 못 고친다).
+        //  카드 러시 판 전용. 클라가 내 선수 예측을 이 21칸으로 맞춘다(하나라도 빠지면 그 칸만 다른 어긋남을 영영 못 고친다).
         //  선수가 아닌 몸은 0(다른 모드 스냅을 키우지 않게 — 넉백 총 칸과 같은 방식). 지속은 이미 "끝나는(시작한) 절대 틱"이라 그대로 싣는다.
         //  최고 연속·맞은 수는 서버 통계라 안 싣는다.
         private static void FillCardRush(EntitySnap snap, GameFramework.World.Entity entity)
@@ -190,7 +190,6 @@ namespace LOP
             snap.CardUseCount = s.UseCount;
             snap.CardSpinStartTick = s.SpinStartTick;
             snap.CardDashStartTick = s.DashStartTick;
-            snap.CardBlockEndTick = s.BlockEndTick;
             snap.CardStunEndTick = s.StunEndTick;
             snap.CardObstacleIndex = s.ObstacleIndex;
             snap.CardObstacleTick = s.ObstacleTick;
@@ -203,6 +202,11 @@ namespace LOP
             snap.CardFinishTick = s.FinishTick;
             snap.CardCleanStreak = s.CleanStreak;
             snap.CardWhiffTick = s.WhiffTick;
+            snap.CardLockTick = s.LockTick;
+            snap.CardExpireTick = s.ExpireTick;
+            snap.CardJumpStartTick = s.JumpStartTick;
+            snap.CardShotTick = s.ShotTick;
+            snap.CardShotFromMm = s.ShotFromMm;
         }
     }
 }

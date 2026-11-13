@@ -66,7 +66,7 @@ namespace LOP.Tests
                     StunEndTick = 1004, ObstacleIndex = 5, ObstacleTick = 1006, ZoneIndex = 3, ZoneTick = 1008,
                     ObstacleEvent = (int)CardRushObstacleEvent.Tumbled, ObstacleEventTick = 1010,
                     ZoneEvent = (int)CardRushZoneEvent.Held, ZoneEventTick = 1012, FinishTick = 1013, CleanStreak = 6, WhiffTick = 1014,
-                    LockTick = 1015, ExpireTick = 1016, JumpStartTick = 1017, ShotTick = 1018, ShotFromMm = 1019,
+                    LockTick = 1015, ExpireTick = 1016, JumpStartTick = 1017, ShotTick = 1018, ShotFromMm = 1019, RollStartTick = 1020,
                     BestCleanStreak = 9, Hits = 4,
                 },
             });
@@ -94,6 +94,7 @@ namespace LOP.Tests
             Assert.AreEqual(1017L, snap.CardJumpStartTick);
             Assert.AreEqual(1018L, snap.CardShotTick);
             Assert.AreEqual(1019, snap.CardShotFromMm);
+            Assert.AreEqual(1020L, snap.CardRollStartTick);
         }
 
         [Test]
@@ -125,6 +126,7 @@ namespace LOP.Tests
             Assert.AreEqual(0L, snap.CardJumpStartTick);
             Assert.AreEqual(0L, snap.CardShotTick);
             Assert.AreEqual(0, snap.CardShotFromMm);
+            Assert.AreEqual(0L, snap.CardRollStartTick);
         }
     }
 }

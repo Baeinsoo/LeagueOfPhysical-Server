@@ -207,6 +207,7 @@ namespace LOP
             snap.CardJumpStartTick = s.JumpStartTick;
             snap.CardShotTick = s.ShotTick;
             snap.CardShotFromMm = s.ShotFromMm;
+            snap.CardRollStartTick = s.RollStartTick;
         }
     }
 }

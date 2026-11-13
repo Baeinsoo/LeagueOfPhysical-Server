@@ -127,6 +127,7 @@ namespace LOP.Tests
             {
                 PosMm = 30_000 - CardRushRules.RollerContactMm - (CardRushRules.RunMmPerTick + CardRushRules.RollerMmPerTick) * ticksToContact,
                 ObstacleTick = tick,
+                RollStartTick = Start,
             };
 
         [Test]

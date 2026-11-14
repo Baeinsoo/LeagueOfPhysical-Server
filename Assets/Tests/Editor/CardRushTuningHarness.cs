@@ -265,5 +265,20 @@ namespace LOP.Tests
         {
             RunGrid("v4-grid3-shipped", new List<Candidate> { new Candidate() });
         }
+
+        /// <summary>
+        /// 4.3차 — 사용자 "장애물 좀 더 늘리고 기절 시간 늘리면". 막누름이 고수만큼 빨라서(4.2차 46.1 대 47.0) 장애물 간격을 좁히고
+        /// 구덩이 기절·바리케이드 기다림을 늘려 카드를 읽는 쪽이 이기게 하는 값을 찾는다.
+        /// </summary>
+        [Test]
+        public void 격자4_장애물_늘리고_기절_늘리기()
+        {
+            var list = new List<Candidate> { new Candidate() };
+            foreach (var (omin, omax) in new[] { (9.4f, 13f), (10f, 14f) })
+                foreach (float stun in new[] { 1.5f, 2.0f, 2.5f })
+                    foreach (float wait in new[] { 2.0f, 3.0f })
+                        list.Add(new Candidate { ObstacleMin = omin, ObstacleMax = omax, PitStun = stun, BarricadeWait = wait });
+            RunGrid("v4-3-grid4", list);
+        }
     }
 }

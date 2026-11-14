@@ -179,7 +179,7 @@ namespace LOP.Tests
             var pit = new CardRushObstacle(CardRushObstacleKind.Pit, 20_000, 0, 1_200);
             var track = Track(new[] { pit });
             int center = CardRushBotBrain.PitJumpCenter(pit);
-            Assert.AreEqual(20_000 - 600, center, "(앞 가장자리 + 폭 − 2.4 m, 앞 가장자리)의 가운데");
+            Assert.AreEqual(20_000 - 1_000, center, "(앞 가장자리 + 폭 − 3.2 m, 앞 가장자리)의 가운데");
 
             var brain = Brain(config);
             Assert.IsTrue(TapsWhenShowing(brain, new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000 }, 3000, CardColor.Yellow, track, config.Tuning));

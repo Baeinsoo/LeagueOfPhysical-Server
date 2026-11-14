@@ -223,8 +223,8 @@ namespace LOP
         }
 
         /// <summary>
-        /// 구덩이를 넘는 뛰는 자리의 가운데. 이번 틱에 쓰면 40틱 뒤 지금 자리 + 2.4 m에 내려앉으니
-        /// 뛰는 자리는 (앞 가장자리 + 폭 − 2.4 m, 앞 가장자리) 안이어야 한다(spec §2).
+        /// 구덩이를 넘는 뛰는 자리의 가운데. 이번 틱에 쓰면 40틱 뒤 지금 자리 + 3.2 m에 내려앉으니
+        /// 뛰는 자리는 (앞 가장자리 + 폭 − 3.2 m, 앞 가장자리) 안이어야 한다(4.2차 spec).
         /// </summary>
         public static int PitJumpCenter(in CardRushObstacle pit)
         {

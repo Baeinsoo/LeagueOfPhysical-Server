@@ -296,7 +296,11 @@ namespace LOP
                 case CardRushObstacleKind.Barricade:
                     return barricadeOk || o.AtMm - s.PosMm > CardRushRules.DashMm + ClearObstacleMarginMm;
                 case CardRushObstacleKind.Goblin:
-                    return true;   // 고블린은 대시해도 잡을 수 있다
+                    //  고블린은 대시해도 잡을 수 있다 — 대신 그 뒤 장애물에 대시가 닿는지 본다(4.4차 리뷰 I1).
+                    var after = s;
+                    after.ObstacleIndex += 1;
+                    after.ObstacleTick = 0;
+                    return ObstaclesClearForDash(after, tick, track, barricadeOk);
                 default:
                     return CardRushRunnerSim.TryFront(s, tick, track, out int front)
                            && front - s.PosMm > CardRushRules.DashMm + ClearObstacleMarginMm;

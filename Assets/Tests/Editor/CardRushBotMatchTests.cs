@@ -39,10 +39,10 @@ namespace LOP.Tests
             float median = all.Count == 0 ? float.NaN : (all[(all.Count - 1) / 2] + all[all.Count / 2]) / 2f;
             string report = $"중앙값 {median:0.0}초, 미완주 {unfinished}/{20 * Bots}\n{perSeed}";
 
-            //  모두 2분 안 + 중앙값이 하네스 중앙(54.6초, 씨앗 200, 180 m — CardRushTuningHarness 4.3차 격자4 11-14) ± 8초 안.
+            //  모두 2분 안 + 중앙값이 하네스 중앙(40.1초, 씨앗 200, 180 m — CardRushTuningHarness 4.4차 격자5 11-15) ± 8초 안.
             //  표·봇·규칙이 바뀌어 벗어나면 하네스를 다시 돌린다.
             Assert.AreEqual(0, unfinished, report);
-            Assert.That(median, Is.InRange(46.6f, 62.6f), report);
+            Assert.That(median, Is.InRange(32.1f, 48.1f), report);
             TestContext.WriteLine(report);
         }
 

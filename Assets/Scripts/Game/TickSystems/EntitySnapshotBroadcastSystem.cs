@@ -204,7 +204,7 @@ namespace LOP
             snap.CardWhiffTick = s.WhiffTick;
             snap.CardLockTick = s.LockTick;
             snap.CardExpireTick = s.ExpireTick;
-            snap.CardJumpStartTick = s.JumpStartTick;
+            snap.CardJumpStartTick = s.RushEndTick;   // 옛 점프 칸을 골드 러시 끝 틱으로 재사용
             snap.CardShotTick = s.ShotTick;
             snap.CardShotFromMm = s.ShotFromMm;
             snap.CardRollStartTick = s.RollStartTick;

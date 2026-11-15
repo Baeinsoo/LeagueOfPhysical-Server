@@ -17,6 +17,8 @@ namespace LOP
         Barricade,
         Roller,
         Pit,
+        /// <summary>황금 고블린이 곧 나타나거나 나타나 달아나는 중 — 노랑으로 잡는다.</summary>
+        Goblin,
         /// <summary>날고 있는 투사체가 지금 장애물을 맞힐 참 — 할 일이 없다.</summary>
         ShotInFlight,
     }
@@ -48,8 +50,8 @@ namespace LOP
 
     /// <summary>
     /// 카드 러시 출시 봇(4차 spec §7) — 다음 위협에 맞는 색을 <b>잡고</b>, 쓸 때가 되면 <b>쓴다</b>. 안 맞는 카드를 쥐고 있으면 해 없는 때 써서 비운다.
-    /// 위협(가까운 순): 켜진 구역 → 파랑(바로) / 8.3 m 안 장애물 — 바리케이드 → 빨강(사거리 안), 굴러오는 것 → 빨강 먼저·늦으면 노랑(닿기 직전),
-    /// 구덩이 → 노랑(뛰는 창 가운데) / 없음 → 확률로 빈 길 대시.
+    /// 위협(가까운 순): 켜진 구역 → 파랑(바로) / 8.3 m 안 장애물 — 바리케이드 → 빨강(사거리 안), 굴러오는 것 → 빨강 먼저·늦으면 파랑(닿기 직전),
+    /// 구덩이 → 파랑(대시가 먼 가장자리 너머에 내려앉는 창 가운데), 황금 고블린 → 노랑(나타나면 바로, 반응이 빠를수록 러시가 길다) / 없음 → 확률로 빈 길 대시.
     /// 사람과 같은 입력 길로 판다. 읽는 값은 서버 월드의 권위 상태라 결정론이 필요 없다 — 난수는 봇마다 나눈 <see cref="System.Random"/>.
     /// </summary>
     public sealed class CardRushBotBrain : ICardRushBotPolicy
@@ -63,12 +65,14 @@ namespace LOP
         public const int ClearPitMarginMm = 2400;
         /// <summary>빈 길 판단: 다음 구역 시작이 대시 + 이만큼 밖이어야 한다(구역 앞에서 파랑을 써 버리지 않게).</summary>
         public const int ClearZoneMarginMm = 1000;
-        /// <summary>노랑을 버리는(뛰는) 것은 바리케이드·구덩이 앞이 이만큼 넘게 비었을 때만.</summary>
-        public const int YellowDiscardClearMm = 1000;
-        /// <summary>굴러오는 것: 닿기까지 이 틱 안이면 빨강을 기다리지 않고 노랑을 잡는다(두 장).</summary>
+        /// <summary>고블린을 미리 준비하는 거리 — 나타나는 자리(5 m)보다 3 m 앞부터 노랑을 돌려 잡아 둔다.</summary>
+        public const int GoblinPrepMm = CardRushRules.GoblinRevealMm + 3000;
+        /// <summary>대시 착지가 구덩이 먼 가장자리에서 이만큼은 넘어야 안전하다(창 가장자리 여유).</summary>
+        public const int PitLandMarginMm = 400;
+        /// <summary>굴러오는 것: 닿기까지 이 틱 안이면 빨강을 기다리지 않고 파랑을 잡는다(두 장).</summary>
         public const int RollerAltGrabTicks = 2 * CardRushRules.CardDwellTicks;
-        /// <summary>굴러오는 것을 노랑으로 넘는 때 — 닿기까지 점프 절반(20틱) 안. 공중에 있는 동안 닿아야 넘는다.</summary>
-        public const int RollerJumpLeadTicks = CardRushRules.JumpTicks / 2;
+        /// <summary>굴러오는 것을 파랑으로 넘는 때 — 닿기까지 대시 절반(7틱) 안. 대시하는 동안 닿아야 넘는다.</summary>
+        public const int RollerDashLeadTicks = CardRushRules.DashTicks / 2;
         /// <summary>빈 길 계획의 수명과 반응 — 0.8초 / 0.4초(3차 그대로).</summary>
         public const int FreePlanTicks = 40;
         public const int FreeReactTicks = 20;
@@ -159,6 +163,10 @@ namespace LOP
                 {
                     if (o.AtMm - s.PosMm <= NoticeMm) return CardRushBotThreat.Pit;
                 }
+                else if (o.Kind == CardRushObstacleKind.Goblin)
+                {
+                    if (s.ObstacleTick != 0 || o.AtMm - s.PosMm <= GoblinPrepMm) return CardRushBotThreat.Goblin;
+                }
                 else if (CardRushRunnerSim.TryFront(s, tick, track, out int front) && front - s.PosMm <= NoticeMm)
                 {
                     //  이미 던진 투사체가 닿을 곳이면 다시 빨강을 잡지 않는다(굴러오는 것은 다가오기만 하니 맞는다).
@@ -184,8 +192,11 @@ namespace LOP
                 case CardRushBotThreat.Barricade:
                     return new CardRushBotPlan(threat, key, CardColor.Red, null, ReactAt(tick), Forever);
                 case CardRushBotThreat.Roller:
-                    return new CardRushBotPlan(threat, key, CardColor.Red, CardColor.Yellow, ReactAt(tick), Forever);
+                    return new CardRushBotPlan(threat, key, CardColor.Red, CardColor.Blue, ReactAt(tick), Forever);
                 case CardRushBotThreat.Pit:
+                    return new CardRushBotPlan(threat, key, CardColor.Blue, null, ReactAt(tick), Forever);
+                case CardRushBotThreat.Goblin:
+                    //  이미 나타났으면 반응 틱만큼만 기다리고, 아직이면 미리 잡아 두고 나타나길 기다린다.
                     return new CardRushBotPlan(threat, key, CardColor.Yellow, null, ReactAt(tick), Forever);
                 case CardRushBotThreat.ShotInFlight:
                     return new CardRushBotPlan(threat, key, null, null, tick, Forever);
@@ -199,8 +210,9 @@ namespace LOP
         {
             CardRushBotThreat.Zone => held == CardColor.Blue,
             CardRushBotThreat.Barricade => held == CardColor.Red,
-            CardRushBotThreat.Roller => held == CardColor.Red || held == CardColor.Yellow,
-            CardRushBotThreat.Pit => held == CardColor.Yellow,
+            CardRushBotThreat.Roller => held == CardColor.Red || held == CardColor.Blue,
+            CardRushBotThreat.Pit => held == CardColor.Blue,
+            CardRushBotThreat.Goblin => held == CardColor.Yellow,
             _ => false,
         };
 
@@ -215,21 +227,23 @@ namespace LOP
                     return InShotRange(s, tick, track);
                 case CardRushBotThreat.Roller:
                     if (held == CardColor.Red) return InShotRange(s, tick, track);
-                    return s.ObstacleTick != 0 && TicksToRoller(s, tick, track) <= RollerJumpLeadTicks;
+                    return s.ObstacleTick != 0 && TicksToRoller(s, tick, track) <= RollerDashLeadTicks;
                 case CardRushBotThreat.Pit:
-                    return s.PosMm >= PitJumpCenter(track.Obstacles[s.ObstacleIndex]);
+                    return s.PosMm >= PitDashCenter(track.Obstacles[s.ObstacleIndex]);
+                case CardRushBotThreat.Goblin:
+                    return s.ObstacleTick != 0;   // 나타난 뒤에만 잡힌다 — 빨리 쓸수록 러시가 길다
             }
             return false;
         }
 
         /// <summary>
-        /// 구덩이를 넘는 뛰는 자리의 가운데. 이번 틱에 쓰면 40틱 뒤 지금 자리 + 3.2 m에 내려앉으니
-        /// 뛰는 자리는 (앞 가장자리 + 폭 − 3.2 m, 앞 가장자리) 안이어야 한다(4.2차 spec).
+        /// 구덩이를 대시로 넘는 시작 자리의 가운데. 이번 틱에 쓰면 DashMm 앞에 내려앉고 그 자리가 구덩이 먼 가장자리를 넘어야 하니,
+        /// 시작 자리는 (먼 가장자리 − DashMm, 앞 가장자리) 안이어야 한다 — 그 창의 가운데.
         /// </summary>
-        public static int PitJumpCenter(in CardRushObstacle pit)
+        public static int PitDashCenter(in CardRushObstacle pit)
         {
-            const int air = CardRushRules.JumpMmPerTick * CardRushRules.JumpTicks;
-            return pit.AtMm - (air - pit.WidthMm) / 2;
+            int lo = pit.AtMm + pit.WidthMm - CardRushRules.DashMm + PitLandMarginMm;
+            return (lo + pit.AtMm) / 2;
         }
 
         private static bool InShotRange(in CardRushRunnerState s, long tick, CardRushTrack track)
@@ -252,7 +266,7 @@ namespace LOP
 
         /// <summary>
         /// 안 맞는 카드를 쥐었다 — 지금 써서 비워도 해가 없나(4차 spec §7 "버리기"). 아니면 사라지길 기다린다.
-        /// 빨강은 아무 때나(헛방). 노랑은 바리케이드·구덩이 앞이 1 m 넘게 비었을 때. 파랑은 굴러오는 것·구덩이가 대시 거리 + 여유 밖이고
+        /// 빨강·노랑은 아무 때나(헛방·헛손질). 파랑은 굴러오는 것·구덩이가 대시 거리 + 여유 밖이고
         /// 곧 켜질 구역이 없을 때(구역에서 쓰려고 쥐고 있는다). 바리케이드 앞 대시는 벽에 일찍 닿을 뿐이라 해가 없다.
         /// 빈 길에서 쥔 파랑은 이 규칙으로 바로 쓴다(빈 길 대시).
         /// </summary>
@@ -261,12 +275,8 @@ namespace LOP
             switch (held)
             {
                 case CardColor.Red:
-                    return true;
                 case CardColor.Yellow:
-                    if (s.ObstacleIndex >= track.Obstacles.Count) return true;
-                    var o = track.Obstacles[s.ObstacleIndex];
-                    if (o.Kind == CardRushObstacleKind.Roller) return true;
-                    return o.AtMm - s.PosMm > YellowDiscardClearMm;
+                    return true;
                 default:
                     return ObstaclesClearForDash(s, tick, track, barricadeOk: true) && NextZoneIsFar(s, track);
             }
@@ -285,6 +295,12 @@ namespace LOP
                     return o.AtMm - s.PosMm > CardRushRules.DashMm + ClearPitMarginMm;
                 case CardRushObstacleKind.Barricade:
                     return barricadeOk || o.AtMm - s.PosMm > CardRushRules.DashMm + ClearObstacleMarginMm;
+                case CardRushObstacleKind.Goblin:
+                    //  고블린은 대시해도 잡을 수 있다 — 대신 그 뒤 장애물에 대시가 닿는지 본다(4.4차 리뷰 I1).
+                    var after = s;
+                    after.ObstacleIndex += 1;
+                    after.ObstacleTick = 0;
+                    return ObstaclesClearForDash(after, tick, track, barricadeOk);
                 default:
                     return CardRushRunnerSim.TryFront(s, tick, track, out int front)
                            && front - s.PosMm > CardRushRules.DashMm + ClearObstacleMarginMm;

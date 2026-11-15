@@ -280,5 +280,17 @@ namespace LOP.Tests
                         list.Add(new Candidate { ObstacleMin = omin, ObstacleMax = omax, PitStun = stun, BarricadeWait = wait });
             RunGrid("v4-3-grid4", list);
         }
+
+        /// <summary>
+        /// 4.4차 — 달리기가 1.25배 빨라져 장애물이 더 자주 닥친다. 장애물 간격(최소·최대)을 바꿔 속도감을 맞춘다. 구덩이 기절·바리케이드 기다림은 출시 표 그대로.
+        /// </summary>
+        [Test]
+        public void 격자5_속도감()
+        {
+            var list = new List<Candidate> { new Candidate() };
+            foreach (var (omin, omax) in new[] { (6.5f, 9.5f), (7f, 10f), (8f, 11f) })
+                list.Add(new Candidate { ObstacleMin = omin, ObstacleMax = omax });
+            RunGrid("v4-4-grid5", list);
+        }
     }
 }

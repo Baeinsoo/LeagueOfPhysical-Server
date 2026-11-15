@@ -131,72 +131,108 @@ namespace LOP.Tests
             };
 
         [Test]
-        public void 굴러오는_것은_빨강을_먼저_노리고_닿기_직전에만_노랑()
+        public void 굴러오는_것은_빨강을_먼저_노리고_닿기_직전에만_파랑()
         {
             var config = Config();
             var track = Track(new[] { new CardRushObstacle(CardRushObstacleKind.Roller, 30_000, 0) });
 
             //  닿기까지 60틱(> 두 장 46틱) — 노랑이 보여도 안 잡고, 빨강은 잡는다.
-            long ty = FirstTickShowing(new CardRushRunnerState { RollStartTick = Start }, 3000 + React, CardColor.Yellow, track);
+            long ty = FirstTickShowing(new CardRushRunnerState { RollStartTick = Start }, 3000 + React, CardColor.Blue, track);
             var brain = Brain(config);
-            Assert.IsFalse(TapsWhenShowing(brain, RollerIn(60, ty - React), ty - React, CardColor.Yellow, track, config.Tuning), "멀면 노랑을 안 잡는다");
+            Assert.IsFalse(TapsWhenShowing(brain, RollerIn(60, ty - React), ty - React, CardColor.Blue, track, config.Tuning), "멀면 파랑을 안 잡는다");
             Assert.AreEqual(CardColor.Red, brain.Plan.Want);
-            Assert.AreEqual(CardColor.Yellow, brain.Plan.Alt);
+            Assert.AreEqual(CardColor.Blue, brain.Plan.Alt);
             long tr = FirstTickShowing(new CardRushRunnerState { RollStartTick = Start }, 4000 + React, CardColor.Red, track);
             Assert.IsTrue(TapsWhenShowing(Brain(config), RollerIn(60, tr - React), tr - React, CardColor.Red, track, config.Tuning), "빨강은 잡는다");
 
-            //  닿기까지 30틱 — 노랑을 잡는다.
-            Assert.IsTrue(TapsWhenShowing(Brain(config), RollerIn(30, ty - React), ty - React, CardColor.Yellow, track, config.Tuning), "가까우면 노랑");
+            //  닿기까지 30틱 — 파랑을 잡는다.
+            Assert.IsTrue(TapsWhenShowing(Brain(config), RollerIn(30, ty - React), ty - React, CardColor.Blue, track, config.Tuning), "가까우면 파랑");
 
-            //  쥔 노랑은 닿기까지 20틱(점프 절반) 안에서만 쓴다 — 공중에 있는 동안 닿아야 넘는다.
+            //  쥔 파랑은 닿기까지 7틱(대시 절반) 안에서만 쓴다 — 대시하는 동안 닿아야 넘는다.
             const long T = 5000;
-            Assert.IsFalse(Brain(config).ShouldTap(Holding(RollerIn(21, T), CardColor.Yellow, T, track), T, Start, Lane, track, config.Tuning), "21틱");
-            Assert.IsTrue(Brain(config).ShouldTap(Holding(RollerIn(20, T), CardColor.Yellow, T, track), T, Start, Lane, track, config.Tuning), "20틱");
+            Assert.IsFalse(Brain(config).ShouldTap(Holding(RollerIn(8, T), CardColor.Blue, T, track), T, Start, Lane, track, config.Tuning), "8틱");
+            Assert.IsTrue(Brain(config).ShouldTap(Holding(RollerIn(7, T), CardColor.Blue, T, track), T, Start, Lane, track, config.Tuning), "7틱");
             //  쥔 빨강은 사거리 안이면 바로 던진다.
             Assert.IsTrue(Brain(config).ShouldTap(Holding(RollerIn(60, T), CardColor.Red, T, track), T, Start, Lane, track, config.Tuning));
         }
 
         [Test]
-        public void 쥔_노랑으로_굴러오는_것을_넘는다()
+        public void 쥔_파랑으로_굴러오는_것을_넘는다()
         {
             var config = Config();
             var track = Track(new[] { new CardRushObstacle(CardRushObstacleKind.Roller, 30_000, 0) });
             var brain = Brain(config);
             const long T = 5000;
-            var s = Holding(RollerIn(60, T), CardColor.Yellow, T, track);
+            var s = Holding(RollerIn(60, T), CardColor.Blue, T, track);
             for (long t = T; t < T + 200 && s.ObstacleIndex == 0; t++)
                 CardRushRunnerSim.Step(ref s, t, brain.ShouldTap(s, t, Start, Lane, track, config.Tuning), Start, Lane, track, config.Tuning);
 
             Assert.AreEqual(1, s.ObstacleIndex);
-            Assert.AreEqual((int)CardRushObstacleEvent.Jumped, s.ObstacleEvent, "공중에서 닿아 넘는다");
+            Assert.AreEqual((int)CardRushObstacleEvent.Jumped, s.ObstacleEvent, "대시하는 동안 닿아 넘는다");
             Assert.AreEqual(0, s.Hits);
         }
 
         [Test]
-        public void 구덩이는_노랑을_잡고_뛰는_창_가운데서_쓴다()
+        public void 구덩이는_파랑을_잡고_대시가_먼_가장자리_너머에_내리는_창_가운데서_쓴다()
         {
             var config = Config();
             var pit = new CardRushObstacle(CardRushObstacleKind.Pit, 20_000, 0, 1_200);
             var track = Track(new[] { pit });
-            int center = CardRushBotBrain.PitJumpCenter(pit);
-            Assert.AreEqual(20_000 - 1_000, center, "(앞 가장자리 + 폭 − 3.2 m, 앞 가장자리)의 가운데");
+            int center = CardRushBotBrain.PitDashCenter(pit);
+            //  시작 창: (먼 가장자리 − 대시 + 여유, 앞 가장자리) = (16400, 20000)
+            Assert.AreEqual(18_200, center);
 
             var brain = Brain(config);
-            Assert.IsTrue(TapsWhenShowing(brain, new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000 }, 3000, CardColor.Yellow, track, config.Tuning));
+            Assert.IsTrue(TapsWhenShowing(brain, new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000 }, 3000, CardColor.Blue, track, config.Tuning));
             Assert.AreEqual(CardRushBotThreat.Pit, brain.Plan.Threat);
 
             const long T = 5000;
-            Assert.IsFalse(Brain(config).ShouldTap(Holding(new CardRushRunnerState { RollStartTick = Start, PosMm = center - 1 }, CardColor.Yellow, T, track), T, Start, Lane, track, config.Tuning));
-            Assert.IsTrue(Brain(config).ShouldTap(Holding(new CardRushRunnerState { RollStartTick = Start, PosMm = center }, CardColor.Yellow, T, track), T, Start, Lane, track, config.Tuning));
+            Assert.IsFalse(Brain(config).ShouldTap(Holding(new CardRushRunnerState { RollStartTick = Start, PosMm = center - 1 }, CardColor.Blue, T, track), T, Start, Lane, track, config.Tuning));
+            Assert.IsTrue(Brain(config).ShouldTap(Holding(new CardRushRunnerState { RollStartTick = Start, PosMm = center }, CardColor.Blue, T, track), T, Start, Lane, track, config.Tuning));
 
-            //  실제로 넘는다 — 노랑을 쥔 채 달려와 창 가운데서 뛰면 Jumped, 빠지지 않는다.
-            var s = Holding(new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000 }, CardColor.Yellow, T, track);
+            //  실제로 넘는다 — 파랑을 쥔 채 달려와 창 가운데서 대시하면 빠지지 않고 구덩이 너머에 선다.
+            var s = Holding(new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000 }, CardColor.Blue, T, track);
+            var b = Brain(config);
+            bool fell = false;
+            for (long t = T; t < T + 300 && s.PosMm <= pit.AtMm + pit.WidthMm; t++)
+            {
+                CardRushRunnerSim.Step(ref s, t, b.ShouldTap(s, t, Start, Lane, track, config.Tuning), Start, Lane, track, config.Tuning);
+                if (s.ObstacleEvent == (int)CardRushObstacleEvent.Fell) fell = true;
+            }
+            Assert.IsFalse(fell, "구덩이에 빠지지 않는다");
+            Assert.Greater(s.PosMm, pit.AtMm + pit.WidthMm, "먼 가장자리 너머에 내려앉았다");
+            Assert.AreEqual(0, s.Hits);
+        }
+
+        //  황금 고블린이 나타난 상태 — 고블린 자리 20 m, 나타난 틱은 tick.
+        private static CardRushRunnerState GoblinShown(long tick)
+            => new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000, ObstacleTick = tick };
+
+        [Test]
+        public void 나타난_고블린은_노랑을_잡고_바로_쓴다()
+        {
+            var config = Config();
+            var track = Track(new[] { new CardRushObstacle(CardRushObstacleKind.Goblin, 20_000, 0) });
+
+            var brain = Brain(config);
+            long ty = FirstTickShowing(new CardRushRunnerState { RollStartTick = Start }, 3000 + React, CardColor.Yellow, track);
+            Assert.IsTrue(TapsWhenShowing(brain, GoblinShown(ty - React), ty - React, CardColor.Yellow, track, config.Tuning), "노랑을 잡는다");
+            Assert.AreEqual(CardRushBotThreat.Goblin, brain.Plan.Threat);
+
+            //  아직 안 나타났으면 쥐고 기다린다 — 나타나면 바로 쓴다.
+            const long T = 5000;
+            var hidden = new CardRushRunnerState { RollStartTick = Start, PosMm = 13_000 };
+            Assert.IsFalse(Brain(config).ShouldTap(Holding(hidden, CardColor.Yellow, T, track), T, Start, Lane, track, config.Tuning), "나타나기 전");
+            Assert.IsTrue(Brain(config).ShouldTap(Holding(GoblinShown(T), CardColor.Yellow, T, track), T, Start, Lane, track, config.Tuning), "나타난 뒤");
+
+            //  실제로 잡는다 — 노랑을 쥔 채 달려오면 Caught, 골드 러시가 켜진다.
+            var s = Holding(hidden, CardColor.Yellow, T, track);
             var b = Brain(config);
             for (long t = T; t < T + 300 && s.ObstacleIndex == 0; t++)
                 CardRushRunnerSim.Step(ref s, t, b.ShouldTap(s, t, Start, Lane, track, config.Tuning), Start, Lane, track, config.Tuning);
             Assert.AreEqual(1, s.ObstacleIndex);
-            Assert.AreEqual((int)CardRushObstacleEvent.Jumped, s.ObstacleEvent);
-            Assert.AreEqual(0, s.Hits);
+            Assert.AreEqual((int)CardRushObstacleEvent.Caught, s.ObstacleEvent);
+            Assert.Greater(s.RushEndTick, 0L, "골드 러시");
         }
 
         [Test]
@@ -211,7 +247,7 @@ namespace LOP.Tests
             var zone = Track(zones: new[] { ZoneAhead });
             Assert.IsTrue(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 10_500, ZoneTick = T - 5 }, CardColor.Red, zone), "빨강은 아무 때나");
 
-            //  굴러오는 것이 닿기 30틱 앞인데 파랑 — 대시하면 들이받는다. 사라지길 기다린다.
+            //  굴러오는 것이 닿기 30틱 앞인데 파랑 — 대시 시간이 아직 아니라 쥐고 기다린다.
             var roller = Track(new[] { new CardRushObstacle(CardRushObstacleKind.Roller, 30_000, 0) });
             Assert.IsFalse(Taps(RollerIn(30, T), CardColor.Blue, roller), "굴러오는 것 앞 파랑");
 
@@ -219,9 +255,14 @@ namespace LOP.Tests
             var barricade = Track(new[] { new CardRushObstacle(CardRushObstacleKind.Barricade, 20_000, 0) });
             Assert.IsTrue(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 18_000 }, CardColor.Blue, barricade), "바리케이드 앞 파랑");
 
-            //  바리케이드 1 m 안 노랑은 참고, 3 m 앞이면 뛰어 비운다.
-            Assert.IsFalse(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 19_200 }, CardColor.Yellow, barricade), "바리케이드 0.8 m 앞 노랑");
+            //  고블린이 없으면 노랑은 헛손질이라 아무 때나 비운다.
+            Assert.IsTrue(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 19_200 }, CardColor.Yellow, barricade), "바리케이드 앞 노랑");
             Assert.IsTrue(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 17_000 }, CardColor.Yellow, barricade), "바리케이드 3 m 앞 노랑");
+
+            //  구덩이 앞 빨강은 비우지만, 구덩이에 쓸 파랑은 창이 열릴 때까지 쥔다.
+            var pitTrack = Track(new[] { new CardRushObstacle(CardRushObstacleKind.Pit, 20_000, 0, 1_200) });
+            Assert.IsTrue(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000 }, CardColor.Red, pitTrack), "구덩이 앞 빨강");
+            Assert.IsFalse(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 15_000 }, CardColor.Blue, pitTrack), "구덩이 앞 파랑은 쥔다");
 
             //  빈 길의 파랑은 쓰지만(빈 길 대시), 곧 켜질 구역 앞이면 쥐고 기다린다.
             Assert.IsTrue(Taps(new CardRushRunnerState { RollStartTick = Start, PosMm = 1_000 }, CardColor.Blue, zone), "빈 길 파랑");
@@ -358,12 +399,6 @@ namespace LOP.Tests
                 Assert.IsFalse(brain.ShouldTap(finished, t, Start, Lane, track, tuning), "완주");
             }
             Assert.IsFalse(brain.Plan.Active, "못 쓰는 틱엔 계획을 세우지 않는다");
-
-            //  공중에서 파랑을 쥐고 있으면 쓸 수 없다 — 생각도 안 한다.
-            var airborne = Holding(inside, CardColor.Blue, 3100, track);
-            airborne.JumpStartTick = 3090;
-            Assert.IsFalse(brain.ShouldTap(airborne, 3100, Start, Lane, track, tuning), "공중 파랑");
-            Assert.IsFalse(brain.Plan.Active);
 
             //  계획이 있을 때: 그 계획이 지난 뒤라도 못 쓰는 동안엔 바꾸지 않는다.
             brain.ShouldTap(inside, 3000, Start, Lane, track, tuning);

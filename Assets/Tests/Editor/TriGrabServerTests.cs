@@ -128,6 +128,8 @@ namespace LOP.Tests
             builder.RegisterInstance(new EntitySpawner(null, registry, new FakeCreator(registry), null, null,
                 new FakePublisher<EntityCreated>(), new FakePublisher<EntityDestroyed>()));
             builder.Register<InputBufferSystem>(Lifetime.Singleton);
+            var presence = new PlayerPresence();   // 실제로는 방 스코프(RoomLifetimeScope)가 등록한다
+            builder.RegisterInstance(presence);
 
             TriGrabLifetimeScope.RegisterGame(builder, runner);
             var container = builder.Build();
@@ -141,6 +143,7 @@ namespace LOP.Tests
             var end = (System.Collections.IList)systems[typeof(LOP.Event.LOPRunner.Update.End)];
             Assert.Contains(container.Resolve<TriGrabBotSystem>(), begin, "봇 입력은 Begin — 빠지면 봇이 영영 안 움직인다");
             Assert.Contains(container.Resolve<TriGrabMatchSystem>(), end);
+            Assert.AreSame(presence, container.Resolve<TriGrabMatchSystem>().Presence, "나간 사람을 알 수 있게 주입된다");
             Assert.Contains(container.Resolve<TriGrabStateBroadcastSystem>(), end);
             Assert.Less(end.IndexOf(container.Resolve<TriGrabMatchSystem>()), end.IndexOf(container.Resolve<TriGrabStateBroadcastSystem>()),
                 "판 진행이 방송보다 먼저");
@@ -269,6 +272,29 @@ namespace LOP.Tests
             f.Registry.Get(id).Get<InputBuffer>().Current = new InputCommand { Fire = false };
             system.Tick(now + 1, 0.02f);
             Assert.AreEqual(1, f.Match.State.Hooks.Count, "Fire가 꺼지면 더 안 나간다");
+        }
+
+        [Test]
+        public void 나간_사람은_판_엔진에서_비활성이고_봇은_늘_활성()
+        {
+            var f = BuildRule(0, "u1");
+            var world = new FakeWorld(f.Registry, new GameFramework.World.WorldEventBuffer()) { GameplayStartTick = 0 };
+            var presence = new PlayerPresence();
+            presence.Begin(new[] { "u1" });
+            presence.MarkJoined("u1");
+            presence.MarkMatchStarted();
+            var system = new TriGrabMatchSystem(f.Match, f.Registry, world, f.Clock) { Presence = presence };
+            string human = f.Match.State.PlayerOrder[0];
+
+            system.Tick(0, 0.02f);
+            Assert.IsFalse(f.Match.State.Inactive.Contains(human), "양성 대조 — 들어와 있으면 활성");
+            presence.MarkLeft("u1");
+            system.Tick(1, 0.02f);
+            Assert.IsTrue(f.Match.State.Inactive.Contains(human), "나가면 비활성");
+            Assert.AreEqual(1, f.Match.State.Inactive.Count, "봇은 늘 활성");
+            presence.MarkJoined("u1");
+            system.Tick(2, 0.02f);
+            Assert.IsFalse(f.Match.State.Inactive.Contains(human), "돌아오면 다시 활성");
         }
 
         [Test]

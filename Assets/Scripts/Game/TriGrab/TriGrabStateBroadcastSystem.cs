@@ -59,8 +59,9 @@ namespace LOP
                 LiveStartTick = state.Clock.LiveStartTick,
                 FreezeTick = state.Clock.FreezeTick,
                 RoundWinnerId = state.RoundWinnerId ?? "",
-                TargetScore = TriGrabConfig.TargetScore,
                 MatchWinnerId = state.MatchWinnerId ?? "",
+                TotalRounds = state.TotalRounds,
+                RoundLimitTick = state.RoundLimitTick,
             };
             foreach (var slot in state.Slots)
             {
@@ -87,6 +88,7 @@ namespace LOP
                 {
                     EntityId = id, Score = p.Score, Mistakes = p.Mistakes,
                     ReloadUntilTick = p.ReloadUntilTick, BestRtMs = p.BestRtMs,
+                    RoundPlace = p.RoundPlace, RoundPoints = p.RoundPoints,
                 });
             }
             return m;

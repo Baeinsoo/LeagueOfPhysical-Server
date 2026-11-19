@@ -5,7 +5,7 @@ namespace LOP
 {
     /// <summary>
     /// 삼색 그랩 룰(서버). 참가자(사람 + 부족하면 봇)를 맵 자리에 세우고 판 엔진에 등록한다.
-    /// 판은 엔진이 Over가 된 뒤 여운이 지나면 끝나고, 등수는 점수 내림차순(같은 점수는 공동)이다.
+    /// 판은 엔진이 Over(5라운드 끝)가 된 뒤 여운이 지나면 끝나고, 등수는 누적 점수 내림차순(같은 점수는 공동)이다.
     /// 점수·카드는 TriGrabMatchSystem이 매 틱 굴린다.
     /// </summary>
     public class TriGrabRuleSystem : IGameRuleSystem, ISettledResults
@@ -105,7 +105,7 @@ namespace LOP
         /// <summary>사람이 둘 이상이어야 겨룬 판이다 — 혼자 봇과 한 판은 연습.</summary>
         public static bool IsPractice(int humanCount) => humanCount < 2;
 
-        /// <summary>점수 내림차순 등수. 같은 점수는 같은 등수, 다음 등수는 건너뛴다(1,1,3).</summary>
+        /// <summary>누적 점수 내림차순 등수. 같은 점수는 같은 등수, 다음 등수는 건너뛴다(1,1,3).</summary>
         public static MatchOutcome PlacementsByScore(IReadOnlyList<(string userId, int score)> scores)
         {
             var outcome = new MatchOutcome();

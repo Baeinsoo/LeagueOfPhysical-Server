@@ -62,6 +62,9 @@ namespace LOP
                 MatchWinnerId = state.MatchWinnerId ?? "",
                 TotalRounds = state.TotalRounds,
                 RoundLimitTick = state.RoundLimitTick,
+                RuleShapePlus1 = state.Rule.ShapeFilter + 1,
+                RuleNegate = state.Rule.Negate,
+                RuleDecoyInkPlus1 = state.Rule.DecoyInk + 1,
             };
             foreach (var slot in state.Slots)
             {
@@ -96,7 +99,7 @@ namespace LOP
 
         private static TriGrabCardWire CardToWire(TriGrabCard c) => new TriGrabCardWire
         {
-            Id = c.Id, Word = c.Word, Ink = c.Ink, Cycles = c.Cycles, PeriodTicks = c.PeriodTicks, T0Tick = c.T0Tick,
+            Id = c.Id, Word = c.Word, Ink = c.Ink, Shape = c.Shape, Cycles = c.Cycles, PeriodTicks = c.PeriodTicks, T0Tick = c.T0Tick,
         };
     }
 }

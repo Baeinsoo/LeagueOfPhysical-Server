@@ -314,6 +314,28 @@ namespace LOP.Tests
         // ---- 와이어 ----
 
         [Test]
+        public void ToWire_3차_모양과_주문_확장을_싣는다()
+        {
+            var state = new TriGrabMatchState
+            {
+                Phase = TriGrabPhase.Live, Round = 5, Version = 3,
+                Rule = new TriGrabRule(TriGrabRuleType.Ink, (int)TriGrabColor.Red, (int)TriGrabShape.Square, true, (int)TriGrabColor.Blue),
+            };
+            state.Slots[2].Card = new TriGrabCard { Id = 4, Word = 4, Ink = 1, Shape = (int)TriGrabShape.Triangle };
+            var w = TriGrabStateBroadcastSystem.ToWire(state);
+            Assert.AreEqual((int)TriGrabShape.Square + 1, w.RuleShapePlus1);
+            Assert.IsTrue(w.RuleNegate);
+            Assert.AreEqual((int)TriGrabColor.Blue + 1, w.RuleDecoyInkPlus1);
+            Assert.AreEqual((int)TriGrabShape.Triangle, w.Slots[2].Card.Shape);
+            Assert.AreEqual(4, w.Slots[2].Card.Word, "모양 이름 말 번호(3~5)도 그대로");
+
+            var plain = TriGrabStateBroadcastSystem.ToWire(new TriGrabMatchState { Rule = new TriGrabRule(TriGrabRuleType.Shape, 1), Version = 1 });
+            Assert.AreEqual(0, plain.RuleShapePlus1, "거르기 없음 = 0");
+            Assert.AreEqual(0, plain.RuleDecoyInkPlus1, "속임 없음 = 0");
+            Assert.IsFalse(plain.RuleNegate);
+        }
+
+        [Test]
         public void ToWire_왕복_모든_필드가_상태와_같다()
         {
             var state = new TriGrabMatchState

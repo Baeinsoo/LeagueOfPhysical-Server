@@ -12,6 +12,10 @@ namespace LOP
             builder.Register<SkydiveConfig>(c => c.Resolve<SkydiveConfigProvider>().Get(), Lifetime.Singleton);
 
             builder.Register<SkydiveMoveSystem>(Lifetime.Singleton);
+            //  몸개그 장애물(구름 쿠션·먹구름·갈매기·상승 기류) — 시제품이라 배치는 맵 씬이 아니라 공용 코드 표에서 맵 id로 고른다.
+            //  클·서가 같은 맵 id로 같은 표를 써야 예측이 권위와 갈리지 않는다.
+            builder.Register(c => StormHazardLayout.ForMap(CurrentMapId(c.Resolve<IRoomDataStore>())), Lifetime.Singleton);
+            builder.Register<StormHazardSystem>(Lifetime.Singleton);
             builder.Register<StaminaSystem>(Lifetime.Singleton);
             // 맵 씬의 WindVolume 마커가 맵 로드 시 여기에 자기를 넣는다.
             builder.Register<WindField>(Lifetime.Singleton);
@@ -47,7 +51,9 @@ namespace LOP
                 UnityEngine.LayerMask.GetMask("Default"),
                 c.Resolve<SavePadField>(),
                 c.Resolve<ObstacleField>(),
-                c.Resolve<CatchTargetField>()), Lifetime.Singleton);
+                c.Resolve<CatchTargetField>(),
+                c.Resolve<StormHazardField>(),
+                c.Resolve<StormHazardSystem>()), Lifetime.Singleton);
 
             builder.Register<ICharacterCreator, SkydivePlayerCreator>(Lifetime.Singleton);
             builder.Register<IGameRuleSystem, SkydiveRuleSystem>(Lifetime.Singleton);
@@ -119,6 +125,16 @@ namespace LOP
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(
                     container.Resolve<FinishTrackingSystem>());
             });
+        }
+
+        private static int CurrentMapId(IRoomDataStore roomDataStore)
+        {
+            var rounds = roomDataStore.match?.rounds;
+            if (rounds == null || rounds.Length == 0)
+            {
+                return 0;
+            }
+            return rounds[MatchSceneResolver.CurrentRoundIndex(rounds.Length)].mapId;
         }
     }
 }

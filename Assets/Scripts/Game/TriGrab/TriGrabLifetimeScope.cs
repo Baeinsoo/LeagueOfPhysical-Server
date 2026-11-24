@@ -8,7 +8,9 @@ namespace LOP
         protected override void ConfigureGame(IContainerBuilder builder)
         {
             builder.Register<GameFramework.World.IWorld, LOPWorld>(Lifetime.Singleton);
-            builder.Register<ICharacterCreator, CharacterCreator>(Lifetime.Singleton);
+            builder.Register<CharacterCreator>(Lifetime.Singleton);
+            builder.Register<ICharacterCreator>(c => new TriGrabCharacterCreator(
+                c.Resolve<CharacterCreator>(), c.Resolve<GameFramework.World.EntityRegistry>()), Lifetime.Singleton);
             RegisterGame(builder, runner);
         }
 
@@ -17,16 +19,19 @@ namespace LOP
         /// </summary>
         public static void RegisterGame(IContainerBuilder builder, LOPRunner runner)
         {
-            builder.Register(c => new TriGrabMatch(unchecked((int)c.Resolve<IMatchSeed>().Value)), Lifetime.Singleton);
+            builder.Register(c => new LOP.TriGrab.TriGrabMatch(unchecked((int)c.Resolve<IMatchSeed>().Value)), Lifetime.Singleton);
             builder.Register<TriGrabRunClock>(Lifetime.Singleton);
-            builder.Register(c => new TriGrabBotFill(TriGrabTestBots.ReadFillTo, TriGrabConfig.MinPlayersWithBots), Lifetime.Singleton);
+            builder.Register(c => new TriGrabBotFill(TriGrabTestBots.ReadFillTo, LOP.TriGrab.TriGrabConfig.MinPlayersWithBots), Lifetime.Singleton);
             builder.Register<IGameRuleSystem, TriGrabRuleSystem>(Lifetime.Singleton);
 
             builder.Register<TriGrabMatchSystem>(Lifetime.Singleton);
+            builder.Register(c => new TriGrabMoveGateSystem(
+                c.Resolve<GameFramework.World.EntityRegistry>(),
+                c.Resolve<LOP.TriGrab.TriGrabMatch>()), Lifetime.Singleton);
             builder.Register<TriGrabStateBroadcastSystem>(Lifetime.Singleton);
             builder.Register(c => new TriGrabBotSystem(
                 c.Resolve<GameFramework.World.EntityRegistry>(),
-                c.Resolve<TriGrabMatch>(),
+                c.Resolve<LOP.TriGrab.TriGrabMatch>(),
                 c.Resolve<InputBufferSystem>(),
                 c.Resolve<IMatchSeed>(),
                 MountedArcheryBots.IsBot), Lifetime.Singleton);
@@ -36,6 +41,8 @@ namespace LOP
             {
                 //  봇 입력은 사람 입력이 처리되기 전(Begin)에 이번 틱 번호로 넣어야 같은 틱에 쓰인다.
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.Begin>(container.Resolve<TriGrabBotSystem>());
+                //  이동 막기는 봇 입력이 들어간 뒤, 입력 확정(ServerInputSystem)보다 앞이어야 이번 틱에 먹는다.
+                runner.RegisterSystem<LOP.Event.LOPRunner.Update.Begin>(container.Resolve<TriGrabMoveGateSystem>());
                 //  순서가 뜻이다: 판 진행 → 방송.
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<TriGrabMatchSystem>());
                 runner.RegisterSystem<LOP.Event.LOPRunner.Update.End>(container.Resolve<TriGrabStateBroadcastSystem>());

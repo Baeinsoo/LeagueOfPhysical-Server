@@ -4,6 +4,7 @@ using LOP.Event.Entity;
 using MessagePipe;
 using NUnit.Framework;
 using UnityEngine;
+using Vector2 = UnityEngine.Vector2;
 using VContainer;
 
 namespace LOP.Tests
@@ -74,6 +75,20 @@ namespace LOP.Tests
             public void RemoveSessionByUserId(string userId) => throw new System.NotImplementedException();
         }
 
+        private sealed class SpeedStubCreator : ICharacterCreator
+        {
+            private readonly GameFramework.World.EntityRegistry registry;
+            public SpeedStubCreator(GameFramework.World.EntityRegistry registry) { this.registry = registry; }
+            public void Create(CharacterCreationData data)
+            {
+                var e = new GameFramework.World.Entity(data.entityId);
+                var stats = new GameFramework.World.Stats();
+                stats.BaseStats[(int)GameFramework.World.EntityStatType.MoveSpeed] = 3f;
+                e.Add(stats);
+                registry.Add(e);
+            }
+        }
+
         private readonly List<GameObject> spawned = new List<GameObject>();
 
         [TearDown]
@@ -87,7 +102,7 @@ namespace LOP.Tests
         {
             public GameFramework.World.EntityRegistry Registry = new GameFramework.World.EntityRegistry();
             public FakeCreator Creator;
-            public TriGrabMatch Match = new TriGrabMatch(1);
+            public LOP.TriGrab.TriGrabMatch Match = new LOP.TriGrab.TriGrabMatch(1);
             public TriGrabRunClock Clock = new TriGrabRunClock();
             public TriGrabRuleSystem Rule;
         }
@@ -100,7 +115,7 @@ namespace LOP.Tests
                 new FakePublisher<EntityCreated>(), new FakePublisher<EntityDestroyed>());
             var store = new FakeRoomDataStore { match = new Match { playerList = humans } };
             f.Rule = new TriGrabRuleSystem(store, spawner, f.Match, f.Clock,
-                new TriGrabBotFill(() => fillSwitch, TriGrabConfig.MinPlayersWithBots));
+                new TriGrabBotFill(() => fillSwitch, LOP.TriGrab.TriGrabConfig.MinPlayersWithBots));
             f.Rule.Initialize();
             return f;
         }
@@ -135,7 +150,7 @@ namespace LOP.Tests
             var container = builder.Build();
 
             Assert.IsInstanceOf<TriGrabRuleSystem>(container.Resolve<IGameRuleSystem>());
-            Assert.AreSame(container.Resolve<TriGrabMatch>(), container.Resolve<TriGrabMatch>());
+            Assert.AreSame(container.Resolve<LOP.TriGrab.TriGrabMatch>(), container.Resolve<LOP.TriGrab.TriGrabMatch>());
 
             var systems = (System.Collections.IDictionary)typeof(GameFramework.Runner.RunnerBase)
                 .GetField("_tickSystems", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(runner);
@@ -144,6 +159,9 @@ namespace LOP.Tests
             Assert.Contains(container.Resolve<TriGrabBotSystem>(), begin, "봇 입력은 Begin — 빠지면 봇이 영영 안 움직인다");
             Assert.Contains(container.Resolve<TriGrabMatchSystem>(), end);
             Assert.AreSame(presence, container.Resolve<TriGrabMatchSystem>().Presence, "나간 사람을 알 수 있게 주입된다");
+            Assert.Contains(container.Resolve<TriGrabMoveGateSystem>(), begin, "이동 막기는 Begin — 입력 확정 앞");
+            Assert.Less(begin.IndexOf(container.Resolve<TriGrabBotSystem>()), begin.IndexOf(container.Resolve<TriGrabMoveGateSystem>()),
+                "봇 입력이 들어간 뒤에 막는다");
             Assert.Contains(container.Resolve<TriGrabStateBroadcastSystem>(), end);
             Assert.Less(end.IndexOf(container.Resolve<TriGrabMatchSystem>()), end.IndexOf(container.Resolve<TriGrabStateBroadcastSystem>()),
                 "판 진행이 방송보다 먼저");
@@ -154,7 +172,7 @@ namespace LOP.Tests
         [Test]
         public void 봇_채우기는_최소_4명까지_스위치는_8까지()
         {
-            var fill = new TriGrabBotFill(() => 0, TriGrabConfig.MinPlayersWithBots);
+            var fill = new TriGrabBotFill(() => 0, LOP.TriGrab.TriGrabConfig.MinPlayersWithBots);
             Assert.AreEqual(3, fill.BotsToAdd(1));
             Assert.AreEqual(0, fill.BotsToAdd(4));
             Assert.AreEqual(0, fill.BotsToAdd(6), "사람이 더 많으면 안 채운다");
@@ -189,35 +207,22 @@ namespace LOP.Tests
         // ---- 등수 · 끝 ----
 
         [Test]
-        public void 점수_내림차순_등수_같은_점수는_공동이고_다음은_건너뛴다()
-        {
-            var o = TriGrabRuleSystem.PlacementsByScore(new List<(string, int)> { ("a", 2), ("b", 5), ("c", 2), ("d", 0) });
-            int Rank(string u) { foreach (var p in o.placements) if (p.userId == u) return p.placement; return -1; }
-            Assert.AreEqual(1, Rank("b"));
-            Assert.AreEqual(2, Rank("a"));
-            Assert.AreEqual(2, Rank("c"));
-            Assert.AreEqual(4, Rank("d"));
-        }
-
-        [Test]
-        public void 결과는_엔진_누적_점수로_매기고_사람_하나면_연습이다()
+        public void Placements_ReportedToResult()
         {
             var f = BuildRule(0, "u1");
             var ids = f.Match.State.PlayerOrder;
-            // 누적 점수(5라운드 합). 이번 라운드 점수(RoundPoints)는 등수에 안 쓴다.
-            f.Match.State.Players[ids[0]].Score = 27;
-            f.Match.State.Players[ids[1]].Score = 38;
-            f.Match.State.Players[ids[2]].Score = 27;
-            f.Match.State.Players[ids[3]].Score = 9;
-            f.Match.State.Players[ids[3]].RoundPoints = 10;
+            f.Match.State.Players[ids[0]].Score = 3;
+            f.Match.State.Players[ids[1]].Score = 5;
+            f.Match.State.Players[ids[2]].Score = 3;
+            f.Match.State.Players[ids[3]].Score = -1;
             var outcome = f.Rule.ResolveOutcome();
-            Assert.IsTrue(outcome.practice);
+            Assert.IsTrue(outcome.practice, "사람 하나면 연습");
             Assert.AreEqual(4, outcome.placements.Count);
             var byUser = new Dictionary<string, int>();
             foreach (var p in outcome.placements) byUser[p.userId] = p.placement;
-            Assert.AreEqual(1, byUser[MountedArcheryBots.UserIdFor(1)], "두 번째 몸(봇 1)이 38점");
+            Assert.AreEqual(1, byUser[MountedArcheryBots.UserIdFor(1)], "두 번째 몸(봇 1)이 5점");
             Assert.AreEqual(2, byUser["u1"]);
-            Assert.AreEqual(2, byUser[MountedArcheryBots.UserIdFor(2)], "같은 누적 점수는 공동");
+            Assert.AreEqual(2, byUser[MountedArcheryBots.UserIdFor(2)], "같은 점수는 공동");
             Assert.AreEqual(4, byUser[MountedArcheryBots.UserIdFor(3)], "공동 2위 다음은 4위");
             Assert.IsFalse(TriGrabRuleSystem.IsPractice(2));
         }
@@ -226,17 +231,17 @@ namespace LOP.Tests
         public void 끝은_Over가_되고_여운_150틱이_지난_뒤()
         {
             Assert.IsFalse(TriGrabRuleSystem.MatchOver(-1, 9999), "Over가 아직");
-            Assert.IsFalse(TriGrabRuleSystem.MatchOver(1000, 1000 + TriGrabConfig.EndGraceTicks - 1));
-            Assert.IsTrue(TriGrabRuleSystem.MatchOver(1000, 1000 + TriGrabConfig.EndGraceTicks));
+            Assert.IsFalse(TriGrabRuleSystem.MatchOver(1000, 1000 + LOP.TriGrab.TriGrabConfig.EndGraceTicks - 1));
+            Assert.IsTrue(TriGrabRuleSystem.MatchOver(1000, 1000 + LOP.TriGrab.TriGrabConfig.EndGraceTicks));
 
             var f = BuildRule(0, "u1");
             f.Clock.LastTick = 5000;
             Assert.IsFalse(f.Rule.IsMatchOver);
             f.Clock.OverSinceTick = 4000;
             Assert.IsTrue(f.Rule.IsMatchOver);
-            Assert.Greater(f.Rule.MatchDurationTicks, TriGrabConfig.MatchCapTicks, "러너 상한은 엔진 상한보다 길다");
-            long fiveFullRounds = TriGrabConfig.TotalRounds * (TriGrabConfig.PrepTicks + TriGrabConfig.RoundLimitTicks + TriGrabConfig.ResolvedTicks);
-            Assert.Greater(TriGrabConfig.MatchCapTicks, fiveFullRounds, "다섯 라운드가 모두 시간 상한까지 가도 엔진 상한 안");
+            Assert.Greater(f.Rule.MatchDurationTicks, LOP.TriGrab.TriGrabConfig.MatchCapTicks, "러너 상한은 엔진 상한보다 길다");
+            long fullRounds = LOP.TriGrab.TriGrabConfig.TotalRounds * (LOP.TriGrab.TriGrabConfig.AskTicks + LOP.TriGrab.TriGrabConfig.LiveLimitTicks + LOP.TriGrab.TriGrabConfig.ResolvedTicks);
+            Assert.Greater(LOP.TriGrab.TriGrabConfig.MatchCapTicks, fullRounds, "모든 라운드가 시간 상한까지 가도 엔진 상한 안");
         }
 
         // ---- 판 진행 ----
@@ -254,24 +259,102 @@ namespace LOP.Tests
             var system = new TriGrabMatchSystem(f.Match, f.Registry, world, f.Clock);
 
             Step(system, 0, 10);
-            Assert.AreEqual(TriGrabPhase.Waiting, f.Match.State.Phase, "GameplayStartTick 전");
+            Assert.AreEqual(LOP.TriGrab.TriGrabPhase.Waiting, f.Match.State.Phase, "GameplayStartTick 전");
 
             world.GameplayStartTick = 20;
-            Step(system, 11, 20 + TriGrabConfig.PrepTicks + 2);
-            Assert.AreEqual(TriGrabPhase.Live, f.Match.State.Phase);
+            Step(system, 11, 20 + LOP.TriGrab.TriGrabConfig.AskTicks + 2);
+            Assert.AreEqual(LOP.TriGrab.TriGrabPhase.Live, f.Match.State.Phase);
 
             string id = f.Match.State.PlayerOrder[0];
-            long now = 20 + TriGrabConfig.PrepTicks + 3;
+            long now = 20 + LOP.TriGrab.TriGrabConfig.AskTicks + 3;
             Assert.AreEqual(0, f.Match.State.Hooks.Count);
             f.Registry.Get(id).Get<InputBuffer>().Current = new InputCommand { Fire = true, AimYaw = 90f };
             system.Tick(now, 0.02f);
             Assert.AreEqual(1, f.Match.State.Hooks.Count, "Fire가 켜진 틱에 갈고리가 나간다");
-            Assert.AreEqual(id, f.Match.State.Hooks[0].OwnerId);
-            Assert.AreEqual(1f, f.Match.State.Hooks[0].Dir.x, 0.01f, "yaw 90도 = +x");
+            Assert.AreEqual(id, f.Match.State.Hooks[0].Owner);
+            Assert.AreEqual(1f, f.Match.State.Hooks[0].Dir.X, 0.01f, "yaw 90도 = +x");
 
             f.Registry.Get(id).Get<InputBuffer>().Current = new InputCommand { Fire = false };
             system.Tick(now + 1, 0.02f);
             Assert.AreEqual(1, f.Match.State.Hooks.Count, "Fire가 꺼지면 더 안 나간다");
+        }
+
+        [Test]
+        public void FireInput_StartsHook()
+        {
+            var f = BuildRule(0, "u1");
+            var world = new FakeWorld(f.Registry, new GameFramework.World.WorldEventBuffer()) { GameplayStartTick = 0 };
+            var system = new TriGrabMatchSystem(f.Match, f.Registry, world, f.Clock);
+            Step(system, 0, LOP.TriGrab.TriGrabConfig.AskTicks + 2);
+            string id = f.Match.State.PlayerOrder[0];
+            long now = LOP.TriGrab.TriGrabConfig.AskTicks + 3;
+            f.Registry.Get(id).Get<InputBuffer>().Current = new InputCommand { Fire = true, AimYaw = 0f };
+            system.Tick(now, 0.02f);
+            var hook = f.Match.HookOf(id);
+            Assert.IsNotNull(hook);
+            var body = f.Registry.Get(id).Get<GameFramework.World.Transform>().Position;
+            Assert.AreEqual(body.X, hook.Origin.X, 0.01f, "몸 자리에서 나간다");
+            Assert.AreEqual(body.Z, hook.Origin.Y, 0.01f);
+            Assert.IsNull(f.Match.HookOf(f.Match.State.PlayerOrder[1]), "쏘지 않은 사람은 손이 없다");
+        }
+
+        [Test]
+        public void HookOut_ZeroesMovement()
+        {
+            var f = BuildRule(0, "u1");
+            var world = new FakeWorld(f.Registry, new GameFramework.World.WorldEventBuffer()) { GameplayStartTick = 0 };
+            var system = new TriGrabMatchSystem(f.Match, f.Registry, world, f.Clock);
+            var gate = new TriGrabMoveGateSystem(f.Registry, f.Match);
+            var inputs = new InputBufferSystem();
+            Step(system, 0, LOP.TriGrab.TriGrabConfig.AskTicks + 2);
+            string a = f.Match.State.PlayerOrder[0], b = f.Match.State.PlayerOrder[1];
+            long now = LOP.TriGrab.TriGrabConfig.AskTicks + 3;
+
+            f.Registry.Get(a).Get<InputBuffer>().Current = new InputCommand { Fire = true };
+            system.Tick(now, 0.02f);
+            Assert.IsNotNull(f.Match.HookOf(a), "전제: 손이 나갔다");
+
+            long next = now + 1;
+            inputs.Enqueue(f.Registry.Get(a).Get<InputBuffer>(), next, new InputCommand { SequenceNumber = 1, Horizontal = 1f, Vertical = 1f });
+            inputs.Enqueue(f.Registry.Get(b).Get<InputBuffer>(), next, new InputCommand { SequenceNumber = 1, Horizontal = 1f, Vertical = 1f });
+            gate.Tick(next, 0.02f);
+            var ca = inputs.Consume(f.Registry.Get(a).Get<InputBuffer>(), next);
+            var cb = inputs.Consume(f.Registry.Get(b).Get<InputBuffer>(), next);
+            Assert.AreEqual(0f, ca.Horizontal); Assert.AreEqual(0f, ca.Vertical);
+            Assert.AreEqual(1f, cb.Horizontal, "양성 대조 — 손이 없는 사람은 그대로");
+            Assert.AreEqual(1f, cb.Vertical);
+        }
+
+        [Test]
+        public void Stunned_ZeroesMovementAndKeepsFire()
+        {
+            var f = BuildRule(0, "u1");
+            var gate = new TriGrabMoveGateSystem(f.Registry, f.Match);
+            var inputs = new InputBufferSystem();
+            string a = f.Match.State.PlayerOrder[0];
+            f.Match.State.Players[a].StunUntilTick = 100;
+            var buffer = f.Registry.Get(a).Get<InputBuffer>();
+            inputs.Enqueue(buffer, 50, new InputCommand { SequenceNumber = 1, Horizontal = 1f, Fire = true, AimYaw = 30f });
+            gate.Tick(50, 0.02f);
+            var c = inputs.Consume(buffer, 50);
+            Assert.AreEqual(0f, c.Horizontal);
+            Assert.IsTrue(c.Fire);
+            Assert.AreEqual(30f, c.AimYaw);
+
+            inputs.Enqueue(buffer, 100, new InputCommand { SequenceNumber = 2, Horizontal = 1f });
+            gate.Tick(100, 0.02f);
+            Assert.AreEqual(1f, inputs.Consume(buffer, 100).Horizontal, "기절이 끝난 틱엔 걷는다");
+        }
+
+        [Test]
+        public void CharacterCreator_SetsTriGrabWalkSpeed()
+        {
+            var registry = new GameFramework.World.EntityRegistry();
+            var inner = new SpeedStubCreator(registry);
+            var creator = new TriGrabCharacterCreator(inner, registry);
+            creator.Create(new CharacterCreationData { entityId = "e1", userId = "u" });
+            var stats = registry.Get("e1").Get<GameFramework.World.Stats>();
+            Assert.AreEqual(7f, stats.BaseStats[(int)GameFramework.World.EntityStatType.MoveSpeed]);
         }
 
         [Test]
@@ -305,106 +388,27 @@ namespace LOP.Tests
             var system = new TriGrabMatchSystem(f.Match, f.Registry, world, f.Clock);
             system.Tick(0, 0.02f);
             Assert.AreEqual(-1, f.Clock.OverSinceTick);
-            system.Tick(TriGrabConfig.MatchCapTicks, 0.02f);
-            Assert.AreEqual(TriGrabPhase.Over, f.Match.State.Phase);
-            Assert.AreEqual(TriGrabConfig.MatchCapTicks, f.Clock.OverSinceTick);
-            Assert.AreEqual(TriGrabConfig.MatchCapTicks, f.Clock.LastTick);
-        }
-
-        // ---- 와이어 ----
-
-        [Test]
-        public void ToWire_왕복_모든_필드가_상태와_같다()
-        {
-            var state = new TriGrabMatchState
+            long overTick = -1;
+            for (long t = 1; t <= LOP.TriGrab.TriGrabConfig.MatchCapTicks; t++)
             {
-                Phase = TriGrabPhase.Live, PhaseEndTick = 900, Round = 3,
-                Rule = new TriGrabRule(TriGrabRuleType.Word, (int)TriGrabColor.Blue),
-                Clock = new TriGrabRoundClock { BaseAngle0 = 1.5f, Omega = 0.6f, LiveStartTick = 400, FreezeTick = long.MaxValue },
-                RoundWinnerId = "p2", MatchWinnerId = "", Version = 9,
-                RoundLimitTick = 1400,
-            };
-            state.Slots[0].Card = new TriGrabCard { Id = 7, Word = 1, Ink = 2, Cycles = true, PeriodTicks = 30, T0Tick = 400 };
-            state.Slots[0].EmptyUntilTick = 0;
-            state.Slots[3].EmptyUntilTick = 555;   // 빈 슬롯
-            state.Hooks.Add(new TriGrabHook
-            {
-                OwnerId = "p1", FireTick = 410, Origin = new Vector2(1, 2), Dir = new Vector2(0, 1),
-                TurnTick = 428, TurnLength = 9f, Result = TriGrabHookResult.Correct, EndTick = 470,
-                Carried = new TriGrabCard { Id = 8, Word = 0, Ink = 0, Cycles = false, PeriodTicks = 0, T0Tick = 400 },
-            });
-            state.Hooks.Add(new TriGrabHook { OwnerId = "p2", FireTick = 420, Dir = new Vector2(1, 0), Result = TriGrabHookResult.None });
-            foreach (var id in new[] { "p2", "p1" })
-            {
-                state.PlayerOrder.Add(id);
-                state.Players[id] = new TriGrabPlayerScore
-                {
-                    Score = id == "p1" ? 2 : 4, Mistakes = 1, ReloadUntilTick = 77, BestRtMs = 480,
-                    RoundPlace = id == "p1" ? 0 : 2, RoundPoints = id == "p1" ? 0 : 9,
-                };
+                system.Tick(t, 0.02f);
+                if (f.Match.State.Phase == LOP.TriGrab.TriGrabPhase.Over) { overTick = t; break; }
             }
-
-            var w = TriGrabStateBroadcastSystem.ToWire(state);
-            Assert.AreEqual(9, w.Version);
-            Assert.AreEqual((int)TriGrabPhase.Live, w.Phase);
-            Assert.AreEqual(900L, w.PhaseEndTick);
-            Assert.AreEqual(3, w.Round);
-            Assert.AreEqual((int)TriGrabRuleType.Word, w.RuleType);
-            Assert.AreEqual((int)TriGrabColor.Blue, w.RuleColor);
-            Assert.AreEqual(1.5f, w.BaseAngle0);
-            Assert.AreEqual(0.6f, w.Omega);
-            Assert.AreEqual(400L, w.LiveStartTick);
-            Assert.AreEqual(long.MaxValue, w.FreezeTick);
-            Assert.AreEqual("p2", w.RoundWinnerId);
-            Assert.AreEqual("", w.MatchWinnerId);
-            Assert.AreEqual(TriGrabConfig.TotalRounds, w.TotalRounds);
-            Assert.AreEqual(5, w.TotalRounds);
-            Assert.AreEqual(1400L, w.RoundLimitTick);
-            Assert.AreEqual(0, w.TargetScore, "목표 점수는 2차부터 안 쓴다");
-
-            Assert.AreEqual(TriGrabConfig.Slots, w.Slots.Count);
-            Assert.AreEqual(7, w.Slots[0].Card.Id);
-            Assert.AreEqual(1, w.Slots[0].Card.Word);
-            Assert.AreEqual(2, w.Slots[0].Card.Ink);
-            Assert.IsTrue(w.Slots[0].Card.Cycles);
-            Assert.AreEqual(30, w.Slots[0].Card.PeriodTicks);
-            Assert.AreEqual(400L, w.Slots[0].Card.T0Tick);
-            Assert.IsNull(w.Slots[3].Card, "빈 슬롯 = 카드 없음");
-            Assert.AreEqual(555L, w.Slots[3].EmptyUntilTick);
-
-            Assert.AreEqual(2, w.Hooks.Count);
-            var h = w.Hooks[0];
-            Assert.AreEqual("p1", h.OwnerId);
-            Assert.AreEqual(410L, h.FireTick);
-            Assert.AreEqual(1f, h.OriginX); Assert.AreEqual(2f, h.OriginZ);
-            Assert.AreEqual(0f, h.DirX); Assert.AreEqual(1f, h.DirZ);
-            Assert.AreEqual(428L, h.TurnTick);
-            Assert.AreEqual(9f, h.TurnLength);
-            Assert.AreEqual((int)TriGrabHookResult.Correct, h.Result);
-            Assert.AreEqual(470L, h.EndTick);
-            Assert.AreEqual(8, h.Carried.Id);
-            Assert.IsNull(w.Hooks[1].Carried);
-
-            Assert.AreEqual(2, w.Players.Count);
-            Assert.AreEqual("p2", w.Players[0].EntityId, "등록 순서 그대로");
-            Assert.AreEqual(4, w.Players[0].Score);
-            Assert.AreEqual(1, w.Players[0].Mistakes);
-            Assert.AreEqual(77L, w.Players[0].ReloadUntilTick);
-            Assert.AreEqual(480, w.Players[0].BestRtMs);
-            Assert.AreEqual(2, w.Players[0].RoundPlace);
-            Assert.AreEqual(9, w.Players[0].RoundPoints);
-            Assert.AreEqual(2, w.Players[1].Score);
-            Assert.AreEqual(0, w.Players[1].RoundPlace, "아직 못 냄");
-            Assert.AreEqual(0, w.Players[1].RoundPoints);
+            Assert.Greater(overTick, 0, "엔진 상한 안에 Over가 된다");
+            Assert.AreEqual(overTick, f.Clock.OverSinceTick);
+            Assert.AreEqual(overTick, f.Clock.LastTick);
         }
+
+        // ---- 방송 ----
 
         [Test]
         public void 방송은_판본이_바뀔_때만_한_번씩_다시_연결된_세션은_다시_받는다()
         {
-            var match = new TriGrabMatch(1);
+            var match = new LOP.TriGrab.TriGrabMatch(1);
             var s = new FakeSession { sessionId = "s1" };
             var sessions = new FakeSessions(); sessions.All.Add(s);
             var system = new TriGrabStateBroadcastSystem(match, sessions);
+            int States() { int n = 0; foreach (var m in s.Sent) if (m is TriGrabRingStateToC) n++; return n; }
 
             system.Tick(1, 0.02f);
             Assert.AreEqual(0, s.Sent.Count, "판본 0은 안 보낸다");
@@ -412,17 +416,65 @@ namespace LOP.Tests
             match.State.Version++;
             system.Tick(2, 0.02f);
             system.Tick(3, 0.02f);
-            Assert.AreEqual(1, s.Sent.Count);
+            Assert.AreEqual(1, States());
 
             match.State.Version++;
             system.Tick(4, 0.02f);
-            Assert.AreEqual(2, s.Sent.Count);
+            Assert.AreEqual(2, States());
 
             s.isConnected = false;
             system.Tick(5, 0.02f);
             s.isConnected = true;
             system.Tick(6, 0.02f);
-            Assert.AreEqual(3, s.Sent.Count, "끊겼다 돌아오면 같은 판본도 다시");
+            Assert.AreEqual(3, States(), "끊겼다 돌아오면 같은 판본도 다시");
+        }
+
+        private sealed class ReliableSession : GameFramework.ISession
+        {
+            public string sessionId { get; set; } = "s";
+            public string userId { get; set; }
+            public bool isConnected { get; set; } = true;
+            public readonly List<(GameFramework.IMessage msg, bool reliable)> Sent = new List<(GameFramework.IMessage, bool)>();
+            public void Send<T>(T message, bool reliable = true) where T : GameFramework.IMessage => Sent.Add((message, reliable));
+            public GameFramework.IMessage Receive() => null;
+            public void Dispose() { }
+        }
+
+        [Test]
+        public void Broadcast_SendsCardsEveryTwoTicksDuringLive()
+        {
+            var f = BuildRule(0, "u1");
+            var world = new FakeWorld(f.Registry, new GameFramework.World.WorldEventBuffer()) { GameplayStartTick = 0 };
+            var matchSystem = new TriGrabMatchSystem(f.Match, f.Registry, world, f.Clock);
+            var session = new ReliableSession();
+            var sessions = new FakeSessions(); sessions.All.Add(session);
+            var broadcast = new TriGrabStateBroadcastSystem(f.Match, sessions);
+
+            long t = 0;
+            for (; f.Match.State.Phase != LOP.TriGrab.TriGrabPhase.Live && t < 500; t++)
+            {
+                matchSystem.Tick(t, 0.02f);
+                broadcast.Tick(t, 0.02f);
+            }
+            Assert.AreEqual(LOP.TriGrab.TriGrabPhase.Live, f.Match.State.Phase);
+            foreach (var (m, _) in session.Sent) Assert.IsNotInstanceOf<TriGrabCardsToC>(m, "Live 전엔 카드 자리를 안 보낸다");
+            var stateMsg = session.Sent.Find(x => x.msg is TriGrabRingStateToC);
+            Assert.IsTrue(stateMsg.reliable, "상태는 신뢰 전송");
+
+            session.Sent.Clear();
+            long start = t;
+            for (; t < start + 10; t++)
+            {
+                matchSystem.Tick(t, 0.02f);
+                broadcast.Tick(t, 0.02f);
+            }
+            var cards = session.Sent.FindAll(x => x.msg is TriGrabCardsToC);
+            Assert.AreEqual(5, cards.Count, "10틱 동안 짝수 틱마다");
+            foreach (var (m, reliable) in cards)
+            {
+                Assert.IsFalse(reliable, "카드 자리는 비신뢰");
+                Assert.AreEqual(0, ((TriGrabCardsToC)m).Tick % 2);
+            }
         }
 
         // ---- 봇 ----
@@ -436,8 +488,8 @@ namespace LOP.Tests
             var bots = new TriGrabBotSystem(f.Registry, f.Match, new InputBufferSystem(), new Seed(), MountedArcheryBots.IsBot);
 
             long t = 0;
-            for (; t <= TriGrabConfig.PrepTicks + 5; t++) matchSystem.Tick(t, 0.02f);
-            Assert.AreEqual(TriGrabPhase.Live, f.Match.State.Phase);
+            for (; t <= LOP.TriGrab.TriGrabConfig.AskTicks + 5; t++) matchSystem.Tick(t, 0.02f);
+            Assert.AreEqual(LOP.TriGrab.TriGrabPhase.Live, f.Match.State.Phase);
 
             bots.Tick(t, 0.02f);
             var order = f.Match.State.PlayerOrder;

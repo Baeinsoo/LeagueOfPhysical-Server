@@ -5,7 +5,7 @@ namespace LOP
 {
     /// <summary>
     /// 삼색 그랩 룰(서버). 참가자(사람 + 부족하면 봇)를 맵 자리에 세우고 판 엔진에 등록한다.
-    /// 판은 엔진이 Over(5라운드 끝)가 된 뒤 여운이 지나면 끝나고, 등수는 누적 점수 내림차순(같은 점수는 공동)이다.
+    /// 판은 엔진이 Over(라운드가 다 끝남)가 된 뒤 여운이 지나면 끝나고, 등수는 엔진의 Placements(점수 내림차순, 같은 점수는 공동)다.
     /// 점수·카드는 TriGrabMatchSystem이 매 틱 굴린다.
     /// </summary>
     public class TriGrabRuleSystem : IGameRuleSystem, ISettledResults
@@ -18,13 +18,13 @@ namespace LOP
 
         private readonly IRoomDataStore roomDataStore;
         private readonly EntitySpawner entitySpawner;
-        private readonly TriGrabMatch match;
+        private readonly LOP.TriGrab.TriGrabMatch match;
         private readonly TriGrabRunClock clock;
         private readonly TriGrabBotFill botFill;
         private readonly Dictionary<string, string> entityIdToUserId = new Dictionary<string, string>();
         private int humanCount;
 
-        public TriGrabRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, TriGrabMatch match,
+        public TriGrabRuleSystem(IRoomDataStore roomDataStore, EntitySpawner entitySpawner, LOP.TriGrab.TriGrabMatch match,
                                  TriGrabRunClock clock, TriGrabBotFill botFill = null)
         {
             this.roomDataStore = roomDataStore;
@@ -98,39 +98,23 @@ namespace LOP
         public bool IsMatchOver => MatchOver(clock.OverSinceTick, clock.LastTick);
 
         public static bool MatchOver(long overSinceTick, long now) =>
-            overSinceTick >= 0 && now - overSinceTick >= TriGrabConfig.EndGraceTicks;
+            overSinceTick >= 0 && now - overSinceTick >= LOP.TriGrab.TriGrabConfig.EndGraceTicks;
 
-        public long MatchDurationTicks => TriGrabConfig.MatchCapTicks + MatchDurationPaddingTicks;
+        public long MatchDurationTicks => LOP.TriGrab.TriGrabConfig.MatchCapTicks + MatchDurationPaddingTicks;
 
         /// <summary>사람이 둘 이상이어야 겨룬 판이다 — 혼자 봇과 한 판은 연습.</summary>
         public static bool IsPractice(int humanCount) => humanCount < 2;
 
-        /// <summary>누적 점수 내림차순 등수. 같은 점수는 같은 등수, 다음 등수는 건너뛴다(1,1,3).</summary>
-        public static MatchOutcome PlacementsByScore(IReadOnlyList<(string userId, int score)> scores)
-        {
-            var outcome = new MatchOutcome();
-            var sorted = new List<(string userId, int score)>(scores);
-            sorted.Sort((a, b) => b.score.CompareTo(a.score));
-            int rank = 0;
-            for (int i = 0; i < sorted.Count; i++)
-            {
-                if (i == 0 || sorted[i].score != sorted[i - 1].score) rank = i + 1;
-                outcome.placements.Add(new MatchPlacement { userId = sorted[i].userId, placement = rank });
-            }
-            return outcome;
-        }
-
         public MatchOutcome ResolveOutcome()
         {
-            var scores = new List<(string userId, int score)>();
-            foreach (var entityId in match.State.PlayerOrder)
+            var outcome = new MatchOutcome();
+            foreach (var (entityId, place) in match.Placements())
             {
-                if (entityIdToUserId.TryGetValue(entityId, out var user) && match.State.Players.TryGetValue(entityId, out var p))
+                if (entityIdToUserId.TryGetValue(entityId, out var user))
                 {
-                    scores.Add((user, p.Score));
+                    outcome.placements.Add(new MatchPlacement { userId = user, placement = place });
                 }
             }
-            var outcome = PlacementsByScore(scores);
             outcome.practice = IsPractice(humanCount);
             return outcome;
         }

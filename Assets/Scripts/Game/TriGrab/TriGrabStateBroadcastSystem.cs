@@ -3,17 +3,20 @@ using System.Collections.Generic;
 namespace LOP
 {
     /// <summary>
-    /// 삼색 그랩 상태 방송(서버 End 페이즈, 맨 마지막). 판본이 바뀌면 모든 세션에 한 번씩 보낸다.
+    /// 삼색 그랩 상태 방송(서버 End 페이즈, 맨 마지막).
+    /// 상태(<c>TriGrabRingStateToC</c>)는 판본이 바뀔 때 모든 세션에 신뢰 전송으로 한 번씩 보낸다 — 연출 사건(fx)은 틱마다
+    /// 비워지므로 판엔진이 굴러간 바로 이 틱에 만들어 보내야 한 번씩만 나간다.
     /// 끊긴 세션은 받은 목록에서 지워 두어, 다시 연결되면 지금 상태를 한 번 더 받는다(DodgeStateBroadcastSystem과 같다).
+    /// 카드 자리(<c>TriGrabCardsToC</c>)는 Live 중 짝수 틱마다 비신뢰로 보낸다(Resolved·Prep엔 카드가 안 움직인다).
     /// </summary>
     public sealed class TriGrabStateBroadcastSystem : GameFramework.Runner.ITickSystem
     {
-        private readonly TriGrabMatch match;
+        private readonly LOP.TriGrab.TriGrabMatch match;
         private readonly GameFramework.ISessionManager sessionManager;
         private readonly HashSet<string> receivedSessionIds = new HashSet<string>();
         private int sentVersion;
 
-        public TriGrabStateBroadcastSystem(TriGrabMatch match, GameFramework.ISessionManager sessionManager)
+        public TriGrabStateBroadcastSystem(LOP.TriGrab.TriGrabMatch match, GameFramework.ISessionManager sessionManager)
         {
             this.match = match;
             this.sessionManager = sessionManager;
@@ -29,7 +32,9 @@ namespace LOP
                 receivedSessionIds.Clear();
             }
 
-            TriGrabStateToC message = null;
+            bool sendCards = state.Phase == LOP.TriGrab.TriGrabPhase.Live && tick % 2 == 0;
+            TriGrabRingStateToC stateMessage = null;
+            TriGrabCardsToC cardsMessage = null;
             foreach (var session in sessionManager.GetAllSessions())
             {
                 if (session.isConnected == false)
@@ -37,66 +42,18 @@ namespace LOP
                     receivedSessionIds.Remove(session.sessionId);
                     continue;
                 }
-                if (receivedSessionIds.Contains(session.sessionId)) continue;
-                message ??= ToWire(state);
-                session.Send(message);
-                receivedSessionIds.Add(session.sessionId);
+                if (receivedSessionIds.Contains(session.sessionId) == false)
+                {
+                    stateMessage ??= LOP.TriGrab.TriGrabWire.ToWire(match, tick);
+                    session.Send(stateMessage);
+                    receivedSessionIds.Add(session.sessionId);
+                }
+                if (sendCards)
+                {
+                    cardsMessage ??= LOP.TriGrab.TriGrabWire.CardsToWire(state, tick);
+                    session.Send(cardsMessage, false);
+                }
             }
         }
-
-        public static TriGrabStateToC ToWire(TriGrabMatchState state)
-        {
-            var m = new TriGrabStateToC
-            {
-                Version = state.Version,
-                Phase = (int)state.Phase,
-                PhaseEndTick = state.PhaseEndTick,
-                Round = state.Round,
-                RuleType = (int)state.Rule.Type,
-                RuleColor = state.Rule.Color,
-                BaseAngle0 = state.Clock.BaseAngle0,
-                Omega = state.Clock.Omega,
-                LiveStartTick = state.Clock.LiveStartTick,
-                FreezeTick = state.Clock.FreezeTick,
-                RoundWinnerId = state.RoundWinnerId ?? "",
-                MatchWinnerId = state.MatchWinnerId ?? "",
-                TotalRounds = state.TotalRounds,
-                RoundLimitTick = state.RoundLimitTick,
-            };
-            foreach (var slot in state.Slots)
-            {
-                var w = new TriGrabSlotWire { EmptyUntilTick = slot.EmptyUntilTick };
-                if (slot.Card.HasValue) w.Card = CardToWire(slot.Card.Value);
-                m.Slots.Add(w);
-            }
-            foreach (var h in state.Hooks)
-            {
-                var w = new TriGrabHookWire
-                {
-                    OwnerId = h.OwnerId, FireTick = h.FireTick,
-                    OriginX = h.Origin.x, OriginZ = h.Origin.y, DirX = h.Dir.x, DirZ = h.Dir.y,
-                    TurnTick = h.TurnTick, TurnLength = h.TurnLength,
-                    Result = (int)h.Result, EndTick = h.EndTick,
-                };
-                if (h.Carried.HasValue) w.Carried = CardToWire(h.Carried.Value);
-                m.Hooks.Add(w);
-            }
-            foreach (var id in state.PlayerOrder)
-            {
-                var p = state.Players[id];
-                m.Players.Add(new TriGrabPlayerWire
-                {
-                    EntityId = id, Score = p.Score, Mistakes = p.Mistakes,
-                    ReloadUntilTick = p.ReloadUntilTick, BestRtMs = p.BestRtMs,
-                    RoundPlace = p.RoundPlace, RoundPoints = p.RoundPoints,
-                });
-            }
-            return m;
-        }
-
-        private static TriGrabCardWire CardToWire(TriGrabCard c) => new TriGrabCardWire
-        {
-            Id = c.Id, Word = c.Word, Ink = c.Ink, Cycles = c.Cycles, PeriodTicks = c.PeriodTicks, T0Tick = c.T0Tick,
-        };
     }
 }

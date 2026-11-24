@@ -135,6 +135,22 @@ namespace LOP
                 //  "잔고 0인데 EmergencyRemaining도 0"으로 보고 곧바로 접어 버려 남이 그 1초
                 //  구제 구간 내내 자유낙하로 보인다(다음 스냅이 와야 되돌아옴 = 러버밴딩).
                 snap.EmergencyRemaining = stamina?.EmergencyRemaining ?? 0f;
+                //  태풍의 눈 몸개그 장애물 — 서버만 맞은 경우 클라가 이것으로 알고 되감는다. 없는 게임은 0.
+                var storm = worldEntity.Get<StormState>();
+                if (storm != null)
+                {
+                    snap.StormStunEndTick = storm.StunEndTick;
+                    snap.StormLiftEndTick = storm.LiftEndTick;
+                    snap.StormEjectX = storm.EjectX;
+                    snap.StormEjectZ = storm.EjectZ;
+                    snap.StormGullOnHeadEndTick = storm.GullOnHeadEndTick;
+                    snap.StormCushionReadyTick = storm.CushionReadyTick;
+                    snap.StormCloudReadyTick = storm.CloudReadyTick;
+                    snap.StormGullReadyTick = storm.GullReadyTick;
+                    snap.StormUpdraftReadyTick = storm.UpdraftReadyTick;
+                    snap.StormLastHitKind = (int)storm.LastHitKind;
+                    snap.StormLastHitTick = storm.LastHitTick;
+                }
 
                 var statusEffects = worldEntity.Get<StatusEffects>();
                 if (statusEffects != null)

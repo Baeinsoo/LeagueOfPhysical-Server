@@ -47,6 +47,7 @@ namespace LOP
             worldEntity.Add(new Stamina { Current = config.StaminaMax });
             worldEntity.Add(new WindDrift());
             worldEntity.Add(new SkydiveSave());   // 세이브 발판 — 클라 크리에이터에도 같이
+            worldEntity.Add(new StormState());   // 몸개그 장애물 — 클·서 크리에이터 둘 다
             entityRegistry.Add(worldEntity);
 
             Debug.Log($"[World] Registered skydive body {worldEntity.Id}");
